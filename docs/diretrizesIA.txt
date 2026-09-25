@@ -1,0 +1,43 @@
+Diretrizes para colaboração entre agentes de IA
+
+Você está trabalhando em um projeto compartilhado com outro desenvolvedor e outro agente de IA. Aplique as três diretrizes abaixo em todas as tarefas.
+
+1. Priorizar explicabilidade e simplicidade
+
+Escolha a solução mais simples que atenda corretamente ao requisito atual. Não implemente funcionalidades futuras sem solicitação.
+Use nomes claros, funções com responsabilidades bem definidas e um fluxo fácil de acompanhar.
+Evite abstrações, dependências e otimizações desnecessárias. Reaproveite os padrões existentes quando forem adequados.
+Faça mudanças pequenas e incrementais. Não misture a tarefa solicitada com grandes refatorações ou alterações sem relação com ela.
+Explique decisões importantes: qual problema está sendo resolvido, como a solução funciona e por que foi escolhida. Comente no código apenas o que não for evidente, especialmente motivos, regras e limitações.
+Preserve a correção e as verificações necessárias. Simplificar não significa esconder erros ou remover cuidados essenciais.
+Quando alguma complexidade for necessária, justifique-a em linguagem acessível.
+
+2. Manter um relatório incremental compartilhado
+
+Antes de alterar o projeto, leia as diretrizes e as entradas relevantes do relatório, e confira o estado atual do código. Não dependa apenas da memória da conversa.
+Utilize o relatório já adotado pela equipe. Se não existir, crie RELATORIO_INCREMENTAL.md na raiz do projeto.
+A cada etapa com alterações, acrescente uma entrada ao relatório junto das mudanças correspondentes. Se interromper uma tarefa incompleta, registre o ponto de parada e as pendências.
+Preserve as entradas anteriores. Registre correções ou decisões que substituem as antigas em novas entradas.
+Destaque mudanças de comportamento, interfaces, configurações ou dependências que afetem o trabalho do outro agente. Não desfaça mudanças dele sem compreender e justificar a necessidade.
+Registre apenas verificações realmente executadas. Se algo não foi testado, declare isso explicitamente.
+
+Use este modelo para cada entrada:
+
+[Data e hora]: [Resumo da etapa]
+Responsável: agente ou desenvolvedor.
+Objetivo: problema ou solicitação atendida.
+Alterações: arquivos afetados e o que mudou.
+Justificativa: por que a solução foi escolhida.
+Verificação: testes ou comandos executados e resultados; indique o que não foi verificado.
+Impactos e pendências: compatibilidade, limitações, riscos e trabalho restante.
+Continuidade: próximo passo e cuidados para o outro agente.
+
+Não considere uma etapa com alterações encerrada enquanto seu registro estiver desatualizado. O código deve ser compreensível, e o relatório deve permitir que o outro agente continue sem precisar reconstruir toda a conversa.
+
+3. Remover arquivos temporários com segurança
+
+Ao concluir cada tarefa, remova os arquivos temporários criados durante o trabalho, como caches (`__pycache__`, `.pyc`, `.pytest_cache`, `.mypy_cache` e `.ruff_cache`), logs de diagnóstico e diretórios temporários que não tenham sido removidos automaticamente.
+Antes de excluir, confirme o caminho exato e verifique que o item é realmente temporário e foi criado pela tarefa ou por suas ferramentas.
+Não faça limpezas amplas em diretórios do sistema, na pasta pessoal ou em áreas compartilhadas. Não remova entradas, resultados ou artefatos do usuário apenas porque não estão versionados.
+Prefira recursos que façam limpeza automática, como diretórios temporários gerenciados por contexto.
+Ao final, verifique novamente a árvore do projeto e registre no relatório o que foi removido e o que foi preservado.

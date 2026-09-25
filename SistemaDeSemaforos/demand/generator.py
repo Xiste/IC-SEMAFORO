@@ -2,7 +2,7 @@
 
 Entrada principal: rede, duração, período e diretório de saída.
 Saída principal: random.trips.xml e random.rou.xml.
-Uso normal: ``make demand-random`` ou uma chamada de ``simulation.py``.
+Uso normal: ``make demand-random`` ou uma chamada do runner de simulação.
 """
 
 import argparse
@@ -17,10 +17,11 @@ import xml.etree.ElementTree as ET
 
 
 DEFAULT_NET_FILE = (
-    Path(__file__).resolve().parent
+    Path(__file__).resolve().parents[1]
+    / "network"
     / "uberlandia.vehicular.families.16_2_4.net.xml"
 )
-DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "demandas"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "demandas"
 DEFAULT_DURATION = 7200.0
 DEFAULT_PERIOD = 1.5
 

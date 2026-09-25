@@ -12,7 +12,7 @@ import shutil
 import subprocess
 import sys
 
-from .demand import (
+from ..demand.generator import (
     DEFAULT_DURATION,
     DEFAULT_NET_FILE,
     DEFAULT_OUTPUT_DIR,
@@ -50,6 +50,8 @@ def run_simulation(
         "--route-files", str(demand_file),
         "--begin", "0",
         "--no-step-log", "true",
+        # Mostra exemplos e depois agrupa avisos repetidos de congestionamento.
+        "--aggregate-warnings", "5",
     ]
     if end is not None:
         command.extend(["--end", str(end)])

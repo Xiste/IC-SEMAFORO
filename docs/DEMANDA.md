@@ -89,7 +89,7 @@ make demand-random DEMAND_ARGS='--duration 3600 --period 2 --output-dir /tmp/dem
 | --- | --- | --- |
 | `--duration` | `7200` | Define a janela de partidas, em segundos. |
 | `--period` | `1.5` | Define o intervalo entre partidas, em segundos. |
-| `--net-file` | Rede do projeto | Escolhe a rede usada na geração e no roteamento. |
+| `--net-file` | Rede em `SistemaDeSemaforos/network/` | Escolhe a rede usada na geração e no roteamento. |
 | `--output-dir` | `SistemaDeSemaforos/demandas` | Escolhe onde os dois XMLs serão gravados. |
 
 Uma nova geração substitui os dois XMLs do diretório escolhido somente depois
@@ -97,14 +97,30 @@ de validar as novas saídas.
 
 ## Como o código está dividido
 
-- `SistemaDeSemaforos/demand.py`: gera uma demanda random e devolve o caminho
-  de `random.rou.xml`.
-- `SistemaDeSemaforos/simulation.py`: recebe uma demanda pronta, executa o
-  SUMO e coordena múltiplos episódios random quando solicitado.
+- `SistemaDeSemaforos/demand/generator.py`: gera uma demanda random e devolve
+  o caminho de `random.rou.xml`.
+- `SistemaDeSemaforos/simulation/runner.py`: recebe uma demanda pronta,
+  executa o SUMO e coordena múltiplos episódios random quando solicitado.
 
-Em uma execução com vários episódios random, `simulation.py` chama novamente
-o gerador antes de cada episódio. Métodos futuros poderão gerar outros
+Em uma execução com vários episódios random, `runner.py` chama novamente o
+gerador antes de cada episódio. Métodos futuros poderão gerar outros
 arquivos e reutilizar a função `run_simulation` sem alterar o SUMO runner.
+
+## Eficiência atual e próximos métodos
+
+Para as aproximadamente 4.800 viagens atuais, o gerador faz uma única chamada
+ao `randomTrips.py`. Essa chamada já inclui o roteamento pelo `duarouter`. O
+Python apenas valida os dois XMLs e publica os arquivos prontos, sem copiar ou
+transformar cada veículo individualmente.
+
+O contrato entre geração e simulação é somente o caminho de `random.rou.xml`.
+Um futuro método poderá criar outro arquivo `.rou.xml` dentro de
+`SistemaDeSemaforos/demand/` e entregá-lo a `run_simulation`. Não é necessário
+alterar o runner nem criar agora factories, registries ou uma API genérica.
+
+O runner atual não pede ao SUMO arquivos de métricas, não lê resultados da
+simulação e não calcula estatísticas. Sua responsabilidade é gerar a demanda
+random de cada episódio e executar o SUMO com essa demanda.
 
 ## Detalhes técnicos
 

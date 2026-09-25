@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock, call, patch
 
-from SistemaDeSemaforos import simulation
+from SistemaDeSemaforos.simulation import runner as simulation
 
 
 def option_value(command, option):
@@ -47,6 +47,8 @@ class RunSimulationTests(unittest.TestCase):
         )
         self.assertNotIn("--end", command)
         self.assertNotIn("--start", command)
+        self.assertEqual(option_value(command, "--aggregate-warnings"), "5")
+        self.assertNotIn("--duration-log.statistics", command)
         self.assertTrue(run.call_args.kwargs["check"])
 
     @patch.object(simulation.subprocess, "run")

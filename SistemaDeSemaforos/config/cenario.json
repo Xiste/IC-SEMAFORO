@@ -1,0 +1,29 @@
+{
+  "network": "../dados/rede/uberlandia.vehicular.families.16_2_4.net.xml",
+  "plans": "../dados/planos/RondonNorte.xlsx",
+  "plan_id": 4,
+  "duration_seconds": 600,
+  "step_seconds": 1,
+  "seeds": [11],
+  "demand": {
+    "mode": "random",
+    "vehicles_per_hour": 360,
+    "flows": []
+  },
+  "targets": [
+    {
+      "name": "Av. Rondon Pacheco x Rua Paraná",
+      "tls_id": "FAM_RONDON_PARANA",
+      "phase_indices": [0, 1, 2, 3, 4, 5]
+    }
+  ],
+  "training": {
+    "iterations": 20,
+    "warmup_random": 10,
+    "candidate_pool": 100,
+    "minimum_green_seconds": 8,
+    "minimum_yellow_seconds": 3,
+    "minimum_all_red_seconds": 1,
+    "unfinished_penalty_seconds": 120
+  }
+}

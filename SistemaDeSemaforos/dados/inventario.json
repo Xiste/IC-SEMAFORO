@@ -1,0 +1,1685 @@
+﻿{
+  "spreadsheet_intersections": {
+    "Av. Rondon Pacheco x Av. Benjamim Magalh�es": {
+      "stages": {
+        "A": "Av. Rondon Pacheco nos dois sentidos",
+        "B": "Av. Benjamim Magalh�es",
+        "C": "Rua Alagoas",
+        "D": "Pedestres"
+      },
+      "plans": {
+        "2": {
+          "offset": 0,
+          "cycle": 70,
+          "stages": {
+            "A": {
+              "green": 10,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "B": {
+              "green": 10,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 10,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 4,
+              "clearance": 0
+            }
+          }
+        },
+        "4": {
+          "offset": 30,
+          "cycle": 110,
+          "stages": {
+            "A": {
+              "green": 27,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "B": {
+              "green": 20,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 23,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 4,
+              "clearance": 0
+            }
+          }
+        },
+        "16": {
+          "offset": 36,
+          "cycle": 130,
+          "stages": {
+            "A": {
+              "green": 42,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "B": {
+              "green": 24,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 24,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 4,
+              "clearance": 0
+            }
+          }
+        },
+        "24": {
+          "offset": 40,
+          "cycle": 150,
+          "stages": {
+            "A": {
+              "green": 48,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "B": {
+              "green": 31,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 31,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 4,
+              "clearance": 0
+            }
+          }
+        }
+      },
+      "sheet_row": 3
+    },
+    "Av. Rondon Pacheco x Rua Paran�": {
+      "stages": {
+        "A": "Av. Rondon Pacheco sentido Rio Uberabinha",
+        "B": "Av. Rondon Pacheco sentido BR050",
+        "C": "Rua Paran� sentido bairro Tibery",
+        "D": "Rua Paran� sentido bairro Brasil"
+      },
+      "plans": {
+        "2": {
+          "offset": 0,
+          "cycle": 70,
+          "stages": {
+            "A": {
+              "green": 23,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 10,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 9,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 8,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "4": {
+          "offset": 20,
+          "cycle": 110,
+          "stages": {
+            "A": {
+              "green": 36,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 22,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 16,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 16,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "16": {
+          "offset": 78,
+          "cycle": 130,
+          "stages": {
+            "A": {
+              "green": 41,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 27,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 21,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 21,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "24": {
+          "offset": 90,
+          "cycle": 150,
+          "stages": {
+            "A": {
+              "green": 46,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 32,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 26,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 26,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        }
+      },
+      "sheet_row": 21
+    },
+    "Av. Ces�rio Alvin x Rua Paran�": {
+      "stages": {
+        "A": "Av. Ces�rio Alvin",
+        "B": "Rua Paran� sentido bairro Tibery",
+        "C": "Rua Paran� sentido bairro Brasil"
+      },
+      "plans": {
+        "2": {
+          "offset": 0,
+          "cycle": 70,
+          "stages": {
+            "A": {
+              "green": 14,
+              "yellow": 5,
+              "clearance": 17
+            },
+            "B": {
+              "green": 10,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 10,
+              "yellow": 5,
+              "clearance": 2
+            }
+          }
+        },
+        "4": {
+          "offset": 80,
+          "cycle": 110,
+          "stages": {
+            "A": {
+              "green": 23,
+              "yellow": 5,
+              "clearance": 17
+            },
+            "B": {
+              "green": 26,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 25,
+              "yellow": 5,
+              "clearance": 2
+            }
+          }
+        },
+        "16": {
+          "offset": 89,
+          "cycle": 130,
+          "stages": {
+            "A": {
+              "green": 30,
+              "yellow": 5,
+              "clearance": 17
+            },
+            "B": {
+              "green": 33,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 31,
+              "yellow": 5,
+              "clearance": 2
+            }
+          }
+        },
+        "24": {
+          "offset": 103,
+          "cycle": 150,
+          "stages": {
+            "A": {
+              "green": 38,
+              "yellow": 5,
+              "clearance": 17
+            },
+            "B": {
+              "green": 37,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 39,
+              "yellow": 5,
+              "clearance": 2
+            }
+          }
+        }
+      },
+      "sheet_row": 39
+    },
+    "Av. Rondon Pacheco x Rua Porto Alegre": {
+      "stages": {
+        "A": "Av. Rondon Pacheco sentido BR050 e convers�o � esquerda",
+        "B": "Av. Rondon Pacheco nos dois sentidos",
+        "C": "Rua Porto Alegre",
+        "D": "Pedestres"
+      },
+      "plans": {
+        "2": {
+          "offset": 61,
+          "cycle": 70,
+          "stages": {
+            "A": {
+              "green": 10,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 16,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 10,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 4,
+              "clearance": 0
+            }
+          }
+        },
+        "4": {
+          "offset": 75,
+          "cycle": 110,
+          "stages": {
+            "A": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 31,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 30,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 4,
+              "clearance": 0
+            }
+          }
+        },
+        "16": {
+          "offset": 91,
+          "cycle": 130,
+          "stages": {
+            "A": {
+              "green": 20,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 41,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 35,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 4,
+              "clearance": 0
+            }
+          }
+        },
+        "24": {
+          "offset": 100,
+          "cycle": 150,
+          "stages": {
+            "A": {
+              "green": 25,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 61,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 30,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 4,
+              "clearance": 0
+            }
+          }
+        }
+      },
+      "sheet_row": 56
+    },
+    "Av. Rondon Pacheco x Rua Bel�m": {
+      "stages": {
+        "A": "Av. Rondon Pacheco sentido BR050",
+        "B": "Av. Rondon Pacheco nos dois sentidos",
+        "C": "Av. Rondon Pacheco sentido centro",
+        "D": "Rua Bel�m"
+      },
+      "plans": {
+        "2": {
+          "offset": 61,
+          "cycle": 70,
+          "stages": {
+            "A": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 10,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 10,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "4": {
+          "offset": 75,
+          "cycle": 110,
+          "stages": {
+            "A": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 30,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 30,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "16": {
+          "offset": 81,
+          "cycle": 130,
+          "stages": {
+            "A": {
+              "green": 20,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 45,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 30,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "24": {
+          "offset": 90,
+          "cycle": 150,
+          "stages": {
+            "A": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 60,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 40,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        }
+      },
+      "sheet_row": 74
+    },
+    "Av. Rondon Pacheco x Rua Ant�nio Cresc�ncio": {
+      "stages": {
+        "A": "Av. Rondon Pacheco sentido centro",
+        "B": "Av. Rondon Pacheco nos dois sentidos",
+        "C": "Av. Rondon Pacheco sentido BR050",
+        "D": "Rua Ant�nio Cresc�ncio"
+      },
+      "plans": {
+        "2": {
+          "offset": 30,
+          "cycle": 70,
+          "stages": {
+            "A": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 10,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 10,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "4": {
+          "offset": 20,
+          "cycle": 110,
+          "stages": {
+            "A": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 30,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 30,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "16": {
+          "offset": 16,
+          "cycle": 130,
+          "stages": {
+            "A": {
+              "green": 20,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 45,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 30,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "24": {
+          "offset": 40,
+          "cycle": 150,
+          "stages": {
+            "A": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 50,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 50,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        }
+      },
+      "sheet_row": 92
+    },
+    "Av. Rondon Pacheco x Rua Niter�i": {
+      "stages": {
+        "A": "Av. Rondon Pacheco sentido centro e convers�o � esquerda",
+        "B": "Av. Rondon Pacheco nos dois sentidos",
+        "C": "Rua Niter�i",
+        "D": "Pedestres"
+      },
+      "plans": {
+        "2": {
+          "offset": 40,
+          "cycle": 70,
+          "stages": {
+            "A": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 10,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 10,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "4": {
+          "offset": 20,
+          "cycle": 110,
+          "stages": {
+            "A": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 40,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 20,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "16": {
+          "offset": 16,
+          "cycle": 130,
+          "stages": {
+            "A": {
+              "green": 25,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 40,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 30,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        },
+        "24": {
+          "offset": 40,
+          "cycle": 150,
+          "stages": {
+            "A": {
+              "green": 25,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "B": {
+              "green": 50,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "C": {
+              "green": 40,
+              "yellow": 3,
+              "clearance": 2
+            },
+            "D": {
+              "green": 15,
+              "yellow": 3,
+              "clearance": 2
+            }
+          }
+        }
+      },
+      "sheet_row": 110
+    },
+    "Av. Rondon Pacheco x Av. Jo�o Naves de �vila": {
+      "stages": {
+        "A": "Av. Rondon Pacheco sentido centro",
+        "B": "Av. Rondon Pacheco sentido BR050"
+      },
+      "plans": {
+        "2": {
+          "offset": 51,
+          "cycle": 70,
+          "stages": {
+            "A": {
+              "green": 23,
+              "yellow": 5,
+              "clearance": 7
+            },
+            "B": {
+              "green": 23,
+              "yellow": 5,
+              "clearance": 7
+            }
+          }
+        },
+        "4": {
+          "offset": 0,
+          "cycle": 110,
+          "stages": {
+            "A": {
+              "green": 43,
+              "yellow": 5,
+              "clearance": 7
+            },
+            "B": {
+              "green": 43,
+              "yellow": 5,
+              "clearance": 7
+            }
+          }
+        },
+        "16": {
+          "offset": 0,
+          "cycle": 130,
+          "stages": {
+            "A": {
+              "green": 53,
+              "yellow": 5,
+              "clearance": 7
+            },
+            "B": {
+              "green": 53,
+              "yellow": 5,
+              "clearance": 7
+            }
+          }
+        },
+        "24": {
+          "offset": 0,
+          "cycle": 150,
+          "stages": {
+            "A": {
+              "green": 63,
+              "yellow": 5,
+              "clearance": 7
+            },
+            "B": {
+              "green": 63,
+              "yellow": 5,
+              "clearance": 7
+            }
+          }
+        }
+      },
+      "sheet_row": 128
+    },
+    "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento": {
+      "stages": {
+        "A": "Av. Rondon Pacheco sentido Rio Uberabinha",
+        "B": "Av. Rondon Pacheco nos dois sentidos",
+        "C": "Av. Anselmo Alves dos Santos"
+      },
+      "plans": {
+        "2": {
+          "offset": 19,
+          "cycle": 70,
+          "stages": {
+            "A": {
+              "green": 13,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "B": {
+              "green": 22,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 14,
+              "yellow": 5,
+              "clearance": 2
+            }
+          }
+        },
+        "4": {
+          "offset": 80,
+          "cycle": 110,
+          "stages": {
+            "A": {
+              "green": 13,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "B": {
+              "green": 48,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 28,
+              "yellow": 5,
+              "clearance": 2
+            }
+          }
+        },
+        "16": {
+          "offset": 87,
+          "cycle": 130,
+          "stages": {
+            "A": {
+              "green": 13,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "B": {
+              "green": 50,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 46,
+              "yellow": 5,
+              "clearance": 2
+            }
+          }
+        },
+        "24": {
+          "offset": 100,
+          "cycle": 150,
+          "stages": {
+            "A": {
+              "green": 13,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "B": {
+              "green": 53,
+              "yellow": 5,
+              "clearance": 2
+            },
+            "C": {
+              "green": 63,
+              "yellow": 5,
+              "clearance": 2
+            }
+          }
+        }
+      },
+      "sheet_row": 144
+    }
+  },
+  "network_traffic_lights": [
+    {
+      "id": "2042692896",
+      "x": 2675.57,
+      "y": 1993.04,
+      "incoming_edges": [
+        "-229703615",
+        "248261379#2",
+        "602306707"
+      ],
+      "phases": [
+        {
+          "duration": 26.0,
+          "state": "GGrrr"
+        },
+        {
+          "duration": 4.0,
+          "state": "yyrrr"
+        },
+        {
+          "duration": 26.0,
+          "state": "rrGrG"
+        },
+        {
+          "duration": 4.0,
+          "state": "rryrG"
+        },
+        {
+          "duration": 26.0,
+          "state": "rrrGG"
+        },
+        {
+          "duration": 4.0,
+          "state": "rrryy"
+        }
+      ]
+    },
+    {
+      "id": "2042693363",
+      "x": 4259.78,
+      "y": 1590.83,
+      "incoming_edges": [
+        "-616971271#0"
+      ],
+      "phases": [
+        {
+          "duration": 82.0,
+          "state": "G"
+        },
+        {
+          "duration": 3.0,
+          "state": "y"
+        },
+        {
+          "duration": 5.0,
+          "state": "r"
+        }
+      ]
+    },
+    {
+      "id": "2042693107",
+      "x": 4315.43,
+      "y": 1778.0,
+      "incoming_edges": [
+        "-616971271#1",
+        "616971271#0"
+      ],
+      "phases": [
+        {
+          "duration": 82.0,
+          "state": "GG"
+        },
+        {
+          "duration": 3.0,
+          "state": "yy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rr"
+        }
+      ]
+    },
+    {
+      "id": "2042692883",
+      "x": 4370.04,
+      "y": 1971.62,
+      "incoming_edges": [
+        "-616971271#2",
+        "-647043773#1",
+        "616971271#1",
+        "647043773#0"
+      ],
+      "phases": [
+        {
+          "duration": 42.0,
+          "state": "GGggrrrrGGggrrrr"
+        },
+        {
+          "duration": 3.0,
+          "state": "yyyyrrrryyyyrrrr"
+        },
+        {
+          "duration": 42.0,
+          "state": "rrrrGGggrrrrGGgg"
+        },
+        {
+          "duration": 3.0,
+          "state": "rrrryyyyrrrryyyy"
+        }
+      ]
+    },
+    {
+      "id": "2042692453",
+      "x": 4425.5,
+      "y": 2163.75,
+      "incoming_edges": [
+        "-616971271#3",
+        "-659117905#1",
+        "616971271#2",
+        "659117905#0"
+      ],
+      "phases": [
+        {
+          "duration": 42.0,
+          "state": "GGggrrrrGGggrrrr"
+        },
+        {
+          "duration": 3.0,
+          "state": "yyyyrrrryyyyrrrr"
+        },
+        {
+          "duration": 42.0,
+          "state": "rrrrGGggrrrrGGgg"
+        },
+        {
+          "duration": 3.0,
+          "state": "rrrryyyyrrrryyyy"
+        }
+      ]
+    },
+    {
+      "id": "2042693016",
+      "x": 4797.53,
+      "y": 1848.62,
+      "incoming_edges": [
+        "-647043773#0"
+      ],
+      "phases": [
+        {
+          "duration": 82.0,
+          "state": "G"
+        },
+        {
+          "duration": 3.0,
+          "state": "y"
+        },
+        {
+          "duration": 5.0,
+          "state": "r"
+        }
+      ]
+    },
+    {
+      "id": "2963614071",
+      "x": 4854.24,
+      "y": 2042.07,
+      "incoming_edges": [
+        "-659117905#2",
+        "659117905#1"
+      ],
+      "phases": [
+        {
+          "duration": 82.0,
+          "state": "GG"
+        },
+        {
+          "duration": 3.0,
+          "state": "yy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rr"
+        }
+      ]
+    },
+    {
+      "id": "FAM_RONDON_PARANA",
+      "x": 3651.64,
+      "y": 3583.24,
+      "incoming_edges": [
+        "1156272393#6",
+        "1156717168",
+        "1156717173#4",
+        "901328279#0"
+      ],
+      "phases": [
+        {
+          "duration": 41.0,
+          "state": "GGGGrrr"
+        },
+        {
+          "duration": 3.0,
+          "state": "yyyyrrr"
+        },
+        {
+          "duration": 1.0,
+          "state": "rrrrrrr"
+        },
+        {
+          "duration": 41.0,
+          "state": "rrrrGGG"
+        },
+        {
+          "duration": 3.0,
+          "state": "rrrryyy"
+        },
+        {
+          "duration": 1.0,
+          "state": "rrrrrrr"
+        }
+      ]
+    },
+    {
+      "id": "5494111603",
+      "x": 3418.76,
+      "y": 3172.19,
+      "incoming_edges": [
+        "1156717170#0"
+      ],
+      "phases": [
+        {
+          "duration": 81.0,
+          "state": "GG"
+        },
+        {
+          "duration": 4.0,
+          "state": "yy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rr"
+        }
+      ]
+    },
+    {
+      "id": "5494111596",
+      "x": 3297.97,
+      "y": 2667.96,
+      "incoming_edges": [
+        "1156717175#0"
+      ],
+      "phases": [
+        {
+          "duration": 81.0,
+          "state": "GGGG"
+        },
+        {
+          "duration": 4.0,
+          "state": "yyyy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rrrr"
+        }
+      ]
+    },
+    {
+      "id": "5494111590",
+      "x": 3234.77,
+      "y": 2298.82,
+      "incoming_edges": [
+        "1156717175#5"
+      ],
+      "phases": [
+        {
+          "duration": 81.0,
+          "state": "GGGGG"
+        },
+        {
+          "duration": 4.0,
+          "state": "yyyyy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rrrrr"
+        }
+      ]
+    },
+    {
+      "id": "1561879989",
+      "x": 3135.04,
+      "y": 3368.16,
+      "incoming_edges": [
+        "152937004#13",
+        "331577758#0"
+      ],
+      "phases": [
+        {
+          "duration": 40.0,
+          "state": "GGrr"
+        },
+        {
+          "duration": 5.0,
+          "state": "yyrr"
+        },
+        {
+          "duration": 40.0,
+          "state": "rrGG"
+        },
+        {
+          "duration": 5.0,
+          "state": "rryy"
+        }
+      ]
+    },
+    {
+      "id": "1561879771",
+      "x": 2720.64,
+      "y": 3670.43,
+      "incoming_edges": [
+        "160744152#12",
+        "332052781"
+      ],
+      "phases": [
+        {
+          "duration": 42.0,
+          "state": "GGrr"
+        },
+        {
+          "duration": 3.0,
+          "state": "yyrr"
+        },
+        {
+          "duration": 42.0,
+          "state": "rrGG"
+        },
+        {
+          "duration": 3.0,
+          "state": "rryy"
+        }
+      ]
+    },
+    {
+      "id": "2042692877",
+      "x": 2665.03,
+      "y": 2001.09,
+      "incoming_edges": [
+        "229703614#7",
+        "353006749",
+        "708111987"
+      ],
+      "phases": [
+        {
+          "duration": 26.0,
+          "state": "rrrGGrr"
+        },
+        {
+          "duration": 4.0,
+          "state": "rrryGrr"
+        },
+        {
+          "duration": 26.0,
+          "state": "GGGrGrr"
+        },
+        {
+          "duration": 4.0,
+          "state": "yyyryrr"
+        },
+        {
+          "duration": 26.0,
+          "state": "rrrrrGG"
+        },
+        {
+          "duration": 4.0,
+          "state": "rrrrryy"
+        }
+      ]
+    },
+    {
+      "id": "1561879807",
+      "x": 2796.29,
+      "y": 3617.32,
+      "incoming_edges": [
+        "261301884#16",
+        "666324276"
+      ],
+      "phases": [
+        {
+          "duration": 42.0,
+          "state": "GGGrr"
+        },
+        {
+          "duration": 3.0,
+          "state": "yyyrr"
+        },
+        {
+          "duration": 42.0,
+          "state": "rrrGG"
+        },
+        {
+          "duration": 3.0,
+          "state": "rrryy"
+        }
+      ]
+    },
+    {
+      "id": "FAM_MARANHAO_MONSENHOR_EDUARDO",
+      "x": 2472.13,
+      "y": 3900.55,
+      "incoming_edges": [
+        "261533405#16",
+        "30620737#13"
+      ],
+      "phases": [
+        {
+          "duration": 41.0,
+          "state": "Grr"
+        },
+        {
+          "duration": 3.0,
+          "state": "yrr"
+        },
+        {
+          "duration": 1.0,
+          "state": "rrr"
+        },
+        {
+          "duration": 41.0,
+          "state": "rGG"
+        },
+        {
+          "duration": 3.0,
+          "state": "ryy"
+        },
+        {
+          "duration": 1.0,
+          "state": "rrr"
+        }
+      ]
+    },
+    {
+      "id": "3386573306",
+      "x": 3413.69,
+      "y": 3146.54,
+      "incoming_edges": [
+        "299471494#1"
+      ],
+      "phases": [
+        {
+          "duration": 81.0,
+          "state": "GG"
+        },
+        {
+          "duration": 4.0,
+          "state": "yy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rr"
+        }
+      ]
+    },
+    {
+      "id": "3386573305",
+      "x": 3407.57,
+      "y": 3189.93,
+      "incoming_edges": [
+        "331577748#2"
+      ],
+      "phases": [
+        {
+          "duration": 81.0,
+          "state": "GGGG"
+        },
+        {
+          "duration": 4.0,
+          "state": "yyyy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rrrr"
+        }
+      ]
+    },
+    {
+      "id": "5494111602",
+      "x": 3406.83,
+      "y": 3187.63,
+      "incoming_edges": [
+        "331577748#3"
+      ],
+      "phases": [
+        {
+          "duration": 81.0,
+          "state": "GGGG"
+        },
+        {
+          "duration": 4.0,
+          "state": "yyyy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rrrr"
+        }
+      ]
+    },
+    {
+      "id": "1561880076",
+      "x": 3262.39,
+      "y": 3273.0,
+      "incoming_edges": [
+        "331577757",
+        "602306713#16"
+      ],
+      "phases": [
+        {
+          "duration": 42.0,
+          "state": "GGrr"
+        },
+        {
+          "duration": 3.0,
+          "state": "yyrr"
+        },
+        {
+          "duration": 42.0,
+          "state": "rrGG"
+        },
+        {
+          "duration": 3.0,
+          "state": "rryy"
+        }
+      ]
+    },
+    {
+      "id": "1561879940",
+      "x": 3001.42,
+      "y": 3464.65,
+      "incoming_edges": [
+        "331577758#1",
+        "666324308#0"
+      ],
+      "phases": [
+        {
+          "duration": 40.0,
+          "state": "GGrr"
+        },
+        {
+          "duration": 5.0,
+          "state": "yyrr"
+        },
+        {
+          "duration": 40.0,
+          "state": "rrGG"
+        },
+        {
+          "duration": 5.0,
+          "state": "rryy"
+        }
+      ]
+    },
+    {
+      "id": "8947803947",
+      "x": 4670.32,
+      "y": 3038.19,
+      "incoming_edges": [
+        "403166945#2"
+      ],
+      "phases": [
+        {
+          "duration": 79.0,
+          "state": "G"
+        },
+        {
+          "duration": 6.0,
+          "state": "y"
+        },
+        {
+          "duration": 5.0,
+          "state": "r"
+        }
+      ]
+    },
+    {
+      "id": "5494111593",
+      "x": 3255.73,
+      "y": 2230.01,
+      "incoming_edges": [
+        "462993308#0"
+      ],
+      "phases": [
+        {
+          "duration": 79.0,
+          "state": "GG"
+        },
+        {
+          "duration": 6.0,
+          "state": "yy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rr"
+        }
+      ]
+    },
+    {
+      "id": "FAM_RONDON_ROTARY_CLUB",
+      "x": 3350.57,
+      "y": 2757.0,
+      "incoming_edges": [
+        "463014795#0",
+        "930831033#0",
+        "965367672#2"
+      ],
+      "phases": [
+        {
+          "duration": 41.0,
+          "state": "Grrrrrrrr"
+        },
+        {
+          "duration": 3.0,
+          "state": "yrrrrrrrr"
+        },
+        {
+          "duration": 1.0,
+          "state": "rrrrrrrrr"
+        },
+        {
+          "duration": 41.0,
+          "state": "rGGGGGGGG"
+        },
+        {
+          "duration": 3.0,
+          "state": "ryyyyyyyy"
+        },
+        {
+          "duration": 1.0,
+          "state": "rrrrrrrrr"
+        }
+      ]
+    },
+    {
+      "id": "5494111589",
+      "x": 3249.47,
+      "y": 2294.17,
+      "incoming_edges": [
+        "576014290#0"
+      ],
+      "phases": [
+        {
+          "duration": 79.0,
+          "state": "GGGG"
+        },
+        {
+          "duration": 6.0,
+          "state": "yyyy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rrrr"
+        }
+      ]
+    },
+    {
+      "id": "5494111594",
+      "x": 3249.88,
+      "y": 2242.31,
+      "incoming_edges": [
+        "576014301#0"
+      ],
+      "phases": [
+        {
+          "duration": 79.0,
+          "state": "GGGG"
+        },
+        {
+          "duration": 6.0,
+          "state": "yyyy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rrrr"
+        }
+      ]
+    },
+    {
+      "id": "338654991",
+      "x": 3282.65,
+      "y": 1991.0,
+      "incoming_edges": [
+        "625668273#2"
+      ],
+      "phases": [
+        {
+          "duration": 41.0,
+          "state": "GG"
+        },
+        {
+          "duration": 4.0,
+          "state": "yy"
+        },
+        {
+          "duration": 45.0,
+          "state": "rr"
+        }
+      ]
+    },
+    {
+      "id": "5494111597",
+      "x": 3311.32,
+      "y": 2653.14,
+      "incoming_edges": [
+        "930831032#0"
+      ],
+      "phases": [
+        {
+          "duration": 79.0,
+          "state": "GGGG"
+        },
+        {
+          "duration": 6.0,
+          "state": "yyyy"
+        },
+        {
+          "duration": 5.0,
+          "state": "rrrr"
+        }
+      ]
+    }
+  ],
+  "note": "A planilha n�o cont�m IDs SUMO; confira a correspond�ncia antes de adicionar targets."
+}

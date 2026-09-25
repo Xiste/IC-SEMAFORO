@@ -1,0 +1,6 @@
+# Demandas geradas automaticamente por demand-random e run-random.
+# São arquivos recriáveis, não cenários permanentes do projeto.
+/SistemaDeSemaforos/demandas/
+# Cache criado pela execução dos módulos e testes Python.
+__pycache__/
+*.py[cod]

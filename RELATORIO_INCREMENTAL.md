@@ -235,3 +235,13 @@ Justificativa: o reflog mostrou que o reset afetou a branch ativa e que o push f
 Verificação: conferidos reflogs, pais dos commits, branches e refs remotas com `git ls-remote`. Os 60 arquivos de `outputs/` preparados para commit mantiveram o conteúdo (SHA-256 por arquivo) e o diff staged integralmente. `origin/24NovCommit01` já aponta para `72df557`. O push normal de `main` falhou com erro de autenticação HTTPS; a consulta posterior confirmou que a main remota ainda aponta para `58c9fb3`. Não foram executados testes de aplicação, pois esta etapa recupera commits existentes.
 Impactos e pendências: falta publicar a main recuperada por `git push origin main` em um terminal autenticado. Não usar force; uma rejeição por avanço concorrente deve ser investigada antes de prosseguir. As branches continuam independentes e a branch ativa permanece `24NovCommit01`.
 Continuidade: confirmar `main` no GitHub em `b82186c` após o push. O relatório está modificado localmente, sem stage; os 60 arquivos de resultados continuam no stage. Nenhum arquivo temporário foi criado ou removido; os artefatos do usuário foram preservados.
+
+
+[2026-09-26 19:47 America/Sao_Paulo]: Remoção do rastreamento de resultados locais ignorados
+Responsável: Codex.
+Objetivo: corrigir os arquivos de outputs/ incluídos no commit 8da712e apesar da regra existente no .gitignore.
+Alterações: preparados no índice, por git rm --cached, os 60 arquivos de outputs/ para deixarem de ser versionados; cópias locais preservadas integralmente. A regra /outputs/ já existente foi mantida. Acrescentada esta entrada ao relatório.
+Justificativa: .gitignore afeta arquivos não rastreados; arquivos já no índice continuam incluídos nos commits. A correção remove apenas o rastreamento, sem reescrever o histórico compartilhado.
+Verificação: git ls-files -ci --exclude-standard e git ls-files -- outputs/ retornaram vazios após a remoção do índice. Os hashes SHA-256 dos 60 arquivos locais permaneceram idênticos. Conferidas as 60 exclusões preparadas e a referência main inalterada. Não foram executados testes de aplicação, pois não houve alteração no código.
+Impactos e pendências: correção preparada na branch 24NovCommit01; falta criar e publicar o commit. Os arquivos continuam nos commits históricos. Nenhuma alteração foi feita na main ou nos remotos.
+Continuidade: revisar e commitar as exclusões do índice junto deste relatório; publicar por push normal de 24NovCommit01. Futuras saídas locais passam a ser ignoradas normalmente. Nenhum temporário foi criado ou removido; os resultados do usuário foram preservados.

@@ -11,6 +11,8 @@ Faça mudanças pequenas e incrementais. Não misture a tarefa solicitada com gr
 Explique decisões importantes: qual problema está sendo resolvido, como a solução funciona e por que foi escolhida. Comente no código apenas o que não for evidente, especialmente motivos, regras e limitações.
 Preserve a correção e as verificações necessárias. Simplificar não significa esconder erros ou remover cuidados essenciais.
 Quando alguma complexidade for necessária, justifique-a em linguagem acessível.
+Antes de criar arquivo, pasta ou documento, verifique se a responsabilidade já tem um lugar no projeto. Amplie esse lugar quando fizer sentido; separe somente quando isso facilitar o entendimento de uma responsabilidade real.
+Mantenha uma fonte principal para cada explicação. O README orienta a leitura, o guia de comandos ensina a executar e o guia de funcionamento explica o pipeline. Catálogos são consultas detalhadas; o relatório incremental preserva o histórico. Ao consolidar, atualize referências e remova documentos substituídos, preservando informações únicas relevantes.
 
 2. Manter um relatório incremental compartilhado
 

@@ -1,6 +1,8 @@
 # Comandos principais. Use DEMAND_ARGS e RUN_ARGS para opções adicionais.
-# Documentação: docs/DEMANDA.md e docs/COMANDOS_TESTE.md.
+# Documentação: docs/FUNCIONAMENTO.md e docs/COMANDOS_TESTE.md.
 PYTHON ?= python3
+# Execuções e testes não deixam bytecode/caches Python no projeto.
+export PYTHONDONTWRITEBYTECODE := 1
 DEMAND_ARGS ?=
 RUN_ARGS ?=
 
@@ -10,7 +12,7 @@ RUN_ARGS ?=
 demand-random:
 	$(PYTHON) -m SistemaDeSemaforos.demand.generator $(DEMAND_ARGS)
 
-# Gera uma demanda nova e executa o SUMO em cada episódio.
+# Gera demanda, executa e registra cada episódio em outputs/outputs-random/.
 run-random:
 	$(PYTHON) -m SistemaDeSemaforos.simulation.runner $(RUN_ARGS)
 
@@ -18,3 +20,4 @@ run-random:
 test:
 	$(PYTHON) -m unittest discover -s tests/demand -v
 	$(PYTHON) -m unittest discover -s tests/simulation -v
+	$(PYTHON) -m unittest discover -s tests/metrics -v

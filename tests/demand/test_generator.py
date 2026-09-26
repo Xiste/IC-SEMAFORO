@@ -5,6 +5,8 @@ Confere os argumentos do SUMO, as viagens/rotas publicadas e os erros que
 devem preservar uma demanda anterior. Executado pelo comando ``make test``.
 """
 
+from datetime import datetime, timezone
+import hashlib
 from pathlib import Path
 import subprocess
 import sys
@@ -48,6 +50,8 @@ class RandomDemandTests(unittest.TestCase):
         self.net_file.write_text("<net />", encoding="utf-8")
         self.output_dir = self.directory / "demand"
         self.random_trips = self.directory / "tools" / "randomTrips.py"
+        self.random_trips.parent.mkdir()
+        self.random_trips.write_text("# ferramenta simulada\n", encoding="utf-8")
         script_patch = patch.object(
             demand, "_find_random_trips", return_value=self.random_trips
         )
@@ -123,6 +127,95 @@ class RandomDemandTests(unittest.TestCase):
             self.assertLess(seed, 2**31)
         expected_call = call(0, 2**31 - 1)
         self.assertEqual(randint.call_args_list, [expected_call, expected_call])
+
+    @patch.object(demand.random, "randint")
+    @patch.object(demand.subprocess, "run", side_effect=write_generated_files)
+    def test_explicit_seed_is_passed_without_drawing_another(self, run, randint):
+        for seed in (0, 2**31 - 1):
+            with self.subTest(seed=seed):
+                self.generate(seed=seed)
+                self.assertEqual(option_value(run.call_args.args[0], "--seed"), str(seed))
+
+        randint.assert_not_called()
+
+    @patch.object(demand.random, "randint")
+    @patch.object(demand.subprocess, "run")
+    def test_invalid_seed_fails_before_generation(self, run, randint):
+        for seed in (-1, 2**31, 1.5, True, False, "42"):
+            with self.subTest(seed=seed):
+                with self.assertRaises(ValueError):
+                    self.generate(seed=seed)
+
+        randint.assert_not_called()
+        run.assert_not_called()
+
+    @patch.object(demand.time, "perf_counter", side_effect=[10.0, 12.5])
+    @patch.object(demand.random, "randint", return_value=17)
+    @patch.object(demand.subprocess, "run", side_effect=write_generated_files)
+    def test_metadata_records_inputs_actual_outputs_and_monotonic_duration(
+        self, run, randint, perf_counter
+    ):
+        metadata = {}
+
+        route_file = self.generate(duration=10.0, period=3.0, metadata=metadata)
+
+        self.assertEqual(metadata["seed"], 17)
+        self.assertEqual(metadata["demand_model"], "random")
+        self.assertEqual(metadata["begin"], 0.0)
+        self.assertEqual(metadata["duration"], 10.0)
+        self.assertEqual(metadata["period"], 3.0)
+        self.assertEqual(metadata["vehicle_class"], "passenger")
+        self.assertIs(metadata["validate"], True)
+        self.assertEqual(metadata["vehicles_requested"], 4)
+        self.assertEqual(metadata["trips_generated"], 1)
+        self.assertEqual(metadata["vehicles_generated"], 1)
+        self.assertEqual(metadata["net_file"], str(self.net_file))
+        self.assertEqual(metadata["trips_file"], str(self.output_dir / "random.trips.xml"))
+        self.assertEqual(metadata["routes_file"], str(route_file))
+        self.assertEqual(metadata["random_trips_file"], str(self.random_trips))
+        self.assertEqual(
+            metadata["random_trips_sha256"],
+            hashlib.sha256(self.random_trips.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(metadata["command"], run.call_args.args[0])
+        self.assertEqual(metadata["duration_seconds"], 2.5)
+        start = datetime.fromisoformat(metadata["started_at_utc"])
+        finish = datetime.fromisoformat(metadata["finished_at_utc"])
+        self.assertEqual(start.tzinfo, timezone.utc)
+        self.assertEqual(finish.tzinfo, timezone.utc)
+        self.assertGreaterEqual(finish, start)
+        randint.assert_called_once_with(0, 2**31 - 1)
+
+    def test_optional_log_captures_tool_output(self):
+        log_file = self.directory / "logs" / "generation.log"
+
+        def generate_with_log(command, **kwargs):
+            kwargs["stdout"].write("mensagem da ferramenta\n")
+            self.assertEqual(kwargs["stderr"], subprocess.STDOUT)
+            return write_generated_files(command, **kwargs)
+
+        with patch.object(demand.subprocess, "run", side_effect=generate_with_log):
+            self.generate(log_file=log_file)
+
+        self.assertEqual(log_file.read_text(encoding="utf-8"), "mensagem da ferramenta\n")
+
+    @patch.object(demand.time, "perf_counter", side_effect=[10.0, 11.0])
+    def test_failure_retains_generation_metadata_and_previous_demand(self, perf_counter):
+        previous = self.create_previous_demand()
+        metadata = {}
+        error = subprocess.CalledProcessError(1, ["randomTrips.py"])
+
+        with patch.object(demand.subprocess, "run", side_effect=error):
+            with self.assertRaises(subprocess.CalledProcessError):
+                self.generate(seed=42, metadata=metadata)
+
+        self.assertEqual(metadata["seed"], 42)
+        self.assertEqual(metadata["duration_seconds"], 1.0)
+        self.assertIn("finished_at_utc", metadata)
+        self.assertIn("command", metadata)
+        self.assertNotIn("vehicles_generated", metadata)
+        self.assert_previous_demand(previous)
+        self.assertEqual(list(self.output_dir.glob(".random-*")), [])
 
     @patch.object(demand.subprocess, "run", side_effect=write_generated_files)
     def test_success_replaces_both_previous_files(self, run):

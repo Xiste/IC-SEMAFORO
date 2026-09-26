@@ -1,0 +1,1916 @@
+{
+  "schema_version": 1,
+  "metrics": [
+    {
+      "metric_name": "aggregation_time_seconds",
+      "data_type": "float",
+      "value": 6.661270338998293
+    },
+    {
+      "metric_name": "baseline_preparation_time_seconds",
+      "data_type": "float",
+      "value": 0.34205652099626604
+    },
+    {
+      "metric_name": "batch_episodes",
+      "data_type": "int",
+      "value": 3
+    },
+    {
+      "metric_name": "collection_collisions_time_seconds",
+      "data_type": "float",
+      "value": 0.0002045840083155781
+    },
+    {
+      "metric_name": "collection_lanechanges_time_seconds",
+      "data_type": "float",
+      "value": 0.12544187498860992
+    },
+    {
+      "metric_name": "collection_network_time_seconds",
+      "data_type": "float",
+      "value": 0.09777093399316072
+    },
+    {
+      "metric_name": "collection_queues_time_seconds",
+      "data_type": "float",
+      "value": 3.699293514000601
+    },
+    {
+      "metric_name": "collection_statistics_time_seconds",
+      "data_type": "float",
+      "value": 0.00030705699464306235
+    },
+    {
+      "metric_name": "collection_summary_time_seconds",
+      "data_type": "float",
+      "value": 0.2672370110085467
+    },
+    {
+      "metric_name": "collection_tls_time_seconds",
+      "data_type": "float",
+      "value": 1.8922203480033204
+    },
+    {
+      "metric_name": "collection_trips_time_seconds",
+      "data_type": "float",
+      "value": 0.5781726670102216
+    },
+    {
+      "metric_name": "collisions",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "completed_emission_co2_abs_max",
+      "data_type": "float",
+      "value": 11194815.27637067
+    },
+    {
+      "metric_name": "completed_emission_co2_abs_mean",
+      "data_type": "float",
+      "value": 1132163.2417042023
+    },
+    {
+      "metric_name": "completed_emission_co2_abs_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_emission_co2_abs_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_emission_co2_abs_sum",
+      "data_type": "float",
+      "value": 5418533274.796312
+    },
+    {
+      "metric_name": "completed_emission_co_abs_max",
+      "data_type": "float",
+      "value": 15633.52894427
+    },
+    {
+      "metric_name": "completed_emission_co_abs_mean",
+      "data_type": "float",
+      "value": 4497.085172425279
+    },
+    {
+      "metric_name": "completed_emission_co_abs_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_emission_co_abs_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_emission_co_abs_sum",
+      "data_type": "float",
+      "value": 21523049.635227386
+    },
+    {
+      "metric_name": "completed_emission_electricity_abs_max",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_emission_electricity_abs_mean",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_emission_electricity_abs_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_emission_electricity_abs_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_emission_electricity_abs_sum",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_emission_fuel_abs_max",
+      "data_type": "float",
+      "value": 3629291.18917604
+    },
+    {
+      "metric_name": "completed_emission_fuel_abs_mean",
+      "data_type": "float",
+      "value": 367035.790164793
+    },
+    {
+      "metric_name": "completed_emission_fuel_abs_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_emission_fuel_abs_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_emission_fuel_abs_sum",
+      "data_type": "float",
+      "value": 1756633291.7286994
+    },
+    {
+      "metric_name": "completed_emission_hc_abs_max",
+      "data_type": "float",
+      "value": 103.86090755
+    },
+    {
+      "metric_name": "completed_emission_hc_abs_mean",
+      "data_type": "float",
+      "value": 29.979326622070616
+    },
+    {
+      "metric_name": "completed_emission_hc_abs_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_emission_hc_abs_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_emission_hc_abs_sum",
+      "data_type": "float",
+      "value": 143481.05721322997
+    },
+    {
+      "metric_name": "completed_emission_n_ox_abs_max",
+      "data_type": "float",
+      "value": 4449.48579748
+    },
+    {
+      "metric_name": "completed_emission_n_ox_abs_mean",
+      "data_type": "float",
+      "value": 433.0643117288065
+    },
+    {
+      "metric_name": "completed_emission_n_ox_abs_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_emission_n_ox_abs_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_emission_n_ox_abs_sum",
+      "data_type": "float",
+      "value": 2072645.7959340678
+    },
+    {
+      "metric_name": "completed_emission_p_mx_abs_max",
+      "data_type": "float",
+      "value": 119.04583193
+    },
+    {
+      "metric_name": "completed_emission_p_mx_abs_mean",
+      "data_type": "float",
+      "value": 45.99029282651278
+    },
+    {
+      "metric_name": "completed_emission_p_mx_abs_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_emission_p_mx_abs_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_emission_p_mx_abs_sum",
+      "data_type": "float",
+      "value": 220109.54146769014
+    },
+    {
+      "metric_name": "completed_throughput_vehicles_per_hour",
+      "data_type": "float",
+      "value": 1331.8945583474642
+    },
+    {
+      "metric_name": "completed_trip_arrival_max",
+      "data_type": "float",
+      "value": 12973.0
+    },
+    {
+      "metric_name": "completed_trip_arrival_mean",
+      "data_type": "float",
+      "value": 4163.8031759297955
+    },
+    {
+      "metric_name": "completed_trip_arrival_min",
+      "data_type": "float",
+      "value": 48.0
+    },
+    {
+      "metric_name": "completed_trip_arrival_pos_max",
+      "data_type": "float",
+      "value": 1366.36
+    },
+    {
+      "metric_name": "completed_trip_arrival_pos_mean",
+      "data_type": "float",
+      "value": 71.46487672377854
+    },
+    {
+      "metric_name": "completed_trip_arrival_pos_min",
+      "data_type": "float",
+      "value": 0.1
+    },
+    {
+      "metric_name": "completed_trip_arrival_pos_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_arrival_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_arrival_speed_max",
+      "data_type": "float",
+      "value": 31.99077196
+    },
+    {
+      "metric_name": "completed_trip_arrival_speed_mean",
+      "data_type": "float",
+      "value": 13.447958487747604
+    },
+    {
+      "metric_name": "completed_trip_arrival_speed_min",
+      "data_type": "float",
+      "value": 1.5915393
+    },
+    {
+      "metric_name": "completed_trip_arrival_speed_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_depart_delay_max",
+      "data_type": "float",
+      "value": 6037.5
+    },
+    {
+      "metric_name": "completed_trip_depart_delay_mean",
+      "data_type": "float",
+      "value": 10.378917676556624
+    },
+    {
+      "metric_name": "completed_trip_depart_delay_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_trip_depart_delay_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_depart_delay_sum",
+      "data_type": "float",
+      "value": 49673.5
+    },
+    {
+      "metric_name": "completed_trip_depart_max",
+      "data_type": "float",
+      "value": 12230.0
+    },
+    {
+      "metric_name": "completed_trip_depart_mean",
+      "data_type": "float",
+      "value": 3604.525908900961
+    },
+    {
+      "metric_name": "completed_trip_depart_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_trip_depart_pos_max",
+      "data_type": "float",
+      "value": 5.1
+    },
+    {
+      "metric_name": "completed_trip_depart_pos_mean",
+      "data_type": "float",
+      "value": 4.467256581696522
+    },
+    {
+      "metric_name": "completed_trip_depart_pos_min",
+      "data_type": "float",
+      "value": 0.1
+    },
+    {
+      "metric_name": "completed_trip_depart_pos_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_depart_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_depart_speed_max",
+      "data_type": "float",
+      "value": 27.78
+    },
+    {
+      "metric_name": "completed_trip_depart_speed_mean",
+      "data_type": "float",
+      "value": 12.877088019421096
+    },
+    {
+      "metric_name": "completed_trip_depart_speed_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_trip_depart_speed_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_duration_max",
+      "data_type": "float",
+      "value": 7196.0
+    },
+    {
+      "metric_name": "completed_trip_duration_mean",
+      "data_type": "float",
+      "value": 559.2772670288341
+    },
+    {
+      "metric_name": "completed_trip_duration_min",
+      "data_type": "float",
+      "value": 2.0
+    },
+    {
+      "metric_name": "completed_trip_duration_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_duration_sum",
+      "data_type": "float",
+      "value": 2676701.0
+    },
+    {
+      "metric_name": "completed_trip_reroute_no_max",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "completed_trip_reroute_no_mean",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_trip_reroute_no_min",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "completed_trip_reroute_no_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_route_length_max",
+      "data_type": "float",
+      "value": 4950.58
+    },
+    {
+      "metric_name": "completed_trip_route_length_mean",
+      "data_type": "float",
+      "value": 1879.194404513165
+    },
+    {
+      "metric_name": "completed_trip_route_length_min",
+      "data_type": "float",
+      "value": 11.05
+    },
+    {
+      "metric_name": "completed_trip_route_length_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_route_length_sum",
+      "data_type": "float",
+      "value": 8993824.420000007
+    },
+    {
+      "metric_name": "completed_trip_speed_factor_max",
+      "data_type": "float",
+      "value": 1.3518
+    },
+    {
+      "metric_name": "completed_trip_speed_factor_mean",
+      "data_type": "float",
+      "value": 1.00062511491851
+    },
+    {
+      "metric_name": "completed_trip_speed_factor_min",
+      "data_type": "float",
+      "value": 0.6783
+    },
+    {
+      "metric_name": "completed_trip_speed_factor_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_stop_time_max",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_trip_stop_time_mean",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_trip_stop_time_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_trip_stop_time_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_time_loss_max",
+      "data_type": "float",
+      "value": 7010.281
+    },
+    {
+      "metric_name": "completed_trip_time_loss_mean",
+      "data_type": "float",
+      "value": 444.9181782281655
+    },
+    {
+      "metric_name": "completed_trip_time_loss_min",
+      "data_type": "float",
+      "value": 0.091
+    },
+    {
+      "metric_name": "completed_trip_time_loss_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_time_loss_sum",
+      "data_type": "float",
+      "value": 2129378.401
+    },
+    {
+      "metric_name": "completed_trip_waiting_count_max",
+      "data_type": "int",
+      "value": 36
+    },
+    {
+      "metric_name": "completed_trip_waiting_count_mean",
+      "data_type": "float",
+      "value": 2.579189302131216
+    },
+    {
+      "metric_name": "completed_trip_waiting_count_min",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "completed_trip_waiting_count_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_waiting_time_max",
+      "data_type": "float",
+      "value": 6789.0
+    },
+    {
+      "metric_name": "completed_trip_waiting_time_mean",
+      "data_type": "float",
+      "value": 397.64396155453403
+    },
+    {
+      "metric_name": "completed_trip_waiting_time_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "completed_trip_waiting_time_samples",
+      "data_type": "int",
+      "value": 4786
+    },
+    {
+      "metric_name": "completed_trip_waiting_time_sum",
+      "data_type": "float",
+      "value": 1903124.0
+    },
+    {
+      "metric_name": "cumulative_insertion_delay_mean_seconds",
+      "data_type": "float",
+      "value": 10.59979167
+    },
+    {
+      "metric_name": "cumulative_removed_travel_time_mean_seconds",
+      "data_type": "float",
+      "value": 566.11666667
+    },
+    {
+      "metric_name": "demand_departure_mean_seconds",
+      "data_type": "float",
+      "value": 3599.25
+    },
+    {
+      "metric_name": "demand_duration_seconds",
+      "data_type": "float",
+      "value": 7200.0
+    },
+    {
+      "metric_name": "demand_first_departure_seconds",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "demand_last_departure_seconds",
+      "data_type": "float",
+      "value": 7198.5
+    },
+    {
+      "metric_name": "demand_model",
+      "data_type": "string",
+      "value": "random"
+    },
+    {
+      "metric_name": "demand_period_seconds",
+      "data_type": "float",
+      "value": 1.5
+    },
+    {
+      "metric_name": "entity_persistence_time_seconds",
+      "data_type": "float",
+      "value": 1.602661523007555
+    },
+    {
+      "metric_name": "episode_id",
+      "data_type": "string",
+      "value": "20260926T215522639451Z_seed-915923831_d92724fd"
+    },
+    {
+      "metric_name": "episode_index",
+      "data_type": "int",
+      "value": 1
+    },
+    {
+      "metric_name": "execution_time_seconds",
+      "data_type": "float",
+      "value": 42.08236043099896
+    },
+    {
+      "metric_name": "file_inventory_time_seconds",
+      "data_type": "float",
+      "value": 0.010415236989501864
+    },
+    {
+      "metric_name": "finished_at_utc",
+      "data_type": "string",
+      "value": "2026-09-26T21:56:04.721776+00:00"
+    },
+    {
+      "metric_name": "generation_time_seconds",
+      "data_type": "float",
+      "value": 3.8315484850027133
+    },
+    {
+      "metric_name": "gui",
+      "data_type": "bool",
+      "value": false
+    },
+    {
+      "metric_name": "lane_change_dir_max",
+      "data_type": "int",
+      "value": 1
+    },
+    {
+      "metric_name": "lane_change_dir_mean",
+      "data_type": "float",
+      "value": -0.19938851277571523
+    },
+    {
+      "metric_name": "lane_change_dir_min",
+      "data_type": "int",
+      "value": -1
+    },
+    {
+      "metric_name": "lane_change_dir_samples",
+      "data_type": "int",
+      "value": 4579
+    },
+    {
+      "metric_name": "lane_change_events",
+      "data_type": "int",
+      "value": 4579
+    },
+    {
+      "metric_name": "lane_change_follower_gap_max",
+      "data_type": "float",
+      "value": 287.76231643
+    },
+    {
+      "metric_name": "lane_change_follower_gap_mean",
+      "data_type": "float",
+      "value": 60.77145912052202
+    },
+    {
+      "metric_name": "lane_change_follower_gap_min",
+      "data_type": "float",
+      "value": 2.50749233
+    },
+    {
+      "metric_name": "lane_change_follower_gap_samples",
+      "data_type": "int",
+      "value": 364
+    },
+    {
+      "metric_name": "lane_change_follower_secure_gap_max",
+      "data_type": "float",
+      "value": 133.38628028
+    },
+    {
+      "metric_name": "lane_change_follower_secure_gap_mean",
+      "data_type": "float",
+      "value": 19.336434800604412
+    },
+    {
+      "metric_name": "lane_change_follower_secure_gap_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "lane_change_follower_secure_gap_samples",
+      "data_type": "int",
+      "value": 364
+    },
+    {
+      "metric_name": "lane_change_follower_speed_max",
+      "data_type": "float",
+      "value": 32.55758427
+    },
+    {
+      "metric_name": "lane_change_follower_speed_mean",
+      "data_type": "float",
+      "value": 12.766838306236256
+    },
+    {
+      "metric_name": "lane_change_follower_speed_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "lane_change_follower_speed_samples",
+      "data_type": "int",
+      "value": 364
+    },
+    {
+      "metric_name": "lane_change_leader_gap_max",
+      "data_type": "float",
+      "value": 248.49310377
+    },
+    {
+      "metric_name": "lane_change_leader_gap_mean",
+      "data_type": "float",
+      "value": 52.44296036207704
+    },
+    {
+      "metric_name": "lane_change_leader_gap_min",
+      "data_type": "float",
+      "value": 2.50746104
+    },
+    {
+      "metric_name": "lane_change_leader_gap_samples",
+      "data_type": "int",
+      "value": 467
+    },
+    {
+      "metric_name": "lane_change_leader_secure_gap_max",
+      "data_type": "float",
+      "value": 121.55296505
+    },
+    {
+      "metric_name": "lane_change_leader_secure_gap_mean",
+      "data_type": "float",
+      "value": 15.801935658522492
+    },
+    {
+      "metric_name": "lane_change_leader_secure_gap_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "lane_change_leader_secure_gap_samples",
+      "data_type": "int",
+      "value": 467
+    },
+    {
+      "metric_name": "lane_change_leader_speed_max",
+      "data_type": "float",
+      "value": 32.0921247
+    },
+    {
+      "metric_name": "lane_change_leader_speed_mean",
+      "data_type": "float",
+      "value": 12.92770279408993
+    },
+    {
+      "metric_name": "lane_change_leader_speed_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "lane_change_leader_speed_samples",
+      "data_type": "int",
+      "value": 467
+    },
+    {
+      "metric_name": "lane_change_orig_leader_gap_max",
+      "data_type": "float",
+      "value": 178.78061735
+    },
+    {
+      "metric_name": "lane_change_orig_leader_gap_mean",
+      "data_type": "float",
+      "value": 44.492192747841536
+    },
+    {
+      "metric_name": "lane_change_orig_leader_gap_min",
+      "data_type": "float",
+      "value": -0.90871581
+    },
+    {
+      "metric_name": "lane_change_orig_leader_gap_samples",
+      "data_type": "int",
+      "value": 366
+    },
+    {
+      "metric_name": "lane_change_orig_leader_secure_gap_max",
+      "data_type": "float",
+      "value": 92.98533867
+    },
+    {
+      "metric_name": "lane_change_orig_leader_secure_gap_mean",
+      "data_type": "float",
+      "value": 18.316618439153004
+    },
+    {
+      "metric_name": "lane_change_orig_leader_secure_gap_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "lane_change_orig_leader_secure_gap_samples",
+      "data_type": "int",
+      "value": 366
+    },
+    {
+      "metric_name": "lane_change_orig_leader_speed_max",
+      "data_type": "float",
+      "value": 29.60673387
+    },
+    {
+      "metric_name": "lane_change_orig_leader_speed_mean",
+      "data_type": "float",
+      "value": 9.670526216666664
+    },
+    {
+      "metric_name": "lane_change_orig_leader_speed_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "lane_change_orig_leader_speed_samples",
+      "data_type": "int",
+      "value": 366
+    },
+    {
+      "metric_name": "lane_change_pos_max",
+      "data_type": "float",
+      "value": 213.99149731
+    },
+    {
+      "metric_name": "lane_change_pos_mean",
+      "data_type": "float",
+      "value": 24.76418052384149
+    },
+    {
+      "metric_name": "lane_change_pos_min",
+      "data_type": "float",
+      "value": 0.00247271
+    },
+    {
+      "metric_name": "lane_change_pos_samples",
+      "data_type": "int",
+      "value": 4579
+    },
+    {
+      "metric_name": "lane_change_reason_636f6f70657261746976657c757267656e74_count",
+      "data_type": "int",
+      "value": 19
+    },
+    {
+      "metric_name": "lane_change_reason_636f6f70657261746976657c757267656e74_value",
+      "data_type": "string",
+      "value": "cooperative|urgent"
+    },
+    {
+      "metric_name": "lane_change_reason_636f6f7065726174697665_count",
+      "data_type": "int",
+      "value": 190
+    },
+    {
+      "metric_name": "lane_change_reason_636f6f7065726174697665_value",
+      "data_type": "string",
+      "value": "cooperative"
+    },
+    {
+      "metric_name": "lane_change_reason_6b6565705269676874_count",
+      "data_type": "int",
+      "value": 529
+    },
+    {
+      "metric_name": "lane_change_reason_6b6565705269676874_value",
+      "data_type": "string",
+      "value": "keepRight"
+    },
+    {
+      "metric_name": "lane_change_reason_73706565644761696e_count",
+      "data_type": "int",
+      "value": 165
+    },
+    {
+      "metric_name": "lane_change_reason_73706565644761696e_value",
+      "data_type": "string",
+      "value": "speedGain"
+    },
+    {
+      "metric_name": "lane_change_reason_7374726174656769637c757267656e74_count",
+      "data_type": "int",
+      "value": 3624
+    },
+    {
+      "metric_name": "lane_change_reason_7374726174656769637c757267656e74_value",
+      "data_type": "string",
+      "value": "strategic|urgent"
+    },
+    {
+      "metric_name": "lane_change_reason_737472617465676963_count",
+      "data_type": "int",
+      "value": 52
+    },
+    {
+      "metric_name": "lane_change_reason_737472617465676963_value",
+      "data_type": "string",
+      "value": "strategic"
+    },
+    {
+      "metric_name": "lane_change_speed_max",
+      "data_type": "float",
+      "value": 33.54432525
+    },
+    {
+      "metric_name": "lane_change_speed_mean",
+      "data_type": "float",
+      "value": 12.75353540906969
+    },
+    {
+      "metric_name": "lane_change_speed_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "lane_change_speed_samples",
+      "data_type": "int",
+      "value": 4579
+    },
+    {
+      "metric_name": "lane_change_time_max",
+      "data_type": "float",
+      "value": 12747.0
+    },
+    {
+      "metric_name": "lane_change_time_mean",
+      "data_type": "float",
+      "value": 3782.123826162918
+    },
+    {
+      "metric_name": "lane_change_time_min",
+      "data_type": "float",
+      "value": 12.0
+    },
+    {
+      "metric_name": "lane_change_time_samples",
+      "data_type": "int",
+      "value": 4579
+    },
+    {
+      "metric_name": "lane_change_type_70617373656e676572_count",
+      "data_type": "int",
+      "value": 4579
+    },
+    {
+      "metric_name": "lane_change_type_70617373656e676572_value",
+      "data_type": "string",
+      "value": "passenger"
+    },
+    {
+      "metric_name": "metrics_profile",
+      "data_type": "string",
+      "value": "core"
+    },
+    {
+      "metric_name": "network_mean_relative_speed_excluded_samples",
+      "data_type": "int",
+      "value": 1
+    },
+    {
+      "metric_name": "network_mean_relative_speed_max",
+      "data_type": "float",
+      "value": 0.99436512
+    },
+    {
+      "metric_name": "network_mean_relative_speed_mean",
+      "data_type": "float",
+      "value": 0.2883185341208655
+    },
+    {
+      "metric_name": "network_mean_relative_speed_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "network_mean_relative_speed_samples",
+      "data_type": "int",
+      "value": 12973
+    },
+    {
+      "metric_name": "network_mean_speed_m_s_excluded_samples",
+      "data_type": "int",
+      "value": 1
+    },
+    {
+      "metric_name": "network_mean_speed_m_s_max",
+      "data_type": "float",
+      "value": 15.41746159
+    },
+    {
+      "metric_name": "network_mean_speed_m_s_mean",
+      "data_type": "float",
+      "value": 5.150793047027701
+    },
+    {
+      "metric_name": "network_mean_speed_m_s_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "network_mean_speed_m_s_samples",
+      "data_type": "int",
+      "value": 12973
+    },
+    {
+      "metric_name": "observation_step_seconds",
+      "data_type": "float",
+      "value": 1.0
+    },
+    {
+      "metric_name": "queue_observation_steps",
+      "data_type": "int",
+      "value": 12974
+    },
+    {
+      "metric_name": "seed",
+      "data_type": "int",
+      "value": 915923831
+    },
+    {
+      "metric_name": "simulation_begin_seconds",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "simulation_duration_seconds",
+      "data_type": "float",
+      "value": 12974.0
+    },
+    {
+      "metric_name": "simulation_end_limited",
+      "data_type": "bool",
+      "value": false
+    },
+    {
+      "metric_name": "simulation_end_seconds",
+      "data_type": "float",
+      "value": 12974.0
+    },
+    {
+      "metric_name": "simulation_execution_time_seconds",
+      "data_type": "float",
+      "value": 29.5828231159976
+    },
+    {
+      "metric_name": "simulation_seed",
+      "data_type": "int",
+      "value": 23423
+    },
+    {
+      "metric_name": "simulation_step_length_seconds",
+      "data_type": "float",
+      "value": 1.0
+    },
+    {
+      "metric_name": "simulation_steps",
+      "data_type": "int",
+      "value": 12974
+    },
+    {
+      "metric_name": "started_at_utc",
+      "data_type": "string",
+      "value": "2026-09-26T21:55:22.639435+00:00"
+    },
+    {
+      "metric_name": "status",
+      "data_type": "string",
+      "value": "completed"
+    },
+    {
+      "metric_name": "sumo_configuration_time_seconds",
+      "data_type": "float",
+      "value": 0.018620515009388328
+    },
+    {
+      "metric_name": "sumo_pedestrian_statistics_duration",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "sumo_pedestrian_statistics_number",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_pedestrian_statistics_route_length",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "sumo_pedestrian_statistics_time_loss",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "sumo_performance_clock_begin",
+      "data_type": "float",
+      "value": 1790459727.187
+    },
+    {
+      "metric_name": "sumo_performance_clock_duration",
+      "data_type": "float",
+      "value": 29.177
+    },
+    {
+      "metric_name": "sumo_performance_clock_end",
+      "data_type": "float",
+      "value": 1790459756.364
+    },
+    {
+      "metric_name": "sumo_performance_person_updates_per_second",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "sumo_performance_real_time_factor",
+      "data_type": "float",
+      "value": 444.66531857
+    },
+    {
+      "metric_name": "sumo_performance_traci_duration",
+      "data_type": "float",
+      "value": 7.218
+    },
+    {
+      "metric_name": "sumo_performance_vehicle_updates_per_second",
+      "data_type": "float",
+      "value": 93133.63265586
+    },
+    {
+      "metric_name": "sumo_person_teleports_abort_wait",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_person_teleports_total",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_person_teleports_wrong_dest",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_persons_jammed",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_persons_loaded",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_persons_running",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_ride_statistics_number",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_safety_emergency_braking",
+      "data_type": "int",
+      "value": 1
+    },
+    {
+      "metric_name": "sumo_safety_emergency_stops",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_step_computation_ms_excluded_samples",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_step_computation_ms_max",
+      "data_type": "int",
+      "value": 26
+    },
+    {
+      "metric_name": "sumo_step_computation_ms_mean",
+      "data_type": "float",
+      "value": 1.702713118544782
+    },
+    {
+      "metric_name": "sumo_step_computation_ms_min",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "sumo_step_computation_ms_samples",
+      "data_type": "int",
+      "value": 12974
+    },
+    {
+      "metric_name": "sumo_teleports_jam",
+      "data_type": "int",
+      "value": 298
+    },
+    {
+      "metric_name": "sumo_teleports_wrong_lane",
+      "data_type": "int",
+      "value": 17
+    },
+    {
+      "metric_name": "sumo_teleports_yield",
+      "data_type": "int",
+      "value": 203
+    },
+    {
+      "metric_name": "sumo_transport_statistics_number",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "teleports",
+      "data_type": "int",
+      "value": 518
+    },
+    {
+      "metric_name": "trip_records_undeparted",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "trip_records_unfinished",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "trip_records_vaporized",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "trips_generated",
+      "data_type": "int",
+      "value": 4800
+    },
+    {
+      "metric_name": "vaporized_emission_co2_abs_max",
+      "data_type": "float",
+      "value": 9858241.95347718
+    },
+    {
+      "metric_name": "vaporized_emission_co2_abs_mean",
+      "data_type": "float",
+      "value": 4438364.59952412
+    },
+    {
+      "metric_name": "vaporized_emission_co2_abs_min",
+      "data_type": "float",
+      "value": 554731.68877065
+    },
+    {
+      "metric_name": "vaporized_emission_co2_abs_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_emission_co2_abs_sum",
+      "data_type": "float",
+      "value": 62137104.39333768
+    },
+    {
+      "metric_name": "vaporized_emission_co_abs_max",
+      "data_type": "float",
+      "value": 8848.00067297
+    },
+    {
+      "metric_name": "vaporized_emission_co_abs_mean",
+      "data_type": "float",
+      "value": 3451.567597782857
+    },
+    {
+      "metric_name": "vaporized_emission_co_abs_min",
+      "data_type": "float",
+      "value": 298.25883635
+    },
+    {
+      "metric_name": "vaporized_emission_co_abs_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_emission_co_abs_sum",
+      "data_type": "float",
+      "value": 48321.946368959994
+    },
+    {
+      "metric_name": "vaporized_emission_electricity_abs_max",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_emission_electricity_abs_mean",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_emission_electricity_abs_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_emission_electricity_abs_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_emission_electricity_abs_sum",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_emission_fuel_abs_max",
+      "data_type": "float",
+      "value": 3195980.66652585
+    },
+    {
+      "metric_name": "vaporized_emission_fuel_abs_mean",
+      "data_type": "float",
+      "value": 1438888.8503365207
+    },
+    {
+      "metric_name": "vaporized_emission_fuel_abs_min",
+      "data_type": "float",
+      "value": 179840.60526908
+    },
+    {
+      "metric_name": "vaporized_emission_fuel_abs_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_emission_fuel_abs_sum",
+      "data_type": "float",
+      "value": 20144443.90471129
+    },
+    {
+      "metric_name": "vaporized_emission_hc_abs_max",
+      "data_type": "float",
+      "value": 59.07090318
+    },
+    {
+      "metric_name": "vaporized_emission_hc_abs_mean",
+      "data_type": "float",
+      "value": 22.967713586428573
+    },
+    {
+      "metric_name": "vaporized_emission_hc_abs_min",
+      "data_type": "float",
+      "value": 1.98107405
+    },
+    {
+      "metric_name": "vaporized_emission_hc_abs_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_emission_hc_abs_sum",
+      "data_type": "float",
+      "value": 321.54799021
+    },
+    {
+      "metric_name": "vaporized_emission_n_ox_abs_max",
+      "data_type": "float",
+      "value": 3912.41560201
+    },
+    {
+      "metric_name": "vaporized_emission_n_ox_abs_mean",
+      "data_type": "float",
+      "value": 1761.4600560321426
+    },
+    {
+      "metric_name": "vaporized_emission_n_ox_abs_min",
+      "data_type": "float",
+      "value": 219.88740912
+    },
+    {
+      "metric_name": "vaporized_emission_n_ox_abs_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_emission_n_ox_abs_sum",
+      "data_type": "float",
+      "value": 24660.440784449995
+    },
+    {
+      "metric_name": "vaporized_emission_p_mx_abs_max",
+      "data_type": "float",
+      "value": 88.11553922
+    },
+    {
+      "metric_name": "vaporized_emission_p_mx_abs_mean",
+      "data_type": "float",
+      "value": 35.58104700928571
+    },
+    {
+      "metric_name": "vaporized_emission_p_mx_abs_min",
+      "data_type": "float",
+      "value": 4.68645521
+    },
+    {
+      "metric_name": "vaporized_emission_p_mx_abs_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_emission_p_mx_abs_sum",
+      "data_type": "float",
+      "value": 498.13465813
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_max",
+      "data_type": "float",
+      "value": 11838.0
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_mean",
+      "data_type": "float",
+      "value": 8247.357142857143
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_min",
+      "data_type": "float",
+      "value": 6573.0
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_pos_max",
+      "data_type": "float",
+      "value": 76.06
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_pos_mean",
+      "data_type": "float",
+      "value": 25.96357142857143
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_pos_min",
+      "data_type": "float",
+      "value": 0.2
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_pos_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_speed_max",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_speed_mean",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_speed_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_trip_arrival_speed_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_depart_delay_max",
+      "data_type": "float",
+      "value": 2.0
+    },
+    {
+      "metric_name": "vaporized_trip_depart_delay_mean",
+      "data_type": "float",
+      "value": 0.39285714285714285
+    },
+    {
+      "metric_name": "vaporized_trip_depart_delay_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_trip_depart_delay_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_depart_delay_sum",
+      "data_type": "float",
+      "value": 5.5
+    },
+    {
+      "metric_name": "vaporized_trip_depart_max",
+      "data_type": "float",
+      "value": 7166.0
+    },
+    {
+      "metric_name": "vaporized_trip_depart_mean",
+      "data_type": "float",
+      "value": 5344.142857142857
+    },
+    {
+      "metric_name": "vaporized_trip_depart_min",
+      "data_type": "float",
+      "value": 3699.0
+    },
+    {
+      "metric_name": "vaporized_trip_depart_pos_max",
+      "data_type": "float",
+      "value": 5.1
+    },
+    {
+      "metric_name": "vaporized_trip_depart_pos_mean",
+      "data_type": "float",
+      "value": 4.750000000000001
+    },
+    {
+      "metric_name": "vaporized_trip_depart_pos_min",
+      "data_type": "float",
+      "value": 0.2
+    },
+    {
+      "metric_name": "vaporized_trip_depart_pos_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_depart_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_depart_speed_max",
+      "data_type": "float",
+      "value": 22.743513
+    },
+    {
+      "metric_name": "vaporized_trip_depart_speed_mean",
+      "data_type": "float",
+      "value": 12.648274164285715
+    },
+    {
+      "metric_name": "vaporized_trip_depart_speed_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_trip_depart_speed_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_duration_max",
+      "data_type": "float",
+      "value": 6289.0
+    },
+    {
+      "metric_name": "vaporized_trip_duration_mean",
+      "data_type": "float",
+      "value": 2903.214285714286
+    },
+    {
+      "metric_name": "vaporized_trip_duration_min",
+      "data_type": "float",
+      "value": 508.0
+    },
+    {
+      "metric_name": "vaporized_trip_duration_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_duration_sum",
+      "data_type": "float",
+      "value": 40645.0
+    },
+    {
+      "metric_name": "vaporized_trip_reroute_no_max",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vaporized_trip_reroute_no_mean",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_trip_reroute_no_min",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vaporized_trip_reroute_no_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_route_length_max",
+      "data_type": "float",
+      "value": 3638.53
+    },
+    {
+      "metric_name": "vaporized_trip_route_length_mean",
+      "data_type": "float",
+      "value": 1621.782142857143
+    },
+    {
+      "metric_name": "vaporized_trip_route_length_min",
+      "data_type": "float",
+      "value": 361.47
+    },
+    {
+      "metric_name": "vaporized_trip_route_length_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_route_length_sum",
+      "data_type": "float",
+      "value": 22704.950000000004
+    },
+    {
+      "metric_name": "vaporized_trip_speed_factor_max",
+      "data_type": "float",
+      "value": 1.1702
+    },
+    {
+      "metric_name": "vaporized_trip_speed_factor_mean",
+      "data_type": "float",
+      "value": 1.0212357142857142
+    },
+    {
+      "metric_name": "vaporized_trip_speed_factor_min",
+      "data_type": "float",
+      "value": 0.8982
+    },
+    {
+      "metric_name": "vaporized_trip_speed_factor_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_stop_time_max",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_trip_stop_time_mean",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_trip_stop_time_min",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vaporized_trip_stop_time_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_time_loss_max",
+      "data_type": "float",
+      "value": 6158.259
+    },
+    {
+      "metric_name": "vaporized_trip_time_loss_mean",
+      "data_type": "float",
+      "value": 2689.2079285714285
+    },
+    {
+      "metric_name": "vaporized_trip_time_loss_min",
+      "data_type": "float",
+      "value": 335.531
+    },
+    {
+      "metric_name": "vaporized_trip_time_loss_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_time_loss_sum",
+      "data_type": "float",
+      "value": 37648.911
+    },
+    {
+      "metric_name": "vaporized_trip_waiting_count_max",
+      "data_type": "int",
+      "value": 30
+    },
+    {
+      "metric_name": "vaporized_trip_waiting_count_mean",
+      "data_type": "float",
+      "value": 12.928571428571429
+    },
+    {
+      "metric_name": "vaporized_trip_waiting_count_min",
+      "data_type": "int",
+      "value": 1
+    },
+    {
+      "metric_name": "vaporized_trip_waiting_count_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_waiting_time_max",
+      "data_type": "float",
+      "value": 5909.0
+    },
+    {
+      "metric_name": "vaporized_trip_waiting_time_mean",
+      "data_type": "float",
+      "value": 2586.6428571428573
+    },
+    {
+      "metric_name": "vaporized_trip_waiting_time_min",
+      "data_type": "float",
+      "value": 301.0
+    },
+    {
+      "metric_name": "vaporized_trip_waiting_time_samples",
+      "data_type": "int",
+      "value": 14
+    },
+    {
+      "metric_name": "vaporized_trip_waiting_time_sum",
+      "data_type": "float",
+      "value": 36213.0
+    },
+    {
+      "metric_name": "vehicles_completed",
+      "data_type": "int",
+      "value": 4800
+    },
+    {
+      "metric_name": "vehicles_discarded",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vehicles_generated",
+      "data_type": "int",
+      "value": 4800
+    },
+    {
+      "metric_name": "vehicles_halting_excluded_samples",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vehicles_halting_max",
+      "data_type": "int",
+      "value": 478
+    },
+    {
+      "metric_name": "vehicles_halting_mean",
+      "data_type": "float",
+      "value": 149.47633728996453
+    },
+    {
+      "metric_name": "vehicles_halting_min",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vehicles_halting_samples",
+      "data_type": "int",
+      "value": 12974
+    },
+    {
+      "metric_name": "vehicles_inserted",
+      "data_type": "int",
+      "value": 4800
+    },
+    {
+      "metric_name": "vehicles_loaded",
+      "data_type": "int",
+      "value": 4800
+    },
+    {
+      "metric_name": "vehicles_removed",
+      "data_type": "int",
+      "value": 4800
+    },
+    {
+      "metric_name": "vehicles_requested",
+      "data_type": "int",
+      "value": 4800
+    },
+    {
+      "metric_name": "vehicles_running_excluded_samples",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vehicles_running_max",
+      "data_type": "int",
+      "value": 558
+    },
+    {
+      "metric_name": "vehicles_running_mean",
+      "data_type": "float",
+      "value": 209.4465854786496
+    },
+    {
+      "metric_name": "vehicles_running_min",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vehicles_running_samples",
+      "data_type": "int",
+      "value": 12974
+    },
+    {
+      "metric_name": "vehicles_scheduled_stop_excluded_samples",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vehicles_scheduled_stop_max",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vehicles_scheduled_stop_mean",
+      "data_type": "float",
+      "value": 0.0
+    },
+    {
+      "metric_name": "vehicles_scheduled_stop_min",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vehicles_scheduled_stop_samples",
+      "data_type": "int",
+      "value": 12974
+    },
+    {
+      "metric_name": "vehicles_waiting_insertion_excluded_samples",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vehicles_waiting_insertion_max",
+      "data_type": "int",
+      "value": 18
+    },
+    {
+      "metric_name": "vehicles_waiting_insertion_mean",
+      "data_type": "float",
+      "value": 3.7366271003545553
+    },
+    {
+      "metric_name": "vehicles_waiting_insertion_min",
+      "data_type": "int",
+      "value": 0
+    },
+    {
+      "metric_name": "vehicles_waiting_insertion_samples",
+      "data_type": "int",
+      "value": 12974
+    }
+  ],
+  "entity_metrics_file": "entities.json.gz"
+}

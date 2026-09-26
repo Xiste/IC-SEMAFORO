@@ -1,0 +1,212 @@
+{
+  "schema_version": 2,
+  "episode_id": "20260926T215654957851Z_seed-242334947_178453e1",
+  "demand_model": "random",
+  "seed": 242334947,
+  "started_at_utc": "2026-09-26T21:56:54.957824+00:00",
+  "source_network": "/home/diego/sistema-semaforos/SistemaDeSemaforos/network/uberlandia.vehicular.families.16_2_4.net.xml",
+  "generation": {
+    "seed": 242334947,
+    "demand_model": "random",
+    "begin": 0.0,
+    "duration": 7200.0,
+    "period": 1.5,
+    "vehicle_class": "passenger",
+    "validate": true,
+    "vehicles_requested": 4800,
+    "net_file": "/home/diego/sistema-semaforos/outputs/baselines/e6187c05d7a7da9714c7d50032c5dfdb3a0ac72cdede18095e70756914176115/network.net.xml",
+    "trips_file": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/inputs/random.trips.xml",
+    "routes_file": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/inputs/random.rou.xml",
+    "started_at_utc": "2026-09-26T21:56:54.958838+00:00",
+    "random_trips_file": "/usr/share/sumo/tools/randomTrips.py",
+    "random_trips_sha256": "5bbfa618b6c3bf5c7166d5128175e95a69ef0476d1ba3d543138f4e1fe79d886",
+    "command": [
+      "/usr/bin/python3",
+      "/usr/share/sumo/tools/randomTrips.py",
+      "--net-file",
+      "/home/diego/sistema-semaforos/outputs/baselines/e6187c05d7a7da9714c7d50032c5dfdb3a0ac72cdede18095e70756914176115/network.net.xml",
+      "--output-trip-file",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/inputs/.random-oqfttbni/random.trips.xml",
+      "--route-file",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/inputs/.random-oqfttbni/random.rou.xml",
+      "--begin",
+      "0",
+      "--end",
+      "7200.0",
+      "--period",
+      "1.5",
+      "--seed",
+      "242334947",
+      "--vehicle-class",
+      "passenger",
+      "--validate"
+    ],
+    "trips_generated": 4800,
+    "vehicles_generated": 4800,
+    "finished_at_utc": "2026-09-26T21:56:58.448608+00:00",
+    "duration_seconds": 3.48979846900329
+  },
+  "simulation": {
+    "command": [
+      "/usr/bin/sumo",
+      "--net-file",
+      "/home/diego/sistema-semaforos/outputs/baselines/e6187c05d7a7da9714c7d50032c5dfdb3a0ac72cdede18095e70756914176115/network.net.xml",
+      "--route-files",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/inputs/random.rou.xml",
+      "--begin",
+      "0",
+      "--no-step-log",
+      "true",
+      "--aggregate-warnings",
+      "5",
+      "--additional-files",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/inputs/observations.add.xml",
+      "--precision",
+      "8",
+      "--summary-output",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/summary.xml.gz",
+      "--tripinfo-output",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/trips.xml.gz",
+      "--statistic-output",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/statistics.xml",
+      "--queue-output",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/queues.xml.gz",
+      "--lanechange-output",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/lanechanges.xml.gz",
+      "--collision-output",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/collisions.xml.gz",
+      "--vehroute-output",
+      "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/vehicle_routes.xml.gz",
+      "--tripinfo-output.write-unfinished",
+      "true",
+      "--tripinfo-output.write-undeparted",
+      "true",
+      "--vehroute-output.exit-times",
+      "true",
+      "--vehroute-output.write-unfinished",
+      "true",
+      "--vehroute-output.route-length",
+      "true",
+      "--device.emissions.probability",
+      "1"
+    ],
+    "configured_options": {
+      "net-file": "/home/diego/sistema-semaforos/outputs/baselines/e6187c05d7a7da9714c7d50032c5dfdb3a0ac72cdede18095e70756914176115/network.net.xml",
+      "route-files": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/inputs/random.rou.xml",
+      "additional-files": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/inputs/observations.add.xml",
+      "precision": "8",
+      "queue-output": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/queues.xml.gz",
+      "summary-output": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/summary.xml.gz",
+      "tripinfo-output": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/trips.xml.gz",
+      "tripinfo-output.write-unfinished": "true",
+      "tripinfo-output.write-undeparted": "true",
+      "vehroute-output": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/vehicle_routes.xml.gz",
+      "vehroute-output.exit-times": "true",
+      "vehroute-output.route-length": "true",
+      "vehroute-output.write-unfinished": "true",
+      "lanechange-output": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/lanechanges.xml.gz",
+      "collision-output": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/collisions.xml.gz",
+      "statistic-output": "/home/diego/sistema-semaforos/outputs/outputs-random/20260926T215654957851Z_seed-242334947_178453e1/raw/statistics.xml",
+      "begin": "0",
+      "aggregate-warnings": "5",
+      "no-step-log": "true",
+      "device.emissions.probability": "1"
+    },
+    "seed": 23423,
+    "step_length": 1.0,
+    "configuration_time_seconds": 0.018058300993288867,
+    "duration_seconds": 33.909983143996214
+  },
+  "files": {
+    "entities.json.gz": {
+      "bytes": 764121,
+      "sha256": "fc57d538863f02652610ca8b54864c2c6063d4178cef4eed97856acadd246122"
+    },
+    "generation.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "inputs/observations.add.xml": {
+      "bytes": 225,
+      "sha256": "ff1e6c59e1d7a5608a3f381b074f84e6b7d94bbc9d62feb7565c87ee6f5854c8"
+    },
+    "inputs/random.rou.xml": {
+      "bytes": 2125709,
+      "sha256": "dc752200a7047e08d197cccb09ffead7e78ba8af08c4b0a5239790a34dbd21d5"
+    },
+    "inputs/random.trips.xml": {
+      "bytes": 437477,
+      "sha256": "89436fc1f4551cd63abbb3fc77ba2186dcc34169338c7117b8e67f1d041292bc"
+    },
+    "inputs/sumo_config.sumocfg": {
+      "bytes": 2459,
+      "sha256": "4bff7b1b585ce82e92e3785ff2ae392fdbe752288b083630244212dac4207c90"
+    },
+    "raw/collisions.xml.gz": {
+      "bytes": 848,
+      "sha256": "9f7d99e97268399e182e89781daa3dff0c15300040f74db60a78ec382573f822"
+    },
+    "raw/lanechanges.xml.gz": {
+      "bytes": 153231,
+      "sha256": "1a9f8afe34254f848dc5f68b0f882320a76c1d242edfc5df5090d1eda4b6ebdc"
+    },
+    "raw/queues.xml.gz": {
+      "bytes": 3828180,
+      "sha256": "51591b79166a2ebb354afe19fa2f3c61982b0d00e4747757318f9a4d95e6cfa1"
+    },
+    "raw/statistics.xml": {
+      "bytes": 3667,
+      "sha256": "a0946e8cf805c2b66d1abeb00225f7c18473096f5702e7850d52ea18bbc5ef9e"
+    },
+    "raw/summary.xml.gz": {
+      "bytes": 357436,
+      "sha256": "e1a42734bad18230b6ca9899cf5c4a670a8dea12b62017bb79bc999e287a936d"
+    },
+    "raw/tls.xml.gz": {
+      "bytes": 1425525,
+      "sha256": "082f4809ccdeb0650e6003c0e45e806c3b4684931524f73a1ba73f7681f5ddc7"
+    },
+    "raw/trips.xml.gz": {
+      "bytes": 2135278,
+      "sha256": "9786192e974e7631a87ab224f5699fcc77c7b8780b695fb9472af88be333723c"
+    },
+    "raw/vehicle_routes.xml.gz": {
+      "bytes": 524969,
+      "sha256": "0c05e7310c4ccaeec2054eae0a2535e1a1b789bac6a022c8aa5fcdec9fd749a1"
+    },
+    "sumo.log": {
+      "bytes": 2802,
+      "sha256": "413969a343ab1af080ae3852b33683414af29ef5a079d684680d515e2a3ae11b"
+    }
+  },
+  "status": "completed",
+  "collection": {
+    "profile": "core",
+    "native_outputs": [
+      "collisions.xml.gz",
+      "lanechanges.xml.gz",
+      "queues.xml.gz",
+      "statistics.xml",
+      "summary.xml.gz",
+      "tls.xml.gz",
+      "trips.xml.gz",
+      "vehicle_routes.xml.gz"
+    ],
+    "entity_counts": {
+      "vehicles": 4800,
+      "lanes": 8578,
+      "edges": 0,
+      "traffic_lights": 28,
+      "approaches": 51,
+      "intersections": 28
+    }
+  },
+  "baseline": {
+    "id": "e6187c05d7a7da9714c7d50032c5dfdb3a0ac72cdede18095e70756914176115",
+    "manifest": "/home/diego/sistema-semaforos/outputs/baselines/e6187c05d7a7da9714c7d50032c5dfdb3a0ac72cdede18095e70756914176115/baseline.json",
+    "bytes": 68642,
+    "sha256": "e14c813f791d03ff591dd0fb679c608d0f6d4bc869bc881e513cdadf87fc04ce"
+  },
+  "finished_at_utc": "2026-09-26T21:57:41.635375+00:00",
+  "execution_time_seconds": 46.67756755799928
+}

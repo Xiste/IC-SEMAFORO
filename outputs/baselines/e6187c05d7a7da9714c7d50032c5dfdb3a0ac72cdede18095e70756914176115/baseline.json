@@ -1,0 +1,2655 @@
+{
+  "schema_version": 1,
+  "network_file": {
+    "bytes": 5201327,
+    "sha256": "46e7c4a4627cd511d419c01f15d65f66724941ac83360c4fc424b86626a5c10b"
+  },
+  "code": {
+    "SistemaDeSemaforos/demand/generator.py": {
+      "bytes": 7343,
+      "sha256": "3e86061a6800524a1503581e712cdbb8b91740cc2905fc0e5bd88edc50b50e55"
+    },
+    "SistemaDeSemaforos/metrics/collector.py": {
+      "bytes": 28158,
+      "sha256": "050c1295280a49f101830e80ff5d535c65d85d06219a3ae26c3bd2722aa04b2d"
+    },
+    "SistemaDeSemaforos/metrics/storage.py": {
+      "bytes": 3071,
+      "sha256": "1df4787978c45fc26f272d24af42e317321546b4cd49be3e510a153986cfae2b"
+    },
+    "SistemaDeSemaforos/metrics/sumo_outputs.py": {
+      "bytes": 3965,
+      "sha256": "10dbef2bbb6dafa9bed8e142d8e5ad43bdc7a50d3ba7dff65070ae519a1f6f9b"
+    },
+    "SistemaDeSemaforos/simulation/baseline.py": {
+      "bytes": 3979,
+      "sha256": "7ecbc887c55766f65be0d315f407668403bd73f6a59321e61d19013ec9676b41"
+    },
+    "SistemaDeSemaforos/simulation/runner.py": {
+      "bytes": 13412,
+      "sha256": "2eb7f949a83e5c783508ea9fb64360d7e3cd89a2f3e2c74680120cc988b75612"
+    }
+  },
+  "toolchain": {
+    "sumo": {
+      "path": "/usr/bin/sumo",
+      "bytes": 8574280,
+      "sha256": "bfcdde0f3c7c998b055049c53ee56bcc010a47ce1765273f2d13fb341a56baee"
+    },
+    "randomTrips": {
+      "path": "/usr/share/sumo/tools/randomTrips.py",
+      "bytes": 54928,
+      "sha256": "5bbfa618b6c3bf5c7166d5128175e95a69ef0476d1ba3d543138f4e1fe79d886"
+    },
+    "duarouter": {
+      "path": "/usr/bin/duarouter",
+      "bytes": 2863656,
+      "sha256": "6b8d1b78af55794bf8560a924e3a0265caf57716e4c46645d981ac2adbb953a0"
+    }
+  },
+  "environment": {
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+    "executable": "/usr/bin/python3"
+  },
+  "baseline_id": "e6187c05d7a7da9714c7d50032c5dfdb3a0ac72cdede18095e70756914176115",
+  "sumo_version": "Eclipse SUMO sumo 1.27.1\n Build features: Linux-6.8.0-117-generic x86_64 GNU 13.3.0 Release FMI Proj GUI Intl SWIG Eigen GDAL GL2PS\n Copyright (C) 2001-2026 German Aerospace Center (DLR) and others; https://sumo.dlr.de\n\nEclipse SUMO sumo 1.27.1 is part of SUMO.\nThis program and the accompanying materials\nare made available under the terms of the Eclipse Public License v2.0\nwhich accompanies this distribution, and is available at\nhttp://www.eclipse.org/legal/epl-v20.html\nThis program may also be made available under the following Secondary\nLicenses when the conditions for such availability set forth in the Eclipse\nPublic License 2.0 are satisfied: GNU General Public License, version 2\nor later which is available at\nhttps://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html\nSPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later",
+  "network": {
+    "edges": 7848,
+    "normal_edges": 2142,
+    "lanes": 8578,
+    "junctions": 1996,
+    "controllers": [
+      {
+        "id": "1561879771",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "42",
+            "state": "GGrr"
+          },
+          {
+            "duration": "3",
+            "state": "yyrr"
+          },
+          {
+            "duration": "42",
+            "state": "rrGG"
+          },
+          {
+            "duration": "3",
+            "state": "rryy"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "1561879807",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "42",
+            "state": "GGGrr"
+          },
+          {
+            "duration": "3",
+            "state": "yyyrr"
+          },
+          {
+            "duration": "42",
+            "state": "rrrGG"
+          },
+          {
+            "duration": "3",
+            "state": "rrryy"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "1561879940",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "40",
+            "state": "GGrr"
+          },
+          {
+            "duration": "5",
+            "state": "yyrr"
+          },
+          {
+            "duration": "40",
+            "state": "rrGG"
+          },
+          {
+            "duration": "5",
+            "state": "rryy"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "1561879989",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "40",
+            "state": "GGrr"
+          },
+          {
+            "duration": "5",
+            "state": "yyrr"
+          },
+          {
+            "duration": "40",
+            "state": "rrGG"
+          },
+          {
+            "duration": "5",
+            "state": "rryy"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "1561880076",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "42",
+            "state": "GGrr"
+          },
+          {
+            "duration": "3",
+            "state": "yyrr"
+          },
+          {
+            "duration": "42",
+            "state": "rrGG"
+          },
+          {
+            "duration": "3",
+            "state": "rryy"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "2042692453",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "42",
+            "state": "GGggrrrrGGggrrrr"
+          },
+          {
+            "duration": "3",
+            "state": "yyyyrrrryyyyrrrr"
+          },
+          {
+            "duration": "42",
+            "state": "rrrrGGggrrrrGGgg"
+          },
+          {
+            "duration": "3",
+            "state": "rrrryyyyrrrryyyy"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "2042692877",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "26",
+            "state": "rrrGGrr"
+          },
+          {
+            "duration": "4",
+            "state": "rrryGrr"
+          },
+          {
+            "duration": "26",
+            "state": "GGGrGrr"
+          },
+          {
+            "duration": "4",
+            "state": "yyyryrr"
+          },
+          {
+            "duration": "26",
+            "state": "rrrrrGG"
+          },
+          {
+            "duration": "4",
+            "state": "rrrrryy"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "2042692883",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "42",
+            "state": "GGggrrrrGGggrrrr"
+          },
+          {
+            "duration": "3",
+            "state": "yyyyrrrryyyyrrrr"
+          },
+          {
+            "duration": "42",
+            "state": "rrrrGGggrrrrGGgg"
+          },
+          {
+            "duration": "3",
+            "state": "rrrryyyyrrrryyyy"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "2042692896",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "26",
+            "state": "GGrrr"
+          },
+          {
+            "duration": "4",
+            "state": "yyrrr"
+          },
+          {
+            "duration": "26",
+            "state": "rrGrG"
+          },
+          {
+            "duration": "4",
+            "state": "rryrG"
+          },
+          {
+            "duration": "26",
+            "state": "rrrGG"
+          },
+          {
+            "duration": "4",
+            "state": "rrryy"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "2042693016",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "82",
+            "state": "G"
+          },
+          {
+            "duration": "3",
+            "state": "y"
+          },
+          {
+            "duration": "5",
+            "state": "r"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "2042693107",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "82",
+            "state": "GG"
+          },
+          {
+            "duration": "3",
+            "state": "yy"
+          },
+          {
+            "duration": "5",
+            "state": "rr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "2042693363",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "82",
+            "state": "G"
+          },
+          {
+            "duration": "3",
+            "state": "y"
+          },
+          {
+            "duration": "5",
+            "state": "r"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "2963614071",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "82",
+            "state": "GG"
+          },
+          {
+            "duration": "3",
+            "state": "yy"
+          },
+          {
+            "duration": "5",
+            "state": "rr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "338654991",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "41",
+            "state": "GG"
+          },
+          {
+            "duration": "4",
+            "state": "yy"
+          },
+          {
+            "duration": "45",
+            "state": "rr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "FAM_RONDON_PARANA",
+        "type": "static",
+        "programID": "1624",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "41",
+            "state": "GGGGrrr"
+          },
+          {
+            "duration": "3",
+            "state": "yyyyrrr"
+          },
+          {
+            "duration": "1",
+            "state": "rrrrrrr"
+          },
+          {
+            "duration": "41",
+            "state": "rrrrGGG"
+          },
+          {
+            "duration": "3",
+            "state": "rrrryyy"
+          },
+          {
+            "duration": "1",
+            "state": "rrrrrrr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "3386573305",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "81",
+            "state": "GGGG"
+          },
+          {
+            "duration": "4",
+            "state": "yyyy"
+          },
+          {
+            "duration": "5",
+            "state": "rrrr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "3386573306",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "81",
+            "state": "GG"
+          },
+          {
+            "duration": "4",
+            "state": "yy"
+          },
+          {
+            "duration": "5",
+            "state": "rr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "FAM_MARANHAO_MONSENHOR_EDUARDO",
+        "type": "static",
+        "programID": "1624",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "41",
+            "state": "Grr"
+          },
+          {
+            "duration": "3",
+            "state": "yrr"
+          },
+          {
+            "duration": "1",
+            "state": "rrr"
+          },
+          {
+            "duration": "41",
+            "state": "rGG"
+          },
+          {
+            "duration": "3",
+            "state": "ryy"
+          },
+          {
+            "duration": "1",
+            "state": "rrr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "5494111589",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "79",
+            "state": "GGGG"
+          },
+          {
+            "duration": "6",
+            "state": "yyyy"
+          },
+          {
+            "duration": "5",
+            "state": "rrrr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "5494111590",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "81",
+            "state": "GGGGG"
+          },
+          {
+            "duration": "4",
+            "state": "yyyyy"
+          },
+          {
+            "duration": "5",
+            "state": "rrrrr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "5494111593",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "79",
+            "state": "GG"
+          },
+          {
+            "duration": "6",
+            "state": "yy"
+          },
+          {
+            "duration": "5",
+            "state": "rr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "5494111594",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "79",
+            "state": "GGGG"
+          },
+          {
+            "duration": "6",
+            "state": "yyyy"
+          },
+          {
+            "duration": "5",
+            "state": "rrrr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "5494111596",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "81",
+            "state": "GGGG"
+          },
+          {
+            "duration": "4",
+            "state": "yyyy"
+          },
+          {
+            "duration": "5",
+            "state": "rrrr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "5494111597",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "79",
+            "state": "GGGG"
+          },
+          {
+            "duration": "6",
+            "state": "yyyy"
+          },
+          {
+            "duration": "5",
+            "state": "rrrr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "5494111602",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "81",
+            "state": "GGGG"
+          },
+          {
+            "duration": "4",
+            "state": "yyyy"
+          },
+          {
+            "duration": "5",
+            "state": "rrrr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "5494111603",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "81",
+            "state": "GG"
+          },
+          {
+            "duration": "4",
+            "state": "yy"
+          },
+          {
+            "duration": "5",
+            "state": "rr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "FAM_RONDON_ROTARY_CLUB",
+        "type": "static",
+        "programID": "1624",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "41",
+            "state": "Grrrrrrrr"
+          },
+          {
+            "duration": "3",
+            "state": "yrrrrrrrr"
+          },
+          {
+            "duration": "1",
+            "state": "rrrrrrrrr"
+          },
+          {
+            "duration": "41",
+            "state": "rGGGGGGGG"
+          },
+          {
+            "duration": "3",
+            "state": "ryyyyyyyy"
+          },
+          {
+            "duration": "1",
+            "state": "rrrrrrrrr"
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "8947803947",
+        "type": "static",
+        "programID": "0",
+        "offset": "0",
+        "phases": [
+          {
+            "duration": "79",
+            "state": "G"
+          },
+          {
+            "duration": "6",
+            "state": "y"
+          },
+          {
+            "duration": "5",
+            "state": "r"
+          }
+        ],
+        "parameters": []
+      }
+    ],
+    "controlled_connections": [
+      {
+        "from": "-229703615",
+        "to": "259739911#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692896_3_0",
+        "tl": "2042692896",
+        "linkIndex": "3",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "-229703615",
+        "to": "229703615",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692896_4_0",
+        "tl": "2042692896",
+        "linkIndex": "4",
+        "dir": "t",
+        "state": "o"
+      },
+      {
+        "from": "-616971271#0",
+        "to": "616971271#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042693363_0_0",
+        "tl": "2042693363",
+        "linkIndex": "0",
+        "dir": "t",
+        "state": "O"
+      },
+      {
+        "from": "-616971271#1",
+        "to": "-616971271#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042693107_0_0",
+        "tl": "2042693107",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "-616971271#2",
+        "to": "647043773#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_0_0",
+        "tl": "2042692883",
+        "linkIndex": "0",
+        "dir": "r",
+        "state": "O"
+      },
+      {
+        "from": "-616971271#2",
+        "to": "-616971271#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_1_0",
+        "tl": "2042692883",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "-616971271#2",
+        "to": "-647043773#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_2_0",
+        "tl": "2042692883",
+        "linkIndex": "2",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "-616971271#2",
+        "to": "616971271#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_3_0",
+        "tl": "2042692883",
+        "linkIndex": "3",
+        "dir": "t",
+        "state": "o"
+      },
+      {
+        "from": "-616971271#3",
+        "to": "-659117905#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_0_0",
+        "tl": "2042692453",
+        "linkIndex": "0",
+        "dir": "r",
+        "state": "O"
+      },
+      {
+        "from": "-616971271#3",
+        "to": "-616971271#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_1_0",
+        "tl": "2042692453",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "-616971271#3",
+        "to": "659117905#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_2_0",
+        "tl": "2042692453",
+        "linkIndex": "2",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "-616971271#3",
+        "to": "616971271#3",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_3_0",
+        "tl": "2042692453",
+        "linkIndex": "3",
+        "dir": "t",
+        "state": "o"
+      },
+      {
+        "from": "-647043773#0",
+        "to": "647043773#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042693016_0_0",
+        "tl": "2042693016",
+        "linkIndex": "0",
+        "dir": "t",
+        "state": "O"
+      },
+      {
+        "from": "-647043773#1",
+        "to": "-616971271#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_12_0",
+        "tl": "2042692883",
+        "linkIndex": "12",
+        "dir": "r",
+        "state": "o"
+      },
+      {
+        "from": "-647043773#1",
+        "to": "-647043773#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_13_0",
+        "tl": "2042692883",
+        "linkIndex": "13",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "-647043773#1",
+        "to": "616971271#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_14_0",
+        "tl": "2042692883",
+        "linkIndex": "14",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "-647043773#1",
+        "to": "647043773#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_15_0",
+        "tl": "2042692883",
+        "linkIndex": "15",
+        "dir": "t",
+        "state": "o"
+      },
+      {
+        "from": "-659117905#1",
+        "to": "616971271#3",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_4_0",
+        "tl": "2042692453",
+        "linkIndex": "4",
+        "dir": "r",
+        "state": "o"
+      },
+      {
+        "from": "-659117905#1",
+        "to": "-659117905#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_5_0",
+        "tl": "2042692453",
+        "linkIndex": "5",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "-659117905#1",
+        "to": "-616971271#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_6_0",
+        "tl": "2042692453",
+        "linkIndex": "6",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "-659117905#1",
+        "to": "659117905#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_7_0",
+        "tl": "2042692453",
+        "linkIndex": "7",
+        "dir": "t",
+        "state": "o"
+      },
+      {
+        "from": "-659117905#2",
+        "to": "-659117905#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2963614071_0_0",
+        "tl": "2963614071",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156272393#6",
+        "to": "1156272393#7",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":3386573294_0_0",
+        "tl": "FAM_RONDON_PARANA",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156272393#6",
+        "to": "1156272393#7",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":3386573294_0_1",
+        "tl": "FAM_RONDON_PARANA",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717168",
+        "to": "331577756#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":3386573297_0_0",
+        "tl": "FAM_RONDON_PARANA",
+        "linkIndex": "5",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717168",
+        "to": "331577756#0",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":3386573297_0_1",
+        "tl": "FAM_RONDON_PARANA",
+        "linkIndex": "6",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717170#0",
+        "to": "1156717170#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":5494111603_0_0",
+        "tl": "5494111603",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717170#0",
+        "to": "1156717170#1",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":5494111603_0_1",
+        "tl": "5494111603",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717173#4",
+        "to": "1156717173#5",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":3386573298_0_0",
+        "tl": "FAM_RONDON_PARANA",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717173#4",
+        "to": "1156717173#5",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":3386573298_0_1",
+        "tl": "FAM_RONDON_PARANA",
+        "linkIndex": "3",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717175#0",
+        "to": "1156717175#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":5494111596_0_0",
+        "tl": "5494111596",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717175#0",
+        "to": "1156717175#1",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":5494111596_0_1",
+        "tl": "5494111596",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717175#0",
+        "to": "1156717175#1",
+        "fromLane": "2",
+        "toLane": "2",
+        "via": ":5494111596_0_2",
+        "tl": "5494111596",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717175#0",
+        "to": "1156717175#1",
+        "fromLane": "3",
+        "toLane": "3",
+        "via": ":5494111596_0_3",
+        "tl": "5494111596",
+        "linkIndex": "3",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717175#5",
+        "to": "576014295",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":5494111590_0_0",
+        "tl": "5494111590",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717175#5",
+        "to": "576014295",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":5494111590_0_1",
+        "tl": "5494111590",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717175#5",
+        "to": "576014295",
+        "fromLane": "2",
+        "toLane": "2",
+        "via": ":5494111590_0_2",
+        "tl": "5494111590",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717175#5",
+        "to": "576014295",
+        "fromLane": "3",
+        "toLane": "3",
+        "via": ":5494111590_0_3",
+        "tl": "5494111590",
+        "linkIndex": "3",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "1156717175#5",
+        "to": "462993309",
+        "fromLane": "3",
+        "toLane": "0",
+        "via": ":5494111590_4_0",
+        "tl": "5494111590",
+        "linkIndex": "4",
+        "dir": "L",
+        "state": "O"
+      },
+      {
+        "from": "152937004#13",
+        "to": "331577758#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879989_0_0",
+        "tl": "1561879989",
+        "linkIndex": "0",
+        "dir": "r",
+        "state": "O"
+      },
+      {
+        "from": "152937004#13",
+        "to": "152937004#14",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879989_1_0",
+        "tl": "1561879989",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "160744152#12",
+        "to": "332052783#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879771_0_0",
+        "tl": "1561879771",
+        "linkIndex": "0",
+        "dir": "r",
+        "state": "o"
+      },
+      {
+        "from": "160744152#12",
+        "to": "160744152#13",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879771_1_0",
+        "tl": "1561879771",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "229703614#7",
+        "to": "1171661493#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692877_5_0",
+        "tl": "2042692877",
+        "linkIndex": "5",
+        "dir": "r",
+        "state": "o"
+      },
+      {
+        "from": "229703614#7",
+        "to": "-353006749",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692877_6_0",
+        "tl": "2042692877",
+        "linkIndex": "6",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "248261379#2",
+        "to": "259739911#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692896_0_0",
+        "tl": "2042692896",
+        "linkIndex": "0",
+        "dir": "r",
+        "state": "o"
+      },
+      {
+        "from": "248261379#2",
+        "to": "229703615",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692896_1_0",
+        "tl": "2042692896",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "261301884#16",
+        "to": "261301884#17",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879807_3_0",
+        "tl": "1561879807",
+        "linkIndex": "3",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "261301884#16",
+        "to": "332052781",
+        "fromLane": "0",
+        "toLane": "1",
+        "via": ":1561879807_4_0",
+        "tl": "1561879807",
+        "linkIndex": "4",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "261533405#16",
+        "to": "261533405#17",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":3391594554_0_0",
+        "tl": "FAM_MARANHAO_MONSENHOR_EDUARDO",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "261533405#16",
+        "to": "261533405#17",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":3391594554_0_1",
+        "tl": "FAM_MARANHAO_MONSENHOR_EDUARDO",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "299471494#1",
+        "to": "299471494#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":3386573306_0_0",
+        "tl": "3386573306",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "299471494#1",
+        "to": "299471494#2",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":3386573306_0_1",
+        "tl": "3386573306",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "30620737#13",
+        "to": "30620737#14",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":3391594553_0_0",
+        "tl": "FAM_MARANHAO_MONSENHOR_EDUARDO",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "331577748#2",
+        "to": "331577748#3",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":3386573305_0_0",
+        "tl": "3386573305",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "331577748#2",
+        "to": "331577748#3",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":3386573305_0_1",
+        "tl": "3386573305",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "331577748#2",
+        "to": "331577748#3",
+        "fromLane": "2",
+        "toLane": "2",
+        "via": ":3386573305_0_2",
+        "tl": "3386573305",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "331577748#2",
+        "to": "331577748#3",
+        "fromLane": "3",
+        "toLane": "3",
+        "via": ":3386573305_0_3",
+        "tl": "3386573305",
+        "linkIndex": "3",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "331577748#3",
+        "to": "331577748#4",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":5494111602_0_0",
+        "tl": "5494111602",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "331577748#3",
+        "to": "331577748#4",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":5494111602_0_1",
+        "tl": "5494111602",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "331577748#3",
+        "to": "331577748#4",
+        "fromLane": "2",
+        "toLane": "2",
+        "via": ":5494111602_0_2",
+        "tl": "5494111602",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "331577748#3",
+        "to": "331577748#4",
+        "fromLane": "3",
+        "toLane": "3",
+        "via": ":5494111602_0_3",
+        "tl": "5494111602",
+        "linkIndex": "3",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "331577757",
+        "to": "602306713#17",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561880076_0_0",
+        "tl": "1561880076",
+        "linkIndex": "0",
+        "dir": "r",
+        "state": "O"
+      },
+      {
+        "from": "331577757",
+        "to": "331577758#0",
+        "fromLane": "1",
+        "toLane": "0",
+        "via": ":1561880076_1_0",
+        "tl": "1561880076",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "331577758#0",
+        "to": "331577758#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879989_2_0",
+        "tl": "1561879989",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "331577758#0",
+        "to": "152937004#14",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879989_3_0",
+        "tl": "1561879989",
+        "linkIndex": "3",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "331577758#1",
+        "to": "666324308#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879940_0_0",
+        "tl": "1561879940",
+        "linkIndex": "0",
+        "dir": "r",
+        "state": "o"
+      },
+      {
+        "from": "331577758#1",
+        "to": "331577758#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879940_1_0",
+        "tl": "1561879940",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "332052781",
+        "to": "332052783#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879771_2_0",
+        "tl": "1561879771",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "332052781",
+        "to": "160744152#13",
+        "fromLane": "1",
+        "toLane": "0",
+        "via": ":1561879771_3_0",
+        "tl": "1561879771",
+        "linkIndex": "3",
+        "dir": "l",
+        "state": "O"
+      },
+      {
+        "from": "353006749",
+        "to": "1171661493#0",
+        "fromLane": "0",
+        "toLane": "2",
+        "via": ":2042692877_3_0",
+        "tl": "2042692877",
+        "linkIndex": "3",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "353006749",
+        "to": "-353006749",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692877_4_0",
+        "tl": "2042692877",
+        "linkIndex": "4",
+        "dir": "t",
+        "state": "o"
+      },
+      {
+        "from": "403166945#2",
+        "to": "403166945#3",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":8947803947_0_0",
+        "tl": "8947803947",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "462993308#0",
+        "to": "462993308#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":5494111593_0_0",
+        "tl": "5494111593",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "462993308#0",
+        "to": "462993308#1",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":5494111593_0_1",
+        "tl": "5494111593",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "463014795#0",
+        "to": "463014795#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":8622218071_0_0",
+        "tl": "FAM_RONDON_ROTARY_CLUB",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "576014290#0",
+        "to": "576014290#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":5494111589_0_0",
+        "tl": "5494111589",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "576014290#0",
+        "to": "576014290#1",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":5494111589_0_1",
+        "tl": "5494111589",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "576014290#0",
+        "to": "576014290#1",
+        "fromLane": "2",
+        "toLane": "2",
+        "via": ":5494111589_0_2",
+        "tl": "5494111589",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "576014290#0",
+        "to": "576014290#1",
+        "fromLane": "3",
+        "toLane": "3",
+        "via": ":5494111589_0_3",
+        "tl": "5494111589",
+        "linkIndex": "3",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "576014301#0",
+        "to": "576014301#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":5494111594_0_0",
+        "tl": "5494111594",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "576014301#0",
+        "to": "576014301#1",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":5494111594_0_1",
+        "tl": "5494111594",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "576014301#0",
+        "to": "576014301#1",
+        "fromLane": "2",
+        "toLane": "2",
+        "via": ":5494111594_0_2",
+        "tl": "5494111594",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "576014301#0",
+        "to": "576014301#1",
+        "fromLane": "3",
+        "toLane": "3",
+        "via": ":5494111594_0_3",
+        "tl": "5494111594",
+        "linkIndex": "3",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "602306707",
+        "to": "259739911#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692896_2_0",
+        "tl": "2042692896",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "602306713#16",
+        "to": "602306713#17",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561880076_2_0",
+        "tl": "1561880076",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "602306713#16",
+        "to": "331577758#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561880076_3_0",
+        "tl": "1561880076",
+        "linkIndex": "3",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "616971271#0",
+        "to": "616971271#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042693107_1_0",
+        "tl": "2042693107",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "616971271#1",
+        "to": "-647043773#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_8_0",
+        "tl": "2042692883",
+        "linkIndex": "8",
+        "dir": "r",
+        "state": "O"
+      },
+      {
+        "from": "616971271#1",
+        "to": "616971271#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_9_0",
+        "tl": "2042692883",
+        "linkIndex": "9",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "616971271#1",
+        "to": "647043773#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_10_0",
+        "tl": "2042692883",
+        "linkIndex": "10",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "616971271#1",
+        "to": "-616971271#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_11_0",
+        "tl": "2042692883",
+        "linkIndex": "11",
+        "dir": "t",
+        "state": "o"
+      },
+      {
+        "from": "616971271#2",
+        "to": "659117905#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_8_0",
+        "tl": "2042692453",
+        "linkIndex": "8",
+        "dir": "r",
+        "state": "O"
+      },
+      {
+        "from": "616971271#2",
+        "to": "616971271#3",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_9_0",
+        "tl": "2042692453",
+        "linkIndex": "9",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "616971271#2",
+        "to": "-659117905#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_10_0",
+        "tl": "2042692453",
+        "linkIndex": "10",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "616971271#2",
+        "to": "-616971271#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_11_0",
+        "tl": "2042692453",
+        "linkIndex": "11",
+        "dir": "t",
+        "state": "o"
+      },
+      {
+        "from": "625668273#2",
+        "to": "625668273#3",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":338654991_0_0",
+        "tl": "338654991",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "625668273#2",
+        "to": "625668273#3",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":338654991_0_1",
+        "tl": "338654991",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "647043773#0",
+        "to": "616971271#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_4_0",
+        "tl": "2042692883",
+        "linkIndex": "4",
+        "dir": "r",
+        "state": "o"
+      },
+      {
+        "from": "647043773#0",
+        "to": "647043773#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_5_0",
+        "tl": "2042692883",
+        "linkIndex": "5",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "647043773#0",
+        "to": "-616971271#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_6_0",
+        "tl": "2042692883",
+        "linkIndex": "6",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "647043773#0",
+        "to": "-647043773#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692883_7_0",
+        "tl": "2042692883",
+        "linkIndex": "7",
+        "dir": "t",
+        "state": "o"
+      },
+      {
+        "from": "659117905#0",
+        "to": "-616971271#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_12_0",
+        "tl": "2042692453",
+        "linkIndex": "12",
+        "dir": "r",
+        "state": "o"
+      },
+      {
+        "from": "659117905#0",
+        "to": "659117905#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_13_0",
+        "tl": "2042692453",
+        "linkIndex": "13",
+        "dir": "s",
+        "state": "o"
+      },
+      {
+        "from": "659117905#0",
+        "to": "616971271#3",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_14_0",
+        "tl": "2042692453",
+        "linkIndex": "14",
+        "dir": "l",
+        "state": "o"
+      },
+      {
+        "from": "659117905#0",
+        "to": "-659117905#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692453_15_0",
+        "tl": "2042692453",
+        "linkIndex": "15",
+        "dir": "t",
+        "state": "o"
+      },
+      {
+        "from": "659117905#1",
+        "to": "659117905#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2963614071_1_0",
+        "tl": "2963614071",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "666324276",
+        "to": "261301884#17",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879807_0_0",
+        "tl": "1561879807",
+        "linkIndex": "0",
+        "dir": "r",
+        "state": "O"
+      },
+      {
+        "from": "666324276",
+        "to": "332052781",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879807_1_0",
+        "tl": "1561879807",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "666324276",
+        "to": "332052781",
+        "fromLane": "0",
+        "toLane": "1",
+        "via": ":1561879807_1_1",
+        "tl": "1561879807",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "666324308#0",
+        "to": "666324308#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879940_2_0",
+        "tl": "1561879940",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "666324308#0",
+        "to": "331577758#2",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":1561879940_3_0",
+        "tl": "1561879940",
+        "linkIndex": "3",
+        "dir": "l",
+        "state": "O"
+      },
+      {
+        "from": "708111987",
+        "to": "1171661493#0",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":2042692877_0_0",
+        "tl": "2042692877",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "708111987",
+        "to": "1171661493#0",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":2042692877_0_1",
+        "tl": "2042692877",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "708111987",
+        "to": "1171661493#0",
+        "fromLane": "2",
+        "toLane": "2",
+        "via": ":2042692877_0_2",
+        "tl": "2042692877",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "901328279#0",
+        "to": "901328279#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":3386573296_0_0",
+        "tl": "FAM_RONDON_PARANA",
+        "linkIndex": "4",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "930831032#0",
+        "to": "930831032#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":5494111597_0_0",
+        "tl": "5494111597",
+        "linkIndex": "0",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "930831032#0",
+        "to": "930831032#1",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":5494111597_0_1",
+        "tl": "5494111597",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "930831032#0",
+        "to": "930831032#1",
+        "fromLane": "2",
+        "toLane": "2",
+        "via": ":5494111597_0_2",
+        "tl": "5494111597",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "930831032#0",
+        "to": "930831032#1",
+        "fromLane": "3",
+        "toLane": "3",
+        "via": ":5494111597_0_3",
+        "tl": "5494111597",
+        "linkIndex": "3",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "930831033#0",
+        "to": "930831033#1",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":8622218072_0_0",
+        "tl": "FAM_RONDON_ROTARY_CLUB",
+        "linkIndex": "1",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "930831033#0",
+        "to": "930831033#1",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":8622218072_0_1",
+        "tl": "FAM_RONDON_ROTARY_CLUB",
+        "linkIndex": "2",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "930831033#0",
+        "to": "930831033#1",
+        "fromLane": "2",
+        "toLane": "2",
+        "via": ":8622218072_0_2",
+        "tl": "FAM_RONDON_ROTARY_CLUB",
+        "linkIndex": "3",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "930831033#0",
+        "to": "930831033#1",
+        "fromLane": "3",
+        "toLane": "3",
+        "via": ":8622218072_0_3",
+        "tl": "FAM_RONDON_ROTARY_CLUB",
+        "linkIndex": "4",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "965367672#2",
+        "to": "965367672#3",
+        "fromLane": "0",
+        "toLane": "0",
+        "via": ":8622218073_0_0",
+        "tl": "FAM_RONDON_ROTARY_CLUB",
+        "linkIndex": "5",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "965367672#2",
+        "to": "965367672#3",
+        "fromLane": "1",
+        "toLane": "1",
+        "via": ":8622218073_0_1",
+        "tl": "FAM_RONDON_ROTARY_CLUB",
+        "linkIndex": "6",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "965367672#2",
+        "to": "965367672#3",
+        "fromLane": "2",
+        "toLane": "2",
+        "via": ":8622218073_0_2",
+        "tl": "FAM_RONDON_ROTARY_CLUB",
+        "linkIndex": "7",
+        "dir": "s",
+        "state": "O"
+      },
+      {
+        "from": "965367672#2",
+        "to": "965367672#3",
+        "fromLane": "3",
+        "toLane": "3",
+        "via": ":8622218073_0_3",
+        "tl": "FAM_RONDON_ROTARY_CLUB",
+        "linkIndex": "8",
+        "dir": "s",
+        "state": "O"
+      }
+    ],
+    "location": {
+      "netOffset": "-785145.54,2095530.41",
+      "convBoundary": "1708.09,1590.83,5558.45,5205.87",
+      "origBoundary": "-48.292710,-18.932213,-48.240454,-18.885064",
+      "projParameter": "+proj=utm +zone=22 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+    }
+  },
+  "sumo_defaults": {
+    "configuration-file": "",
+    "save-configuration": "",
+    "save-configuration.relative": "false",
+    "save-template": "",
+    "save-schema": "",
+    "save-commented": "false",
+    "net-file": "",
+    "route-files": "",
+    "additional-files": "",
+    "weight-files": "",
+    "weight-attribute": "traveltime",
+    "load-state": "",
+    "load-state.offset": "0",
+    "load-state.remove-vehicles": "",
+    "junction-taz": "false",
+    "write-license": "false",
+    "write-metadata": "false",
+    "output-prefix": "",
+    "output-suffix": "",
+    "precision": "2",
+    "precision.geo": "6",
+    "output.compression": "",
+    "output.format": "xml",
+    "output.column-header": "tag",
+    "output.column-separator": ";",
+    "human-readable-time": "false",
+    "netstate-dump": "",
+    "netstate-dump.empty-edges": "false",
+    "netstate-dump.precision": "2",
+    "emission-output": "",
+    "emission-output.precision": "2",
+    "emission-output.geo": "false",
+    "emission-output.step-scaled": "false",
+    "emission-output.attributes": "",
+    "battery-output": "",
+    "battery-output.precision": "2",
+    "elechybrid-output": "",
+    "elechybrid-output.precision": "2",
+    "elechybrid-output.aggregated": "false",
+    "chargingstations-output": "",
+    "chargingstations-output.aggregated": "false",
+    "chargingstations-output.aggregated.write-unfinished": "false",
+    "overheadwiresegments-output": "",
+    "substations-output": "",
+    "substations-output.precision": "2",
+    "fcd-output": "",
+    "fcd-output.geo": "false",
+    "fcd-output.utm": "false",
+    "fcd-output.signals": "false",
+    "fcd-output.distance": "false",
+    "fcd-output.acceleration": "false",
+    "fcd-output.speed-relative": "false",
+    "fcd-output.max-leader-distance": "-1",
+    "fcd-output.params": "",
+    "fcd-output.filter-edges.input-file": "",
+    "fcd-output.attributes": "",
+    "fcd-output.filter-shapes": "",
+    "fcd-output.skip-empty": "false",
+    "person-fcd-output": "",
+    "device.ssm.filter-edges.input-file": "",
+    "full-output": "",
+    "queue-output": "",
+    "queue-output.period": "-1",
+    "vtk-output": "",
+    "amitran-output": "",
+    "summary-output": "",
+    "summary-output.period": "-1",
+    "person-summary-output": "",
+    "tripinfo-output": "",
+    "tripinfo-output.write-unfinished": "false",
+    "tripinfo-output.write-undeparted": "false",
+    "personinfo-output": "",
+    "vehroute-output": "",
+    "vehroute-output.exit-times": "false",
+    "vehroute-output.last-route": "false",
+    "vehroute-output.sorted": "false",
+    "vehroute-output.dua": "false",
+    "vehroute-output.cost": "false",
+    "vehroute-output.intended-depart": "false",
+    "vehroute-output.route-length": "false",
+    "vehroute-output.write-unfinished": "false",
+    "vehroute-output.skip-ptlines": "false",
+    "vehroute-output.incomplete": "false",
+    "vehroute-output.stop-edges": "false",
+    "vehroute-output.speedfactor": "false",
+    "vehroute-output.internal": "false",
+    "personroute-output": "",
+    "link-output": "",
+    "railsignal-block-output": "",
+    "railsignal-vehicle-output": "",
+    "bt-output": "",
+    "lanechange-output": "",
+    "lanechange-output.started": "false",
+    "lanechange-output.ended": "false",
+    "lanechange-output.xy": "false",
+    "stop-output": "",
+    "stop-output.write-unfinished": "false",
+    "collision-output": "",
+    "edgedata-output": "",
+    "lanedata-output": "",
+    "statistic-output": "",
+    "deadlock-output": "",
+    "save-state.times": "",
+    "save-state.period": "-1",
+    "save-state.period.keep": "0",
+    "save-state.prefix": "state",
+    "save-state.suffix": ".xml.gz",
+    "save-state.files": "",
+    "save-state.rng": "false",
+    "save-state.transportables": "false",
+    "save-state.constraints": "false",
+    "save-state.precision": "2",
+    "begin": "0",
+    "end": "-1",
+    "step-length": "1",
+    "step-method.ballistic": "false",
+    "extrapolate-departpos": "false",
+    "threads": "1",
+    "lateral-resolution": "-1",
+    "route-steps": "200",
+    "no-internal-links": "false",
+    "ignore-junction-blocker": "-1",
+    "ignore-route-errors": "false",
+    "ignore-accidents": "false",
+    "collision.action": "teleport",
+    "intermodal-collision.action": "warn",
+    "collision.stoptime": "0",
+    "intermodal-collision.stoptime": "0",
+    "collision.check-junctions": "false",
+    "collision.check-junctions.mingap": "0",
+    "collision.mingap-factor": "-1",
+    "keep-after-arrival": "0",
+    "max-num-vehicles": "-1",
+    "max-num-persons": "-1",
+    "max-num-teleports": "-1",
+    "scale": "1",
+    "scale-suffix": ".",
+    "time-to-teleport": "300",
+    "time-to-teleport.highways": "0",
+    "time-to-teleport.highways.min-speed": "19.1667",
+    "time-to-teleport.disconnected": "-1",
+    "time-to-teleport.remove": "false",
+    "time-to-teleport.remove-constraint": "false",
+    "time-to-teleport.ride": "-1",
+    "time-to-teleport.bidi": "-1",
+    "time-to-teleport.railsignal-deadlock": "-1",
+    "waiting-time-memory": "100",
+    "startup-wait-threshold": "2",
+    "max-depart-delay": "-1",
+    "sloppy-insert": "false",
+    "eager-insert": "false",
+    "emergency-insert": "false",
+    "insertion-checks": "all",
+    "random-depart-offset": "0",
+    "lanechange.duration": "0",
+    "lanechange.overtake-right": "false",
+    "tls.all-off": "false",
+    "tls.actuated.show-detectors": "false",
+    "tls.actuated.jam-threshold": "-1",
+    "tls.actuated.detector-length": "0",
+    "tls.delay_based.detector-range": "100",
+    "tls.yellow.min-decel": "3",
+    "railsignal-moving-block": "false",
+    "railsignal.moving-block.default-classes": "tram,cable_car",
+    "railsignal.moving-block.max-dist": "200",
+    "railsignal.max-block-length": "20000",
+    "railsignal.default-classes": "rail,rail_fast,rail_electric,rail_urban,subway",
+    "time-to-impatience": "180",
+    "default.departspeed": "avg",
+    "default.departlane": "best_prob",
+    "default.action-step-length": "0",
+    "default.carfollowmodel": "Krauss",
+    "default.speeddev": "-1",
+    "default.emergencydecel": "default",
+    "overhead-wire.solver": "true",
+    "overhead-wire.recuperation": "true",
+    "overhead-wire.substation-current-limits": "true",
+    "emergencydecel.warning-threshold": "1",
+    "parking.maneuver": "false",
+    "use-stop-ended": "false",
+    "use-stop-started": "false",
+    "pedestrian.model": "striping",
+    "pedestrian.timegap-crossing": "2",
+    "pedestrian.striping.stripe-width": "0.64",
+    "pedestrian.striping.dawdling": "0.2",
+    "pedestrian.striping.mingap-to-vehicle": "0.25",
+    "pedestrian.striping.jamtime": "300",
+    "pedestrian.striping.jamtime.crossing": "10",
+    "pedestrian.striping.jamtime.narrow": "1",
+    "pedestrian.striping.jamfactor": "0.25",
+    "pedestrian.striping.reserve-oncoming": "0",
+    "pedestrian.striping.reserve-oncoming.junctions": "0.34",
+    "pedestrian.striping.reserve-oncoming.max": "1.28",
+    "pedestrian.striping.legacy-departposlat": "false",
+    "pedestrian.striping.walkingarea-detail": "4",
+    "ride.stop-tolerance": "10",
+    "mapmatch.distance": "100",
+    "mapmatch.junctions": "false",
+    "mapmatch.taz": "false",
+    "weights.turnaround-penalty": "5",
+    "weights.reversal-penalty": "60",
+    "persontrip.walk-opposite-factor": "1",
+    "routing-algorithm": "dijkstra",
+    "weights.random-factor": "1",
+    "weights.random-factor.dynamic": "false",
+    "weights.minor-penalty": "1.5",
+    "weights.tls-penalty": "0",
+    "weights.priority-factor": "0",
+    "weights.separate-turns": "0",
+    "astar.all-distances": "",
+    "astar.landmark-distances": "",
+    "persontrip.walkfactor": "0.75",
+    "persontrip.transfer.car-walk": "parkingAreas",
+    "persontrip.transfer.taxi-walk": "",
+    "persontrip.transfer.walk-taxi": "",
+    "persontrip.default.group": "",
+    "persontrip.taxi.waiting-time": "300",
+    "persontrip.ride-public-line": "false",
+    "railway.max-train-length": "1000",
+    "replay-rerouting": "false",
+    "device.rerouting.probability": "-1",
+    "device.rerouting.explicit": "",
+    "device.rerouting.deterministic": "false",
+    "device.rerouting.period": "0",
+    "device.rerouting.pre-period": "60",
+    "device.rerouting.adaptation-weight": "0",
+    "device.rerouting.adaptation-steps": "180",
+    "device.rerouting.adaptation-interval": "1",
+    "device.rerouting.threshold.factor": "1",
+    "device.rerouting.threshold.constant": "0",
+    "device.rerouting.with-taz": "false",
+    "device.rerouting.mode": "0",
+    "device.rerouting.init-with-loaded-weights": "false",
+    "device.rerouting.threads": "0",
+    "device.rerouting.synchronize": "false",
+    "device.rerouting.railsignal": "false",
+    "device.rerouting.bike-speeds": "false",
+    "device.rerouting.output": "",
+    "person-device.rerouting.probability": "-1",
+    "person-device.rerouting.explicit": "",
+    "person-device.rerouting.deterministic": "false",
+    "person-device.rerouting.period": "0",
+    "person-device.rerouting.mode": "0",
+    "person-device.rerouting.scope": "stage",
+    "verbose": "false",
+    "print-options": "false",
+    "help": "false",
+    "version": "false",
+    "xml-validation": "local",
+    "xml-validation.net": "never",
+    "xml-validation.routes": "local",
+    "no-warnings": "false",
+    "aggregate-warnings": "-1",
+    "log": "",
+    "message-log": "",
+    "error-log": "",
+    "log.timestamps": "false",
+    "log.processid": "false",
+    "language": "C",
+    "duration-log.disable": "false",
+    "duration-log.statistics": "false",
+    "no-step-log": "false",
+    "step-log.period": "100",
+    "emissions.volumetric-fuel": "false",
+    "phemlight-path": "./PHEMlight/",
+    "phemlight-year": "0",
+    "phemlight-temperature": "1.79769e+308",
+    "device.emissions.probability": "-1",
+    "device.emissions.explicit": "",
+    "device.emissions.deterministic": "false",
+    "device.emissions.begin": "-1",
+    "device.emissions.period": "0",
+    "device.btreceiver.probability": "-1",
+    "device.btreceiver.explicit": "",
+    "device.btreceiver.deterministic": "false",
+    "device.btreceiver.range": "300",
+    "device.btreceiver.all-recognitions": "false",
+    "device.btreceiver.offtime": "0.64",
+    "device.btsender.probability": "-1",
+    "device.btsender.explicit": "",
+    "device.btsender.deterministic": "false",
+    "person-device.btsender.probability": "-1",
+    "person-device.btsender.explicit": "",
+    "person-device.btsender.deterministic": "false",
+    "person-device.btreceiver.probability": "-1",
+    "person-device.btreceiver.explicit": "",
+    "person-device.btreceiver.deterministic": "false",
+    "device.stationfinder.probability": "-1",
+    "device.stationfinder.explicit": "",
+    "device.stationfinder.deterministic": "false",
+    "device.stationfinder.rescueTime": "1800",
+    "device.stationfinder.rescueAction": "remove",
+    "device.stationfinder.reserveFactor": "1.1",
+    "device.stationfinder.emptyThreshold": "0.05",
+    "device.stationfinder.radius": "180",
+    "device.stationfinder.maxEuclideanDistance": "-1",
+    "device.stationfinder.repeat": "60",
+    "device.stationfinder.maxChargePower": "100000",
+    "device.stationfinder.chargeType": "charging",
+    "device.stationfinder.waitForCharge": "600",
+    "device.stationfinder.minOpportunityDuration": "3600",
+    "device.stationfinder.saturatedChargeLevel": "0.8",
+    "device.stationfinder.needToChargeLevel": "0.4",
+    "device.stationfinder.opportunisticChargeLevel": "0",
+    "device.stationfinder.replacePlannedStop": "0",
+    "device.stationfinder.maxDistanceToReplacedStop": "300",
+    "device.stationfinder.chargingStrategy": "none",
+    "device.stationfinder.checkEnergyForRoute": "true",
+    "device.battery.probability": "-1",
+    "device.battery.explicit": "",
+    "device.battery.deterministic": "false",
+    "device.battery.track-fuel": "false",
+    "device.example.probability": "-1",
+    "device.example.explicit": "",
+    "device.example.deterministic": "false",
+    "device.example.parameter": "0",
+    "device.ssm.probability": "-1",
+    "device.ssm.explicit": "",
+    "device.ssm.deterministic": "false",
+    "device.ssm.measures": "",
+    "device.ssm.thresholds": "",
+    "device.ssm.trajectories": "false",
+    "device.ssm.range": "50",
+    "device.ssm.extratime": "5",
+    "device.ssm.mdrac.prt": "1",
+    "device.ssm.file": "",
+    "device.ssm.geo": "false",
+    "device.ssm.write-positions": "false",
+    "device.ssm.write-lane-positions": "false",
+    "device.ssm.write-na": "true",
+    "device.ssm.exclude-conflict-types": "",
+    "device.toc.probability": "-1",
+    "device.toc.explicit": "",
+    "device.toc.deterministic": "false",
+    "device.toc.manualType": "",
+    "device.toc.automatedType": "",
+    "device.toc.responseTime": "-1",
+    "device.toc.recoveryRate": "0.1",
+    "device.toc.lcAbstinence": "0",
+    "device.toc.initialAwareness": "0.5",
+    "device.toc.mrmDecel": "1.5",
+    "device.toc.dynamicToCThreshold": "0",
+    "device.toc.dynamicMRMProbability": "0.05",
+    "device.toc.mrmKeepRight": "false",
+    "device.toc.mrmSafeSpot": "",
+    "device.toc.mrmSafeSpotDuration": "60",
+    "device.toc.maxPreparationAccel": "0",
+    "device.toc.ogNewTimeHeadway": "-1",
+    "device.toc.ogNewSpaceHeadway": "-1",
+    "device.toc.ogMaxDecel": "-1",
+    "device.toc.ogChangeRate": "-1",
+    "device.toc.useColorScheme": "true",
+    "device.toc.file": "",
+    "device.driverstate.probability": "-1",
+    "device.driverstate.explicit": "",
+    "device.driverstate.deterministic": "false",
+    "device.driverstate.initialAwareness": "1",
+    "device.driverstate.errorTimeScaleCoefficient": "100",
+    "device.driverstate.errorNoiseIntensityCoefficient": "0.2",
+    "device.driverstate.speedDifferenceErrorCoefficient": "0.15",
+    "device.driverstate.headwayErrorCoefficient": "0.75",
+    "device.driverstate.freeSpeedErrorCoefficient": "0",
+    "device.driverstate.speedDifferenceChangePerceptionThreshold": "0.1",
+    "device.driverstate.headwayChangePerceptionThreshold": "0.1",
+    "device.driverstate.minAwareness": "0.1",
+    "device.driverstate.maximalReactionTime": "-1",
+    "device.bluelight.probability": "-1",
+    "device.bluelight.explicit": "",
+    "device.bluelight.deterministic": "false",
+    "device.bluelight.reactiondist": "25",
+    "device.bluelight.mingapfactor": "1",
+    "device.fcd.probability": "-1",
+    "device.fcd.explicit": "",
+    "device.fcd.deterministic": "false",
+    "device.fcd.begin": "-1",
+    "device.fcd.period": "0",
+    "device.fcd.radius": "0",
+    "person-device.fcd.probability": "-1",
+    "person-device.fcd.explicit": "",
+    "person-device.fcd.deterministic": "false",
+    "person-device.fcd.period": "0",
+    "device.elechybrid.probability": "-1",
+    "device.elechybrid.explicit": "",
+    "device.elechybrid.deterministic": "false",
+    "device.taxi.probability": "-1",
+    "device.taxi.explicit": "",
+    "device.taxi.deterministic": "false",
+    "device.taxi.dispatch-algorithm": "greedy",
+    "device.taxi.dispatch-algorithm.output": "",
+    "device.taxi.dispatch-algorithm.params": "",
+    "device.taxi.dispatch-period": "60",
+    "device.taxi.dispatch-keep-unreachable": "3600",
+    "device.taxi.idle-algorithm": "stop",
+    "device.taxi.idle-algorithm.output": "",
+    "device.taxi.vclasses": "taxi",
+    "device.glosa.probability": "-1",
+    "device.glosa.explicit": "",
+    "device.glosa.deterministic": "false",
+    "device.glosa.range": "100",
+    "device.glosa.max-speedfactor": "1.1",
+    "device.glosa.min-speed": "5",
+    "device.glosa.add-switchtime": "0",
+    "device.glosa.use-queue": "false",
+    "device.glosa.override-safety": "false",
+    "device.glosa.ignore-cfmodel": "false",
+    "device.tripinfo.probability": "-1",
+    "device.tripinfo.explicit": "",
+    "device.tripinfo.deterministic": "false",
+    "device.vehroute.probability": "-1",
+    "device.vehroute.explicit": "",
+    "device.vehroute.deterministic": "false",
+    "device.friction.probability": "-1",
+    "device.friction.explicit": "",
+    "device.friction.deterministic": "false",
+    "device.friction.stdDev": "0.1",
+    "device.friction.offset": "0",
+    "device.fcd-replay.probability": "-1",
+    "device.fcd-replay.explicit": "",
+    "device.fcd-replay.deterministic": "false",
+    "device.fcd-replay.file": "",
+    "remote-port": "0",
+    "num-clients": "1",
+    "mesosim": "false",
+    "meso-edgelength": "98",
+    "meso-tauff": "1.13",
+    "meso-taufj": "1.13",
+    "meso-taujf": "1.73",
+    "meso-taujj": "1.4",
+    "meso-jam-threshold": "-1",
+    "meso-multi-queue": "true",
+    "meso-lane-queue": "false",
+    "meso-ignore-lanes-by-vclass": "pedestrian,bicycle",
+    "meso-junction-control": "false",
+    "meso-junction-control.limited": "false",
+    "meso-tls-penalty": "0",
+    "meso-tls-flow-penalty": "0",
+    "meso-minor-penalty": "0",
+    "meso-overtaking": "false",
+    "meso-recheck": "0",
+    "meso-interpolate-pos": "false",
+    "random": "false",
+    "seed": "23423",
+    "thread-rngs": "64",
+    "gui-settings-file": "",
+    "quit-on-end": "false",
+    "game": "false",
+    "game.mode": "tls",
+    "start": "false",
+    "delay": "0",
+    "breakpoints": "",
+    "edgedata-files": "",
+    "alternative-net-file": "",
+    "selection-file": "",
+    "demo": "false",
+    "disable-textures": "false",
+    "registry-viewport": "false",
+    "window-size": "",
+    "window-pos": "",
+    "tracker-interval": "1",
+    "gui-testing": "false",
+    "gui-testing-debug": "false",
+    "gui-testing.setting-output": ""
+  },
+  "files": {
+    "code/SistemaDeSemaforos/demand/generator.py": {
+      "bytes": 7343,
+      "sha256": "3e86061a6800524a1503581e712cdbb8b91740cc2905fc0e5bd88edc50b50e55"
+    },
+    "code/SistemaDeSemaforos/metrics/collector.py": {
+      "bytes": 28158,
+      "sha256": "050c1295280a49f101830e80ff5d535c65d85d06219a3ae26c3bd2722aa04b2d"
+    },
+    "code/SistemaDeSemaforos/metrics/storage.py": {
+      "bytes": 3071,
+      "sha256": "1df4787978c45fc26f272d24af42e317321546b4cd49be3e510a153986cfae2b"
+    },
+    "code/SistemaDeSemaforos/metrics/sumo_outputs.py": {
+      "bytes": 3965,
+      "sha256": "10dbef2bbb6dafa9bed8e142d8e5ad43bdc7a50d3ba7dff65070ae519a1f6f9b"
+    },
+    "code/SistemaDeSemaforos/simulation/baseline.py": {
+      "bytes": 3979,
+      "sha256": "7ecbc887c55766f65be0d315f407668403bd73f6a59321e61d19013ec9676b41"
+    },
+    "code/SistemaDeSemaforos/simulation/runner.py": {
+      "bytes": 13412,
+      "sha256": "2eb7f949a83e5c783508ea9fb64360d7e3cd89a2f3e2c74680120cc988b75612"
+    },
+    "network.net.xml": {
+      "bytes": 5201327,
+      "sha256": "46e7c4a4627cd511d419c01f15d65f66724941ac83360c4fc424b86626a5c10b"
+    },
+    "sumo_options.xml": {
+      "bytes": 67499,
+      "sha256": "25301433c405c3ef80eb78f0e85313a67f21c8cab1ed95c3c14c1005bfcd0992"
+    }
+  }
+}

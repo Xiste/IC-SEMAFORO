@@ -1,0 +1,31 @@
+Warning: Teleporting vehicle '461'; waited too long (jam), lane=':1561880309_7_0', time=1026.000.
+Warning: Vehicle '461' ends teleporting on edge '402968136#4', time=1026.000.
+Warning: Teleporting vehicle '855'; waited too long (yield), lane=':338677202_5_0', time=1587.000.
+Warning: Vehicle '855' ends teleporting on edge '665897547', time=1589.000.
+Warning: Teleporting vehicle '1039'; waited too long (yield), lane='665897545_0', time=1944.000.
+Warning: Vehicle '1039' ends teleporting on edge '299469392#0', time=1944.000.
+Warning: Teleporting vehicle '1061'; waited too long (jam), lane='307152129#7_0', time=1961.000.
+Warning: Teleporting vehicle '1033'; waited too long (yield), lane=':4053646870_3_0', time=1961.000.
+Warning: Teleporting vehicle '1034'; waited too long (jam), lane='665897547_0', time=1963.000.
+Warning: Vehicle '1033' ends teleporting on edge '402968135#2', time=1963.000.
+Warning: Vehicle '1034' ends teleporting on edge '402968138', time=1963.000.
+Warning: Teleporting vehicle '1073'; waited too long (yield), lane='665897545_0', time=2300.000.
+Warning: Teleporting vehicle '1086'; waited too long (jam), lane='307152129#7_0', time=2303.000.
+Warning: Teleporting vehicle '1085'; waited too long (yield), lane=':4053646870_3_0', time=2303.000.
+Warning: Teleporting vehicle '1245'; waited too long (jam), lane=':4053646858_0_0', time=2303.000.
+Warning: Vehicle '1432' teleports beyond arrival edge '402968138', time=2841.000.
+Warning: Vehicle '2087' teleports beyond arrival edge '-30622679#2', time=3849.000.
+Warning: Vehicle '1307' teleports beyond arrival edge '402968141#10', time=4554.000.
+Warning: Vehicle '1911' teleports beyond arrival edge '402968141#2', time=4701.000.
+Warning: Teleporting vehicle '2996'; waited too long (wrong lane), lane='307152128#0_1', time=4884.000.
+Warning: Vehicle '2891' teleports beyond arrival edge '402968141#2', time=5060.000.
+Warning: Teleporting vehicle '3019'; waited too long (wrong lane), lane='307152128#0_1', time=5197.000.
+Warning: Teleporting vehicle '3104'; waited too long (wrong lane), lane='307152128#0_1', time=5796.000.
+Warning: Teleporting vehicle '3166'; waited too long (wrong lane), lane='307152128#0_1', time=6100.000.
+Warning: Teleporting vehicle '3273'; waited too long (wrong lane), lane='307152128#0_1', time=6452.000.
+Warning: Vehicle '4441' performs emergency braking on lane '30622679#2_0' with decel=9.00000000, wished=4.50000000, severity=1.00022222, time=7488.000.
+Warning: 423 total messages of type: Teleporting vehicle '%'; waited too long (jam), lane='%', time=%.
+Warning: 11 total messages of type: Teleporting vehicle '%'; waited too long (wrong lane), lane='%', time=%.
+Warning: 328 total messages of type: Teleporting vehicle '%'; waited too long (yield), lane='%', time=%.
+Warning: 742 total messages of type: Vehicle '%' ends teleporting on edge '%', time=%.
+Warning: 20 total messages of type: Vehicle '%' teleports beyond arrival edge '%', time=%.

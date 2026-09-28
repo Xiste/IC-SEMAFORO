@@ -16,7 +16,7 @@ from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from SistemaDeSemaforos.simulation import runner as simulation
+from SistemaDeSemaforos.simulation import episode_runner as simulation
 
 
 def option_value(command, option):
@@ -165,7 +165,7 @@ class RandomEpisodeTests(unittest.TestCase):
         self.output_dir = self.output_root / "outputs-random"
         self.workflow = []
 
-        self.collector = ModuleType("SistemaDeSemaforos.metrics.collector")
+        self.collector = ModuleType("SistemaDeSemaforos.metrics.episode_metrics_collector")
         self.collector.collect_episode = Mock(side_effect=self.collect)
         self.start_patch(patch.dict(sys.modules, {self.collector.__name__: self.collector}))
         self.start_patch(patch.object(simulation, "OUTPUT_ROOT", self.output_root))
@@ -208,7 +208,7 @@ class RandomEpisodeTests(unittest.TestCase):
     def collect(self, raw, net_file, profile="core"):
         self.workflow.append("collect")
         return {
-            "metrics": {"vehicles_completed": 2, "average_speed_mean": 8.25},
+            "metrics": {"vehicles_completed": 2, "network_mean_speed_m_s_mean": 8.25},
             "entities": {"lanes": {"via_ação_0": {"queue_length_max": 1}}},
         }
 
@@ -255,10 +255,10 @@ class RandomEpisodeTests(unittest.TestCase):
                 ("demand_period_seconds", "float", 2.0),
                 ("simulation_end_requested_seconds", "float", 60.0),
                 ("vehicles_requested", "int", 60), ("vehicles_generated", "int", 2),
-                ("vehicles_completed", "int", 2), ("average_speed_mean", "float", 8.25),
+                ("vehicles_completed", "int", 2), ("network_mean_speed_m_s_mean", "float", 8.25),
                 ("status", "string", "completed"),
             ):
-                self.assertEqual(records[name], {
+                self.assertEqual({key: records[name][key] for key in ("metric_name", "data_type", "value")}, {
                     "metric_name": name, "data_type": expected_type, "value": value,
                 })
             self.assertGreater(records["execution_time_seconds"]["value"], 0)

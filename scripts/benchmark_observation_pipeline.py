@@ -1,7 +1,7 @@
 """Compara observação mínima, core e full sobre a mesma demanda random.
 
 Entrada: duração/período/seed e repetições; saída: medições e evidências em
-outputs/benchmarks/. Uso: python3 scripts/benchmark_pipeline.py --repetitions 2.
+outputs/benchmarks/. Uso: python3 scripts/benchmark_observation_pipeline.py --repetitions 2.
 O observador mínimo grava apenas tripinfo para conferir a dinâmica das viagens.
 """
 
@@ -22,11 +22,11 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from SistemaDeSemaforos.demand.generator import DEFAULT_NET_FILE, generate_random_demand
-from SistemaDeSemaforos.metrics.collector import collect_episode
-from SistemaDeSemaforos.metrics.storage import file_info, save_entities, write_json
-from SistemaDeSemaforos.simulation.baseline import prepare_baseline
-from SistemaDeSemaforos.simulation.runner import run_simulation
+from SistemaDeSemaforos.demand.random_demand_generator import DEFAULT_NET_FILE, generate_random_demand
+from SistemaDeSemaforos.metrics.episode_metrics_collector import collect_episode
+from SistemaDeSemaforos.metrics.metrics_storage import file_info, save_entities, write_json
+from SistemaDeSemaforos.simulation.experiment_baseline import prepare_baseline
+from SistemaDeSemaforos.simulation.episode_runner import run_simulation
 
 
 def trip_signature(path):

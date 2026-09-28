@@ -12,6 +12,8 @@ from pathlib import Path
 import re
 from tempfile import NamedTemporaryFile
 
+from .metric_presentation import describe_metric, presentation_sort_key
+
 
 def write_json(path: Path, contents: dict) -> None:
     """Publica um JSON completo; uma interrupção não deixa metade do arquivo."""
@@ -68,10 +70,13 @@ def save_entities(directory: Path, entities: dict) -> None:
 
 
 def save_episode(directory: Path, metrics: dict, manifest: dict) -> None:
-    """Centraliza contexto e métricas globais; nomes são únicos por entidade."""
+    """Publica o resumo v2, preservando os nomes, tipos e valores do contrato v1."""
+    records = [{**record, **describe_metric(record["metric_name"])}
+               for record in metric_records(metrics)]
+    records.sort(key=presentation_sort_key)
     write_json(directory / "metrics.json", {
-        "schema_version": 1,
-        "metrics": metric_records(metrics),
+        "schema_version": 2,
+        "metrics": records,
         "entity_metrics_file": "entities.json.gz",
     })
     write_json(directory / "manifest.json", manifest)

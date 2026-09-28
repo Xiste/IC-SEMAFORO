@@ -20,6 +20,32 @@ Cada episódio recebe uma demanda nova. O padrão solicita 4.800 viagens:
 7.200 segundos de partidas, uma a cada 1,5 segundo. Tempo simulado é diferente
 do tempo que o computador leva para executar.
 
+## Direção estratégica
+
+Estado atual: execução SUMO com demanda aleatória, programas semafóricos do mapa,
+observação, métricas e rastreabilidade. Ainda não há treinamento de modelos,
+perfil calibrado com fluxos reais ou controlador adaptativo implementado.
+O trabalho em desenvolvimento está concentrado na consolidação da etapa 1,
+incluindo a organização e interpretação dos resultados.
+
+1. **Etapa atual, em consolidação:** estabelecer um sistema confiável de execução,
+   simulação e treinamento, com pipeline explicável, reproduzível, organizado e
+   operacionalmente eficiente. Treinamento é parte da direção, não capacidade atual.
+2. **Planejado:** criar perfis de execução e demanda para os dados reais da Rondon
+   Norte, com planos semafóricos, fluxos disponíveis e futuros metadados de fluxo.
+3. **Planejado:** ampliar controle e estimação, incluindo os algoritmos derivados
+   de Hazarika e, futuramente, a reconstrução/estimação da rede baseada em Acciai,
+   com treinamento, validação e comprovação experimental. Hazarika será uma
+   estratégia de controle distinta do SUMO nativo e dos demais controladores.
+4. **Planejado:** treinar e evoluir modelos progressivamente, incorporando novos
+   dados, metadados, cenários e possibilidades de execução.
+5. **Planejado:** consolidar dados experimentais para que a equipe de dashboards
+   e apresentação produza evidências claras, rastreáveis e defensáveis dos métodos.
+
+As etapas 2 a 5 orientam decisões de organização; não são funcionalidades
+implementadas. A revisão de `metrics.json` pertence à etapa 1 e preserva os
+cálculos e o conjunto CORE existente.
+
 ## Onde encontrar cada coisa
 
 | Local | Responsabilidade |
@@ -42,11 +68,11 @@ quando se executa a comparação de desempenho, não com `make run-random`.
 
 Leia apenas o documento necessário para sua tarefa:
 
-- [Comandos](docs/COMANDOS_TESTE.md): preparar o ambiente, executar, testar e reproduzir.
-- [Funcionamento](docs/FUNCIONAMENTO.md): mapa, demanda, APIs, configurações e resultados, na ordem do pipeline.
+- [Comandos](docs/GUIA_DE_EXECUCAO_E_TESTES.md): preparar o ambiente, executar, testar e reproduzir.
+- [Funcionamento](docs/GUIA_DE_FUNCIONAMENTO.md): mapa, demanda, APIs, configurações e resultados, na ordem do pipeline.
 - [Configurações](docs/configuration_catalog.csv) e [métricas](docs/metrics_catalog.csv): consultas detalhadas por campo; não são leitura introdutória.
 - [Relatório incremental](RELATORIO_INCREMENTAL.md): decisões e verificações históricas. Entradas antigas podem ter sido substituídas pelas mais recentes.
 
-As regras de colaboração estão em [diretrizesIA.txt](docs/diretrizesIA.txt).
+As regras de colaboração estão em [DIRETRIZES_COLABORACAO_IA.txt](docs/DIRETRIZES_COLABORACAO_IA.txt).
 Os dados de teste anteriores foram removidos a pedido do responsável. O guia de
 funcionamento preserva o resumo das medições; o relatório registra os detalhes.

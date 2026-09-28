@@ -1,7 +1,7 @@
 # Funcionamento do projeto
 
 Guia técnico principal, na ordem do pipeline. Para executar, consulte
-[COMANDOS_TESTE.md](COMANDOS_TESTE.md). Os catálogos são referências para consulta;
+[GUIA_DE_EXECUCAO_E_TESTES.md](GUIA_DE_EXECUCAO_E_TESTES.md). Os catálogos são referências para consulta;
 o runner não carrega esses CSVs como configuração.
 
 Consulta por assunto: [mapa](#1-mapa-e-condições-de-referência),
@@ -9,6 +9,8 @@ Consulta por assunto: [mapa](#1-mapa-e-condições-de-referência),
 [métricas](#4-métricas-seleção-e-interpretação),
 [arquivos de saída](#5-resultados-e-por-que-são-separados) e
 [desempenho](#6-desempenho-já-medido).
+A direção estratégica e a distinção entre estado atual, consolidação em andamento
+e etapas futuras ficam no [README](../README.md#direção-estratégica).
 
 ## 1. Mapa e condições de referência
 
@@ -66,7 +68,7 @@ exercitar o cenário e ainda não é calibrada por contagens reais.
 ```text
 make run-random (um episódio)
         ↓
-runner sorteia a seed e chama generator.generate_random_demand
+runner sorteia a seed e chama random_demand_generator.generate_random_demand
         ↓
 randomTrips.py sorteia viagens na rede Rondon Norte
         ↓
@@ -121,10 +123,10 @@ esgotar a demanda. Não há controlador Python nem mudança dos sinais pela cole
 
 | Interface | Função que chama / módulo | Entrada → saída | Uso e dependência |
 | --- | --- | --- | --- |
-| [randomTrips.py](https://sumo.dlr.de/docs/Tools/Trip.html) | `generate_random_demand` / `demand/generator.py`; `_find_random_trips` localiza o script. | Rede, janela de partidas, período, seed, classe `passenger` → viagens e rotas XML. | Prepara demanda; script em `$SUMO_HOME/tools/randomTrips.py`. |
+| [randomTrips.py](https://sumo.dlr.de/docs/Tools/Trip.html) | `generate_random_demand` / `demand/random_demand_generator.py`; `_find_random_trips` localiza o script. | Rede, janela de partidas, período, seed, classe `passenger` → viagens e rotas XML. | Prepara demanda; script em `$SUMO_HOME/tools/randomTrips.py`. |
 | [duarouter](https://sumo.dlr.de/docs/duarouter.html) | Chamada **indireta** por `randomTrips.py`, com `--route-file` e `--validate`. | Viagens e rede → rotas válidas e viagens verificadas. | Calcula caminhos e verifica conectividade; pode descartar solicitações inviáveis. |
-| [sumo](https://sumo.dlr.de/docs/sumo.html) / [sumo-gui](https://sumo.dlr.de/docs/sumo-gui.html) | `run_simulation` / `simulation/runner.py`, via `subprocess.run`. | Rede, rotas, opções e arquivo adicional → processo concluído, código de saída e observações. | Binário no `PATH`; GUI exige sessão gráfica. |
-| Configuração/template do SUMO | `prepare_baseline` / `simulation/baseline.py`: `--version`, `--save-template`; `run_simulation`: `--save-configuration`. | Executável e opções → versão, defaults e opções explícitas em XML. | Defaults ficam no baseline compartilhado; o episódio preserva suas diferenças. |
+| [sumo](https://sumo.dlr.de/docs/sumo.html) / [sumo-gui](https://sumo.dlr.de/docs/sumo-gui.html) | `run_simulation` / `simulation/episode_runner.py`, via `subprocess.run`. | Rede, rotas, opções e arquivo adicional → processo concluído, código de saída e observações. | Binário no `PATH`; GUI exige sessão gráfica. |
+| Configuração/template do SUMO | `prepare_baseline` / `simulation/experiment_baseline.py`: `--version`, `--save-template`; `run_simulation`: `--save-configuration`. | Executável e opções → versão, defaults e opções explícitas em XML. | Defaults ficam no baseline compartilhado; o episódio preserva suas diferenças. |
 
 Geração: `--net-file`, `--output-trip-file`, `--route-file`, `--begin`, `--end`,
 `--period`, `--seed`, `--vehicle-class`, `--validate`. O gerador retorna `Path`;
@@ -148,7 +150,7 @@ As chamadas usam listas de argumentos, sem shell intermediário.
 | Interface | Onde / chamadas | Responsabilidade |
 | --- | --- | --- |
 | `subprocess` / `shutil.which` | Gerador e runner: `run`, localização de binários. | Passar argumentos, aguardar e conferir processos, sem shell intermediário. |
-| `xml.etree.ElementTree` | Gerador: `parse`; `sumo_outputs`: `parse`, `Element`, `SubElement`, `write`; coletor: `iterparse`. | Validar XML, configurar observadores e ler registros incrementalmente. |
+| `xml.etree.ElementTree` | Gerador: `parse`; `sumo_output_configuration`: `parse`, `Element`, `SubElement`, `write`; coletor: `iterparse`. | Validar XML, configurar observadores e ler registros incrementalmente. |
 | `time` / `datetime` | Gerador/runner: `perf_counter`, `datetime.now(timezone.utc)`. | Duração monotônica e datas UTC. |
 | `random` / `uuid` | Gerador/runner: `randint`; runner: `uuid4`. | Seed da demanda e identificação sem sobrescrita. |
 | `json` / `gzip` / `hashlib` | Storage/baseline: `dump`, `open`, `sha256`; coletor: `gzip.open`. | Dados tipados, compressão, hashes e identificação do baseline. |
@@ -162,11 +164,11 @@ projeto.
 [TraCI](https://sumo.dlr.de/docs/TraCI.html) e
 [libsumo](https://sumo.dlr.de/docs/Libsumo.html) permitem consultas/controle durante
 passos; não são acionados pelo runner. `netconvert`/`netedit` também não são chamados.
-`scripts/audit_configuration.py --probe-defaults` usa TraCI somente em t=0:
+`scripts/audit_configuration_catalog.py --probe-defaults` usa TraCI somente em t=0:
 `start`, `getConnection`, `simulation.getTime`, `vehicletype.getIDList`, os
 26 getters de `PROBE_GETTERS`, `lane.getWidth` e `close`. Mede defaults dos seis
 tipos embutidos e larguras omitidas, sem inserir veículos ou avançar passos.
-`audit_metrics.py` apenas inspeciona métodos/docstrings, sem conectar ao SUMO.
+`audit_metrics_catalog.py` apenas inspeciona métodos/docstrings, sem conectar ao SUMO.
 Esses utilitários usam o TraCI que acompanha `$SUMO_HOME/tools`.
 
 ## 4. Métricas: seleção e interpretação
@@ -188,15 +190,17 @@ agregação de cada métrica ficam no CSV. Unidades não confirmadas são marcad
 `CORE` prioriza observações úteis em toda execução. `OPTIONAL` depende da pergunta
 científica; `DIAGNOSTIC` serve à validação; `CATALOG_ONLY` mantém conhecimento sem
 coleta repetida. Prioridade é uma recomendação, não um mecanismo automático.
+Essa classificação de **coleta** do catálogo permanece igual; é diferente da
+prioridade numérica de **apresentação** de 1 a 4 em `metrics.json`.
 
-`metrics/sumo_outputs.py:prepare_outputs` recebe a pasta e o perfil de coleta,
+`metrics/sumo_output_configuration.py:prepare_outputs` recebe a pasta e o perfil de coleta,
 prepara as opções e grava `observations.add.xml`. Retorna argumentos para o SUMO.
 SUMO produz os arquivos durante a execução;
-`metrics/collector.py:collect_episode` coordena sua leitura após o término.
+`metrics/episode_metrics_collector.py:collect_episode` coordena sua leitura após o término.
 Este recebe `raw/`, a rede e o perfil; retorna dicionários de métricas globais
 e entidades. O catálogo distingue fontes habilitadas das apenas disponíveis.
 
-| Interface/documentação | Opção ou elemento SUMO | Leitor em `collector.py` / dados utilizados |
+| Interface/documentação | Opção ou elemento SUMO | Leitor em `episode_metrics_collector.py` / dados utilizados |
 | --- | --- | --- |
 | [Summary](https://sumo.dlr.de/docs/Simulation/Output/Summary.html) | `--summary-output` | `_summary`: contagens, velocidade da rede, tempos e custo por passo. |
 | [Tripinfo](https://sumo.dlr.de/docs/Simulation/Output/TripInfo.html) | `--tripinfo-output`, `.write-unfinished`, `.write-undeparted`; `--device.emissions.probability 1` | `_trips`: viagens, espera, atraso, distância e emissões acumuladas. |
@@ -263,7 +267,7 @@ outputs/baselines/<hash>/
 └── code/                 # código de produção utilizado
 
 outputs/outputs-random/[subpasta/]<UTC>_seed-<seed>_<UUID>/
-├── metrics.json          # métricas globais tipadas
+├── metrics.json          # resultados globais e contexto, tipados e interpretáveis
 ├── entities.json.gz      # consolidado por entidade, tipado e comprimido
 ├── manifest.json         # contexto, comandos, referência ao baseline e hashes
 ├── generation.log        # diagnóstico de randomTrips/duarouter
@@ -298,32 +302,125 @@ as opções explícitas. Os caminhos são absolutos: uma reprodução precisa
 adaptar entradas movidas e usar novos destinos para todas as saídas.
 
 Ao arquivar um episódio, preserve também seu baseline. Novos manifestos usam
-schema 2; os registros de métricas permanecem no schema 1.
+schema 2; novos `metrics.json` usam schema 2; `entities.json.gz` permanece no
+schema 1. São contratos independentes. Episódios históricos não são regravados.
 
 Resultados e logs são ignorados pelo Git, mas não são caches. Excluir testes
 autorizados é diferente de apagar experimentos científicos automaticamente.
 
 ### Formato dos consolidados
 
+`metrics.json` conserva a lista `metrics`, o nome técnico canônico, o tipo e o
+valor de cada registro. O schema 2 acrescenta uma legenda curta em português,
+unidade e classificação, e ordena os registros pela utilidade experimental.
+Exemplo de estrutura, com valor apenas ilustrativo:
+
 ```json
-{"metric_name": "vehicles_completed", "data_type": "int", "value": 4800}
+{
+  "schema_version": 2,
+  "metrics": [
+    {
+      "metric_name": "completed_trip_time_loss_mean",
+      "data_type": "float",
+      "value": 12.84,
+      "label_pt": "Tempo médio perdido (viagens concluídas)",
+      "description_pt": "Média do tempo perdido ao circular abaixo da velocidade ideal individual, excluindo paradas programadas, entre viagens concluídas.",
+      "unit": "s",
+      "kind": "result",
+      "category": "performance",
+      "priority": 1
+    }
+  ],
+  "entity_metrics_file": "entities.json.gz"
+}
 ```
 
 Tipos: `int`, `float`, `bool`, `string`; `NaN` e infinito são rejeitados.
-`metrics.json.metrics` é a lista global. `entities.json.gz.entities` organiza
-listas por escopo e ID original: `vehicles`, `lanes`, `edges`, `traffic_lights`,
-`approaches`, `intersections`. A chave única é **escopo + ID + metric_name**;
-nomes `snake_case` não se repetem dentro de uma lista.
+A lista global conserva todos os nomes e valores anteriormente exportados,
+inclusive contexto. Nenhuma métrica CORE foi adicionada ou removida por essa
+reorganização; campos condicionais continuam ausentes quando a fonte/população
+não existe. A apresentação não modifica fórmulas, amostras ou perfis de coleta.
+
+| Campo novo | Interpretação |
+| --- | --- |
+| `label_pt` | Nome curto para leitura humana, ao lado do nome canônico estável. |
+| `description_pt` | O que o valor representa, incluindo a população ou agregação pertinente. |
+| `unit` | Unidade do valor; `null` quando não se aplica ou não foi confirmada. Contagem de amostras tem unidade própria, não a unidade da grandeza observada. |
+| `kind` | `result`: resultado medido; `context`: condição/identificação; `diagnostic`: observação técnica da execução/coleta. |
+| `category` | `performance`: desempenho; `operation`: comportamento operacional; `integrity`: confiabilidade; `diagnostic`: diagnóstico; `context`: contexto experimental. |
+| `priority` | Inteiro de 1 a 4 para importância de apresentação, independente do CORE/OPTIONAL do catálogo. |
+
+Ordem de apresentação:
+
+1. **Resultado principal:** perda média de tempo e espera média das viagens
+   concluídas, vazão de chegadas e veículos concluídos; depois os indicadores
+   complementares de eficiência. Abrem a leitura por serem evidências diretamente
+   comparáveis entre controladores, demandas e versões sob condições declaradas.
+2. **Comportamento operacional:** velocidade, duração/distância das viagens,
+   utilização e emissões modeladas ajudam a explicar os resultados.
+3. **Integridade:** viagens incompletas/não iniciadas, remoções anormais,
+   teletransportes, colisões e situação de execução delimitam sua confiabilidade.
+4. **Diagnóstico e contexto:** tempos de processamento, cobertura/amostras,
+   parâmetros, seeds e identificação encerram a lista. Continuam necessários
+   para auditoria, reprodução e comparação, mesmo aparecendo depois dos resultados.
+
+`kind` distingue resultado de contexto sem retirar registros dos consumidores
+existentes. `status` e `error` exigem atenção mesmo quando aparecem após os
+resultados: um episódio encerrado não garante que todas as viagens tenham sido
+concluídas. O manifesto continua sendo a fonte completa de configuração,
+controladores, proveniência e integridade dos arquivos; contexto não é ganho de
+desempenho. Os nomes técnicos continuam sendo as chaves de integração.
+
+Esperas no trânsito e atrasos de inserção são grandezas distintas. As médias
+`completed_*` descrevem apenas viagens concluídas; confronte-as com viagens
+incompletas e teletransportes para evitar uma comparação enviesada. A vazão de
+chegadas usa toda a duração simulada, portanto compare demandas, horizonte e
+critério de término compatíveis. `vehicles_halting_*` mede veículos parados,
+não o comprimento de uma fila. As filas existentes continuam por entidade;
+`queue_observation_steps` mede cobertura temporal da coleta, não congestionamento.
+
+As explicações técnicas completas continuam no [catálogo de métricas](metrics_catalog.csv).
+As legendas curtas e regras de ordem ficam em
+[`metric_presentation.py`](../SistemaDeSemaforos/metrics/metric_presentation.py),
+incluído no snapshot de código do baseline, sem carregar o CSV durante a execução.
+Essa separação prepara a leitura por dashboards futuros sem duplicar o catálogo
+em cada episódio nem implementar a visualização.
+Nomes globais sem uma definição de apresentação são rejeitados explicitamente;
+ao adicionar uma fonte ou atualizar o SUMO, revise também essa cobertura.
+Nenhuma tradução ou unidade é inventada para atributos desconhecidos.
+
+Compatibilidade: leitores devem selecionar registros por `metric_name`, preservar
+o tipo/valor e tolerar os campos adicionais. Não use posições da lista ou a ordem
+alfabética como chave. Leitores estritos de schema 1 precisam aceitar explicitamente
+o schema 2; arquivos históricos continuam legíveis pelos campos canônicos, mas não
+possuem necessariamente legendas/prioridades. No repositório, a auditoria lê esses
+campos por nome; testes de persistência/runner exercitam o contrato. O benchmark
+compara observações/viagens e entidades diretamente, sem ler `metrics.json`.
+Não há consumidores implementados de dashboard ou treinamento no repositório;
+consumidores externos não disponíveis não podem ser certificados aqui.
+
+Recomendações futuras, **não implementadas**: avaliar um resumo global de filas
+somente com definição explícita de cobertura espacial, ponderação e ausência de
+dupla contagem; poderia facilitar comparações sem substituir as entidades.
+Uma eventual taxa de conclusão também exige declarar o denominador (solicitados,
+gerados ou inseridos) e o horizonte. Os totais existentes são preservados e nenhuma
+dessas propostas acrescenta uma métrica nesta etapa.
+
+`entities.json.gz.entities` mantém os registros de três campos
+`metric_name`/`data_type`/`value` do schema 1, organizados por escopo e ID original:
+`vehicles`, `lanes`, `edges`, `traffic_lights`, `approaches`, `intersections`.
+A chave única é **escopo + ID + metric_name**; nomes `snake_case` não se repetem
+dentro de uma lista.
 
 Uma aproximação usa ID `controlador/via_de_entrada`. Uma interseção agrupa
 faixas de entrada do controlador; ele pode controlar vários nós físicos.
 
-`metrics/` contém código com três tarefas distintas: `sumo_outputs.py` solicita
-observações, `collector.py` agrega e `storage.py` valida nomes/tipos e exporta.
-O runner coordena essas tarefas. Uni-las misturaria configuração SUMO, cálculos
-e gravação sem reduzir o trabalho necessário.
+`metrics/` separa configuração, cálculo, apresentação e gravação:
+`sumo_output_configuration.py` solicita observações, `episode_metrics_collector.py`
+agrega, `metric_presentation.py` descreve/ordena os resultados globais e
+`metrics_storage.py` valida nomes/tipos e exporta. O runner coordena essas tarefas.
 
-`simulation/baseline.py` preserva uma cópia compartilhada do cenário, evitando
+`simulation/experiment_baseline.py` preserva uma cópia compartilhada do cenário, evitando
 copiar mapa/código/defaults em cada episódio. Ela permite recuperar as condições
 antigas mesmo se o projeto mudar. `inputs/observations.add.xml` solicita
 observações; não é outro mapa nem outra demanda. Pastas são criadas sob demanda.
@@ -342,7 +439,7 @@ Observações XML são lidas incrementalmente; memória depende das entidades/m�
 
 ### Pastas de teste e histórico
 
-`outputs/benchmarks/` só aparece ao executar `scripts/benchmark_pipeline.py`.
+`outputs/benchmarks/` só aparece ao executar `scripts/benchmark_observation_pipeline.py`.
 É uma comparação de custo entre perfis com a mesma demanda, não parte do run normal.
 Baselines podem ser apagados junto dos testes quando nenhum episódio preservado
 precisar deles. Procedimentos de reprodução ficam no guia de comandos.

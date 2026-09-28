@@ -11,8 +11,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from SistemaDeSemaforos.metrics import collector as c
-from SistemaDeSemaforos.metrics.sumo_outputs import prepare_outputs
+from SistemaDeSemaforos.metrics import episode_metrics_collector as c
+from SistemaDeSemaforos.metrics.sumo_output_configuration import prepare_outputs
 
 
 class CollectorTests(unittest.TestCase):

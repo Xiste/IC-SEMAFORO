@@ -1,7 +1,7 @@
 """Atualiza o catálogo a partir do SUMO instalado, código e schemas XML.
 
 Entrada: instalação SUMO e catálogo curado existente. Saída: CSV conferível.
-Uso: python3 scripts/audit_configuration.py [--check] [--probe-defaults].
+Uso: python3 scripts/audit_configuration_catalog.py [--check] [--probe-defaults].
 O probe opcional usa TraCI somente em t=0, fora do pipeline experimental.
 """
 
@@ -26,9 +26,9 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from SistemaDeSemaforos.demand import generator
-from SistemaDeSemaforos.simulation import runner
-from SistemaDeSemaforos.metrics.sumo_outputs import prepare_outputs
+from SistemaDeSemaforos.demand import random_demand_generator as generator
+from SistemaDeSemaforos.simulation import episode_runner as runner
+from SistemaDeSemaforos.metrics.sumo_output_configuration import prepare_outputs
 
 CATALOG = ROOT / "docs" / "configuration_catalog.csv"
 FIELDS = [
@@ -159,7 +159,7 @@ def native_options(version, sumo_home):
                 description=definition.get("help", ""), data_type=definition.get("type", ""),
                 native_default=default, current_core=current_core, current_full=current_full,
                 value_origin="override pipeline" if explicit else "default do binário instalado",
-                source_file="SistemaDeSemaforos/simulation/runner.py; SistemaDeSemaforos/metrics/sumo_outputs.py"
+                source_file="SistemaDeSemaforos/simulation/episode_runner.py; SistemaDeSemaforos/metrics/sumo_output_configuration.py"
                 if program == "sumo" else str(sumo_home / "tools/randomTrips.py"),
                 modifiable="sim" if diagnostic else "condicional",
                 change_impact="diagnóstico/armazenamento/interface; comparar custo e dados preservados"
@@ -188,7 +188,7 @@ def native_options(version, sumo_home):
             current_core=current.get(name, option.get("value", "")),
             current_full=current.get(name, option.get("value", "")),
             value_origin="override generator" if name in current else "default randomTrips",
-            source_file="SistemaDeSemaforos/demand/generator.py", modifiable="condicional",
+            source_file="SistemaDeSemaforos/demand/random_demand_generator.py", modifiable="condicional",
             change_impact="pode alterar população/rotas/tempos; preservar seed e declarar variante de demanda",
             currently_used="sim: explícita" if name in current else "padrão; aplicabilidade depende da opção",
             scientific_relevance="alta para distribuição da demanda",
@@ -387,7 +387,7 @@ def project_options(version):
                 default = str(default.relative_to(ROOT))
             result.append(row(
                 configuration_name=f"project:{name}.{option}", interface="project", category=name,
-                description=action.help or f"Parâmetro público {option}; ver docs/COMANDOS_TESTE.md e função {name}.main.",
+                description=action.help or f"Parâmetro público {option}; ver docs/GUIA_DE_EXECUCAO_E_TESTES.md e função {name}.main.",
                 data_type=getattr(action.type, "__name__", "bool" if isinstance(default, bool) else type(default).__name__),
                 native_default=default, current_core=default, current_full="full" if option == "metrics-profile" else default,
                 value_origin="argparse do código atual", source_file=str(Path(module.__file__).relative_to(ROOT)),
@@ -396,7 +396,7 @@ def project_options(version):
                 else "altera condições do episódio; registrar e comparar como variante",
                 currently_used="sim", scientific_relevance="alta para rastreabilidade",
                 aliases_or_elements=" ".join(action.option_strings), constraints=f"choices={action.choices}",
-                source_reference="docs/COMANDOS_TESTE.md", source_sha256=digest(module.__file__), sumo_version=version,
+                source_reference="docs/GUIA_DE_EXECUCAO_E_TESTES.md", source_sha256=digest(module.__file__), sumo_version=version,
                 notes="None indica ausência de override. Seed do gerador é distinta da seed interna do SUMO.",
             ))
     return result
@@ -558,7 +558,7 @@ def main():
     rendered = stream.getvalue()
     if args.check:
         if not CATALOG.exists() or CATALOG.read_text(encoding="utf-8") != rendered:
-            raise SystemExit("Catálogo desatualizado: execute scripts/audit_configuration.py e revise as diferenças.")
+            raise SystemExit("Catálogo desatualizado: execute scripts/audit_configuration_catalog.py e revise as diferenças.")
     else:
         CATALOG.parent.mkdir(exist_ok=True)
         CATALOG.write_text(rendered, encoding="utf-8")

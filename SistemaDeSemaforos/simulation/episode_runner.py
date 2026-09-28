@@ -17,15 +17,15 @@ from time import perf_counter
 from uuid import uuid4
 import xml.etree.ElementTree as ET
 
-from ..demand.generator import (
+from ..demand.random_demand_generator import (
     DEFAULT_DURATION,
     DEFAULT_NET_FILE,
     DEFAULT_PERIOD,
     generate_random_demand,
 )
-from ..metrics.storage import file_info, save_entities, save_episode
-from ..metrics.sumo_outputs import prepare_outputs
-from .baseline import prepare_baseline
+from ..metrics.metrics_storage import file_info, save_entities, save_episode
+from ..metrics.sumo_output_configuration import prepare_outputs
+from .experiment_baseline import prepare_baseline
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -219,7 +219,7 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
         metrics["sumo_configuration_time_seconds"] = simulation["configuration_time_seconds"]
         print(f"Episódio {episode}/{episodes}: consolidando métricas.", flush=True)
         # Importação local mantém o executor simples utilizável sem pós-processamento.
-        from ..metrics.collector import collect_episode
+        from ..metrics.episode_metrics_collector import collect_episode
         aggregation_started = perf_counter()
         collected = collect_episode(directory / "raw", snapshot, profile=metrics_profile)
         metrics.update(collected["metrics"])

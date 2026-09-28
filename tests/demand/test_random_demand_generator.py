@@ -15,7 +15,7 @@ import unittest
 from unittest.mock import call, patch
 import xml.etree.ElementTree as ET
 
-from SistemaDeSemaforos.demand import generator as demand
+from SistemaDeSemaforos.demand import random_demand_generator as demand
 
 
 TRIPS_XML = '<routes><trip id="0" depart="0" from="a" to="b" /></routes>'

@@ -17,7 +17,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from SistemaDeSemaforos.metrics.storage import file_info
+from SistemaDeSemaforos.metrics.metrics_storage import file_info
 
 
 def records_valid(records, patterns, observed):
@@ -39,6 +39,37 @@ def records_valid(records, patterns, observed):
                 if not values[name] - 1e-8 <= values[prefix + "_mean"] <= values[prefix + "_max"] + 1e-8:
                     raise ValueError(f"Agregados fora de ordem: {prefix}")
     return len(records)
+
+
+def episode_records_valid(document, patterns, observed):
+    """Aceita resumos v1 e v2; valida a apresentação sem recalcular resultados."""
+    version = document.get("schema_version")
+    if type(version) is not int or version not in {1, 2}:
+        raise ValueError(f"Schema de métricas não suportado: {version}")
+    records = document["metrics"]
+    if version == 2:
+        previous_priority = 0
+        categories = {
+            "performance": {1}, "operation": {2}, "integrity": {3},
+            "diagnostic": {4}, "context": {4},
+        }
+        for record in records:
+            for key in ("label_pt", "description_pt"):
+                if not isinstance(record.get(key), str) or not record[key].strip():
+                    raise ValueError(f"Apresentação sem {key}: {record['metric_name']}")
+            if "unit" not in record or (record["unit"] is not None and
+                    (not isinstance(record["unit"], str) or not record["unit"].strip())):
+                raise ValueError(f"Unidade inválida: {record['metric_name']}")
+            if record.get("kind") not in {"result", "context", "diagnostic"}:
+                raise ValueError(f"Natureza inválida: {record['metric_name']}")
+            priority = record.get("priority")
+            if (type(priority) is not int or
+                    priority not in categories.get(record.get("category"), set())):
+                raise ValueError(f"Prioridade/categoria inválida: {record['metric_name']}")
+            if priority < previous_priority:
+                raise ValueError("Métricas fora da ordem de importância")
+            previous_priority = priority
+    return records_valid(records, patterns, observed)
 
 
 def audit(episodes=None, benchmark=None):
@@ -84,8 +115,8 @@ def audit(episodes=None, benchmark=None):
             for name, expected in manifest["files"].items():
                 if file_info(path.parent / name) != expected:
                     raise ValueError(f"Arquivo do episódio modificado: {name}")
-            records = json.loads((path.parent / "metrics.json").read_text())["metrics"]
-            record_count += records_valid(records, patterns, observed)
+            document = json.loads((path.parent / "metrics.json").read_text())
+            record_count += episode_records_valid(document, patterns, observed)
             with gzip.open(path.parent / "entities.json.gz", "rt") as source:
                 for entities in json.load(source)["entities"].values():
                     for records in entities.values():

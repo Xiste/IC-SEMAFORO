@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from SistemaDeSemaforos.simulation import baseline
+from SistemaDeSemaforos.simulation import experiment_baseline as baseline
 
 
 class BaselineTests(unittest.TestCase):

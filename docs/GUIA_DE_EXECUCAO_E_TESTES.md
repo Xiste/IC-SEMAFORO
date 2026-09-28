@@ -37,7 +37,7 @@ make demand-random DEMAND_ARGS='--duration 60 --period 5'
 
 Produz `random.trips.xml` e `random.rou.xml` em `SistemaDeSemaforos/demandas/`,
 sem simular. Uma nova geração no mesmo destino substitui os arquivos anteriores
-após validar os novos. Fluxo: [Funcionamento — demanda](FUNCIONAMENTO.md#2-demanda-random).
+após validar os novos. Fluxo: [Funcionamento — demanda](GUIA_DE_FUNCIONAMENTO.md#2-demanda-random).
 
 Opções do gerador independente:
 
@@ -68,7 +68,7 @@ detalhadas adicionais:
 make run-random RUN_ARGS='--metrics-profile full'
 ```
 
-Perfis, resultados e desempenho medido: [Funcionamento](FUNCIONAMENTO.md).
+Perfis, resultados e desempenho medido: [Funcionamento](GUIA_DE_FUNCIONAMENTO.md).
 
 ## Verificação rápida com SUMO real
 
@@ -102,7 +102,7 @@ descartáveis só depois de conferir se não são evidências necessárias.
 | `--metrics-profile` | `core` | Seleciona observações `core` ou `full`; não altera demanda/controladores. |
 
 ```bash
-python3 -m SistemaDeSemaforos.simulation.runner --help
+python3 -m SistemaDeSemaforos.simulation.episode_runner --help
 make run-random RUN_ARGS='--output-dir outputs/outputs-random/verificacao --duration 30 --period 5'
 ```
 
@@ -112,9 +112,24 @@ das superfícies auditadas está em
 
 ## Conferir uma execução
 
-Abra `metrics.json` e procure `status`, `seed`, `simulation_seed`,
-`vehicles_generated`, `vehicles_completed` e `execution_time_seconds`.
-`manifest.json` identifica baseline, argumentos reais e observações habilitadas.
+Abra `metrics.json`: a lista `metrics` começa pelos resultados principais,
+com `label_pt`, `description_pt`, `value` e `unit`. Quando há viagens concluídas,
+perda média de tempo e espera média aparecem primeiro, seguidas da vazão de
+chegadas e do número de veículos concluídos. `priority` indica a camada de
+leitura; `kind` distingue resultados, contexto e diagnóstico.
+
+Confira também `status`, `trip_records_unfinished`, `trip_records_undeparted`,
+`teleports` e `collisions` quando presentes; métricas favoráveis precisam ser
+interpretadas junto da integridade do episódio. `seed`, `simulation_seed`,
+`vehicles_generated` e `execution_time_seconds` permanecem na mesma lista.
+`manifest.json` identifica baseline, argumentos reais, controladores e observações
+habilitadas. A classificação não retira informação nem modifica os valores.
+
+Para scripts, indexe por `metric_name` e leia `data_type`/`value`, tolerando campos
+adicionais; não dependa da posição de um registro. Novos resumos usam
+`schema_version: 2`; entidades continuam no schema 1 e manifestos no schema 2.
+Arquivos antigos são preservados. Estrutura, unidades, prioridades e limites de
+interpretação: [Funcionamento — consolidados](GUIA_DE_FUNCIONAMENTO.md#formato-dos-consolidados).
 
 Falhas interrompem o lote e preservam os arquivos disponíveis. Consulte `error`,
 `generation.log` e `sumo.log`. Avisos de congestionamento podem indicar
@@ -148,10 +163,10 @@ Reprodução não se resume a executar novamente `make run-random`.
 ## Reauditar catálogos e custo
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 python3 scripts/audit_configuration.py --check
-PYTHONDONTWRITEBYTECODE=1 python3 scripts/audit_metrics.py
-PYTHONDONTWRITEBYTECODE=1 python3 scripts/audit_metrics.py --episodes outputs/outputs-random
-PYTHONDONTWRITEBYTECODE=1 python3 scripts/benchmark_pipeline.py --repetitions 2
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/audit_configuration_catalog.py --check
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/audit_metrics_catalog.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/audit_metrics_catalog.py --episodes outputs/outputs-random
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/benchmark_observation_pipeline.py --repetitions 2
 ```
 
 O benchmark gera uma única demanda de 400 viagens e compara observação mínima,
@@ -160,13 +175,13 @@ core e full duas vezes, em ordem invertida. Preserva evidências em
 esse argumento pertence ao benchmark/gerador, não ao CLI do runner.
 
 Para atualizar configurações após mudar a instalação, execute
-`scripts/audit_configuration.py --probe-defaults` e revise o CSV. Esse probe
+`scripts/audit_configuration_catalog.py --probe-defaults` e revise o CSV. Esse probe
 usa TraCI em t=0 apenas para auditoria. A opção `--refresh-descriptions` consulta
 documentação oficial versionada e exige rede. Não são tarefas por episódio.
 
 ## Arquivos gerados e limpeza
 
-Use [Funcionamento — resultados](FUNCIONAMENTO.md#5-resultados-e-por-que-são-separados)
+Use [Funcionamento — resultados](GUIA_DE_FUNCIONAMENTO.md#5-resultados-e-por-que-são-separados)
 para identificar o papel de cada output.
 Caches/temporários são regeneráveis; episódios e baselines referenciados são
 evidências. Não exclua um baseline enquanto algum episódio preservado depender

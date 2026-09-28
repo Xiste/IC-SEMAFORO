@@ -15,8 +15,8 @@ import sys
 from tempfile import TemporaryDirectory
 import xml.etree.ElementTree as ET
 
-from ..metrics.storage import file_info, write_json
-from ..metrics.sumo_outputs import describe_network
+from ..metrics.metrics_storage import file_info, write_json
+from ..metrics.sumo_output_configuration import describe_network
 
 
 def prepare_baseline(net_file: Path, binary: str, output_root: Path) -> dict:

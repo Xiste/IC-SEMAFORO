@@ -73,7 +73,7 @@ def episode_records_valid(document, patterns, observed):
 
 
 def audit(episodes=None, benchmark=None):
-    rows = list(csv.DictReader((ROOT / "docs/metrics_catalog.csv").open(encoding="utf-8")))
+    rows = list(csv.DictReader((ROOT / "docs/catalogos/metrics_catalog.csv").open(encoding="utf-8")))
     names = [row["metric_name"] for row in rows]
     if len(names) != len(set(names)):
         raise ValueError("Nomes duplicados no catálogo")

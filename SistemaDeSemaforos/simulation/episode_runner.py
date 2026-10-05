@@ -7,6 +7,7 @@ Uso normal: ``make run-random``, que gera uma demanda nova por episódio.
 
 import argparse
 from datetime import datetime, timezone
+import json
 import math
 from pathlib import Path
 import random
@@ -31,10 +32,65 @@ from .experiment_baseline import prepare_baseline
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 DEFAULT_EPISODE_DIR = OUTPUT_ROOT / "outputs-random"
+SETTRAN_PROGRAMS_FILE = PROJECT_ROOT / "docs" / "settran" / "settran_programs.json"
 
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _validate_signal_profile(signal_profile: str, settran_plan: str | None = None) -> None:
+    """Valida a escolha fixa sem presumir uma agenda ou compilar estados ausentes."""
+    if signal_profile not in {"current", "settran"}:
+        raise ValueError("signal_profile deve ser current ou settran.")
+    if signal_profile == "current":
+        if settran_plan is not None:
+            raise ValueError("--settran-plan exige --signal-profile settran.")
+        return
+    if settran_plan is None:
+        raise ValueError(
+            "Escolha explicitamente --settran-plan para testar um plano SETTRAN fixo; "
+            "nenhum plano foi presumido. Consulte docs/settran/settran_audit.csv."
+        )
+
+    document = json.loads(SETTRAN_PROGRAMS_FILE.read_text(encoding="utf-8"))
+    programs = document["programs"]
+    available = tuple(dict.fromkeys(program["plan_id"] for program in programs))
+    if settran_plan not in available:
+        raise ValueError(
+            f"Plano SETTRAN {settran_plan!r} inexistente. "
+            f"Planos disponíveis na fonte: {'/'.join(available)}."
+        )
+    selected = [program for program in programs if program["plan_id"] == settran_plan]
+    missing_phases = sum(program.get("sumo_phases") is None for program in selected)
+    issues = [
+        f"Plano SETTRAN {settran_plan} selecionado para teste fixo "
+        f"({len(selected)} definições de interseção).",
+        "Execução indisponível: o conversor para programas SUMO não está implementado; "
+        "movimentos, sequência/transições e referência da defasagem ainda precisam "
+        "de confirmação.",
+    ]
+    if missing_phases:
+        issues.append(f"{missing_phases} definições não possuem sumo_phases.")
+    for anomaly in document.get("anomalies", []):
+        if (anomaly["kind"] == "red_cycle_mismatch"
+                and anomaly["plan_id"] == settran_plan):
+            issues.append(
+                f"{anomaly['intersection']}: {anomaly['source_cell']} preserva "
+                f"vermelho de {anomaly['source_red_seconds']} s, incompatível "
+                f"com o ciclo de {anomaly['cycle_seconds']} s."
+            )
+        elif anomaly["kind"] == "intersection_name_mismatch":
+            issues.append(
+                f"Identificação divergente em {'/'.join(anomaly['source_cells'])}: "
+                f"{' / '.join(anomaly['source_values'])}."
+            )
+    issues.append(
+        "A agenda ausente não impede esta escolha explícita; nenhum horário ou "
+        "troca automática foi definido. Consulte docs/settran/settran_audit.csv."
+    )
+    # Alterar o artefato intermediário não implementa um conversor nem valida conflitos.
+    raise ValueError(" ".join(issues))
 
 
 def run_simulation(
@@ -47,8 +103,11 @@ def run_simulation(
     metadata: dict | None = None,
     metrics_profile: str = "core",
     baseline: dict | None = None,
+    signal_profile: str = "current",
+    settran_plan: str | None = None,
 ) -> None:
     """Executa demanda pronta; recording_dir habilita arquivos de observação."""
+    _validate_signal_profile(signal_profile, settran_plan)
     if end is not None and (not math.isfinite(end) or end <= 0):
         raise ValueError("end deve ser um número finito maior que zero.")
 
@@ -121,8 +180,12 @@ def run_random_episodes(
     period: float = DEFAULT_PERIOD,
     end: float | None = None,
     metrics_profile: str = "core",
+    signal_profile: str = "current",
+    settran_plan: str | None = None,
 ) -> None:
     """Gera, simula e consolida cada episódio em uma pasta que nunca se repete."""
+    # Validar antes de sortear seed, gerar demanda ou criar qualquer episódio.
+    _validate_signal_profile(signal_profile, settran_plan)
     if isinstance(episodes, bool) or not isinstance(episodes, int) or episodes < 1:
         raise ValueError("episodes deve ser um inteiro maior que zero.")
     if metrics_profile not in {"core", "full"}:
@@ -142,11 +205,11 @@ def run_random_episodes(
     context = {}
     for episode in range(1, episodes + 1):
         _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, period,
-                            end, metrics_profile, context)
+                            end, metrics_profile, context, signal_profile)
 
 
 def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, period,
-                        end, metrics_profile, context):
+                        end, metrics_profile, context, signal_profile):
     """Mantém juntos o ciclo de vida, o contexto e o tratamento de falhas."""
     started = perf_counter()
     started_at = _utc_now()
@@ -171,6 +234,7 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
         metrics["simulation_end_requested_seconds"] = float(end)
     manifest = {
         "schema_version": 2, "episode_id": episode_id, "demand_model": "random",
+        "signal_profile": signal_profile,
         "seed": seed, "started_at_utc": started_at,
         "source_network": str(net_file), "generation": {}, "simulation": {},
         "files": {}, "status": "running",
@@ -211,7 +275,8 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
         print(f"Episódio {episode}/{episodes}: executando SUMO e registrando observações.", flush=True)
         run_simulation(net_file=snapshot, demand_file=demand_file, gui=gui, end=end,
                        recording_dir=directory, metadata=manifest["simulation"],
-                       metrics_profile=metrics_profile, baseline=baseline)
+                       metrics_profile=metrics_profile, baseline=baseline,
+                       signal_profile=signal_profile)
         simulation = manifest["simulation"]
         metrics["simulation_execution_time_seconds"] = simulation["duration_seconds"]
         metrics["simulation_seed"] = simulation["seed"]
@@ -272,6 +337,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--end", type=float)
     parser.add_argument("--metrics-profile", choices=("core", "full"), default="core",
                         help="core: observações padrão; full: inclui séries por via/faixa/veículo.")
+    parser.add_argument("--signal-profile", choices=("current", "settran"), default="current",
+                        help="current: programas do mapa; settran: auditado, execução bloqueada por lacunas.")
+    parser.add_argument("--settran-plan", type=str,
+                        help="ID oficial para testar um plano SETTRAN fixo; sem escolha presumida.")
     args = parser.parse_args(argv)
 
     try:

@@ -1,6 +1,7 @@
-"""Atualiza o catálogo a partir do SUMO instalado, código e schemas XML.
+"""Atualiza catálogo temático e referência completa das configurações.
 
-Entrada: instalação SUMO e catálogo curado existente. Saída: CSV conferível.
+Entrada: SUMO instalado, código, schemas XML e descrições curadas existentes.
+Saídas: configuration_catalog.csv (seleção) e configuration_reference.csv (cobertura).
 Uso: python3 scripts/audit_configuration_catalog.py [--check] [--probe-defaults].
 O probe opcional usa TraCI somente em t=0, fora do pipeline experimental.
 """
@@ -30,13 +31,14 @@ from SistemaDeSemaforos.demand import random_demand_generator as generator
 from SistemaDeSemaforos.simulation import episode_runner as runner
 from SistemaDeSemaforos.metrics.sumo_output_configuration import prepare_outputs
 
-CATALOG = ROOT / "docs" / "configuration_catalog.csv"
+CATALOG = ROOT / "docs" / "catalogos" / "configuration_catalog.csv"
+REFERENCE = ROOT / "docs" / "catalogos" / "configuration_reference.csv"
 FIELDS = [
     "configuration_name", "interface", "category", "description", "data_type",
     "native_default", "current_core", "current_full", "value_origin", "source_file",
     "modifiable", "change_impact", "currently_used", "scientific_relevance",
     "aliases_or_elements", "constraints", "source_reference", "source_sha256",
-    "sumo_version", "description_source", "notes",
+    "sumo_version", "description_source", "notes", "information_type",
 ]
 XSD = "{http://www.w3.org/2001/XMLSchema}"
 SCHEMA_ROOTS = ("net_file.xsd", "routes_file.xsd", "additional_file.xsd", "viewsettings_file.xsd")
@@ -387,7 +389,7 @@ def project_options(version):
                 default = str(default.relative_to(ROOT))
             result.append(row(
                 configuration_name=f"project:{name}.{option}", interface="project", category=name,
-                description=action.help or f"Parâmetro público {option}; ver docs/GUIA_DE_EXECUCAO_E_TESTES.md e função {name}.main.",
+                description=action.help or f"Parâmetro público {option}; ver docs/guias/GUIA_DE_EXECUCAO_E_TESTES.md e função {name}.main.",
                 data_type=getattr(action.type, "__name__", "bool" if isinstance(default, bool) else type(default).__name__),
                 native_default=default, current_core=default, current_full="full" if option == "metrics-profile" else default,
                 value_origin="argparse do código atual", source_file=str(Path(module.__file__).relative_to(ROOT)),
@@ -396,8 +398,10 @@ def project_options(version):
                 else "altera condições do episódio; registrar e comparar como variante",
                 currently_used="sim", scientific_relevance="alta para rastreabilidade",
                 aliases_or_elements=" ".join(action.option_strings), constraints=f"choices={action.choices}",
-                source_reference="docs/GUIA_DE_EXECUCAO_E_TESTES.md", source_sha256=digest(module.__file__), sumo_version=version,
-                notes="None indica ausência de override. Seed do gerador é distinta da seed interna do SUMO.",
+                source_reference="docs/guias/GUIA_DE_EXECUCAO_E_TESTES.md", source_sha256=digest(module.__file__), sumo_version=version,
+                notes=("Demanda e perfil semafórico são independentes. SETTRAN exige --settran-plan explícito para teste fixo; seleção é validada, mas não há programas compilados comprovados. Sem agenda ou troca automática; lacunas em docs/settran/settran_audit.csv."
+                       if option in {"signal-profile", "settran-plan"}
+                       else "None indica ausência de override. Seed do gerador é distinta da seed interna do SUMO."),
             ))
     return result
 
@@ -517,17 +521,146 @@ def refresh_descriptions(rows, version):
     print(f"Descrições XML atualizadas de tabelas oficiais: {updated}")
 
 
+def information_type(entry):
+    """Separa efeito experimental, operação, estrutura e proveniência."""
+    interface = entry["interface"]
+    name = entry["configuration_name"].split(":", 1)[1]
+    if interface == "project":
+        option = name.rsplit(".", 1)[-1]
+        if option == "net-file":
+            return "estrutural"
+        if option in {"episodes", "gui", "output-dir", "metrics-profile"}:
+            return "operacional"
+        return "experimental"
+    if interface == "builtin_network":
+        return "estrutural"
+    if interface == "builtin_vtype":
+        return "operacional" if name.endswith((".getColor", ".getShapeClass")) else "experimental"
+    if interface == "xml":
+        attribute = name.rsplit(".", 1)[-1]
+        aliases = set(entry["aliases_or_elements"].split(" | "))
+        if entry["category"] == "network":
+            if aliases & {"tlLogic", "phase"}:
+                return "estrutural" if attribute == "id" else "experimental"
+            if attribute == "version":
+                return "metadado_proveniencia"
+            return "propriedade_estrutural_granular"
+        if aliases & {"tlLogic", "phase", "WAUT", "wautSwitch", "wautJunction"}:
+            return "experimental"
+        if attribute == "id":
+            return "metadado_proveniencia"
+        if entry["category"] == "demand":
+            return "experimental"
+        return "operacional"
+    if name == "net-file":
+        return "estrutural"
+    if name in {"version", "help", "save-template", "save-schema", "save-commented"}:
+        return "metadado_proveniencia"
+    if (entry["category"] in {"output", "report", "gui_only", "configuration"}
+            or name in {"output-trip-file", "route-file", "output-file", "alternatives-output", "write-trips",
+                        "no-warnings", "no-step-log", "aggregate-warnings", "additional-files"}
+            or name.startswith("device.emissions.")):
+        return "operacional"
+    return "experimental"
+
+
+def main_catalogue(rows, version):
+    """Seleciona decisões do projeto; capacidades inativas ficam na referência.
+
+    A referência já agrupa atributos por classe XSD, nunca por instância da rede.
+    Aqui também retiramos essas propriedades granulares da leitura principal.
+    """
+    relevant_sumo = {
+        "end", "seed", "random", "step-length", "step-method.ballistic", "time-to-teleport",
+        "collision.action", "max-depart-delay", "ignore-route-errors", "lateral-resolution",
+    }
+    passenger_getters = {
+        "getAccel", "getActionStepLength", "getApparentDecel", "getDecel", "getEmergencyDecel",
+        "getEmissionClass", "getImpatience", "getImperfection", "getLength", "getMass",
+        "getMaxSpeed", "getMinGap", "getSpeedDeviation", "getSpeedFactor", "getTau", "getWidth",
+    }
+    xml_fields = {
+        # A definição base é suficiente; o XSD additional repete os mesmos campos.
+        "xml:base.xsd:tlLogicType.id", "xml:base.xsd:tlLogicType.type",
+        "xml:base.xsd:tlLogicType.programID", "xml:base.xsd:tlLogicType.offset",
+        "xml:base.xsd:phaseType.duration", "xml:base.xsd:phaseType.state",
+        "xml:route.xsd:vTypeType.vClass",
+        "xml:additional_file.xsd:meandataType.excludeEmpty",
+        "xml:additional_file.xsd:meandataType.file",
+        "xml:additional_file.xsd:meandataType.period",
+        "xml:additional_file.xsd:meandataType.withInternal",
+        "xml:additional_file.xsd:timedEventType.dest",
+        "xml:additional_file.xsd:timedEventType.type",
+    }
+    selected = []
+    for entry in rows:
+        interface = entry["interface"]
+        name = entry["configuration_name"]
+        keep = (
+            interface in {"project", "builtin_network"}
+            or entry["value_origin"].startswith("override")
+            or (interface == "sumo" and name.split(":", 1)[1] in relevant_sumo)
+            or (interface == "builtin_vtype" and entry["category"] == "passenger_baseline"
+                and name.rsplit(".", 1)[-1] in passenger_getters)
+            or name in xml_fields
+        )
+        if keep:
+            selected.append(entry)
+    network = ET.parse(generator.DEFAULT_NET_FILE).getroot()
+    counts = Counter(element.tag for element in network.iter())
+    network_source = str(generator.DEFAULT_NET_FILE.relative_to(ROOT))
+    network_hash = digest(generator.DEFAULT_NET_FILE)
+    for key, description, value, impact in (
+        ("structure", "Rede Rondon Norte: geometrias, permissões e conectividade permanecem no XML de origem.",
+         "; ".join(f"{tag}={counts[tag]}" for tag in ("edge", "lane", "junction", "connection")),
+         "Trocar geometria, permissões ou conexões define outro cenário experimental."),
+        ("controlled_links", "Associação estrutural TLS → linkIndex → conexão; indispensável para mapear movimentos SETTRAN.",
+         f"TLS={counts['tlLogic']}; conexões controladas={sum('tl' in element.attrib for element in network.iter('connection'))}",
+         "Preservar a associação; nomes/proximidade não comprovam correspondência SETTRAN."),
+    ):
+        selected.append(row(
+            configuration_name=f"scenario:network.{key}", interface="summary", category="network",
+            description=description, data_type="resumo estrutural", current_core=value, current_full=value,
+            value_origin="contagem do XML; não é parâmetro ajustável", source_file=network_source,
+            modifiable="não no cenário atual", change_impact=impact, currently_used="sim",
+            scientific_relevance="alta: identidade do cenário", source_reference="docs/catalogos/configuration_reference.csv; " + network_source,
+            source_sha256=network_hash, sumo_version=version, information_type="estrutural",
+            notes="Atributos por classe estão na referência completa; valores por instância permanecem no XML original.",
+        ))
+    selected.append(row(
+        configuration_name="provenance:sumo.installation", interface="summary", category="provenance",
+        description="Versão e hash do executável usado para conferir defaults e contratos; não é configuração editável.",
+        data_type="string", current_core=version, current_full=version, value_origin="sumo --version; SHA-256 do binário",
+        source_file=shutil.which("sumo"), modifiable="não; regenerar ao trocar instalação",
+        change_impact="Troca de versão exige reauditoria e registro experimental.", currently_used="sim",
+        scientific_relevance="reprodução", source_reference="sumo --version",
+        source_sha256=digest(shutil.which("sumo")), sumo_version=version, information_type="metadado_proveniencia",
+        notes=f"Referência completa: docs/catalogos/configuration_reference.csv ({len(rows)} entradas). Capacidades catalogadas não são automaticamente flags do CLI do projeto.",
+    ))
+    return sorted(selected, key=lambda entry: entry["configuration_name"])
+
+
+def render(rows):
+    stream = io.StringIO(newline="")
+    writer = csv.DictWriter(stream, fieldnames=FIELDS, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+    return stream.getvalue()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true", help="Compara com CSV sem gravar")
+    parser.add_argument("--check", action="store_true", help="Confere catálogo e referência completa sem gravar")
     parser.add_argument("--probe-defaults", action="store_true", help="Revalida 26 getters dos tipos embutidos em t=0")
     parser.add_argument("--refresh-descriptions", action="store_true", help="Consulta tabelas da documentação oficial versionada")
     args = parser.parse_args()
     sumo_home = Path(os.environ.get("SUMO_HOME", "/usr/share/sumo"))
     version = subprocess.run(["sumo", "--version"], check=True, capture_output=True, text=True).stdout.splitlines()[0]
     previous = {}
-    if CATALOG.exists():
-        with CATALOG.open(newline="", encoding="utf-8") as stream:
+    # Na primeira migração, o catálogo antigo ainda contém a cobertura completa.
+    previous_path = REFERENCE if REFERENCE.exists() else CATALOG
+    if previous_path.exists():
+        with previous_path.open(newline="", encoding="utf-8") as stream:
             previous = {entry["configuration_name"]: entry for entry in csv.DictReader(stream)}
     rows, core_xml, full_xml = native_options(version, sumo_home)
     rows += xml_options(version, sumo_home, core_xml, full_xml) + project_options(version)
@@ -547,22 +680,24 @@ def main():
     if args.refresh_descriptions:
         refresh_descriptions(rows, version)
     clarify_context(rows)
+    for entry in rows:
+        entry["information_type"] = information_type(entry)
     rows.sort(key=lambda entry: entry["configuration_name"])
     names = [entry["configuration_name"] for entry in rows]
     if len(names) != len(set(names)):
         raise ValueError("Chaves duplicadas no catálogo")
-    stream = io.StringIO(newline="")
-    writer = csv.DictWriter(stream, fieldnames=FIELDS, lineterminator="\n")
-    writer.writeheader()
-    writer.writerows(rows)
-    rendered = stream.getvalue()
-    if args.check:
-        if not CATALOG.exists() or CATALOG.read_text(encoding="utf-8") != rendered:
-            raise SystemExit("Catálogo desatualizado: execute scripts/audit_configuration_catalog.py e revise as diferenças.")
-    else:
-        CATALOG.parent.mkdir(exist_ok=True)
-        CATALOG.write_text(rendered, encoding="utf-8")
-    print(json.dumps({"rows": len(rows), "interfaces": Counter(entry["interface"] for entry in rows),
+    main_rows = main_catalogue(rows, version)
+    for path, entries in ((REFERENCE, rows), (CATALOG, main_rows)):
+        rendered = render(entries)
+        if args.check:
+            if not path.exists() or path.read_text(encoding="utf-8") != rendered:
+                raise SystemExit(f"{path.name} desatualizado: execute scripts/audit_configuration_catalog.py e revise as diferenças.")
+        else:
+            path.parent.mkdir(exist_ok=True)
+            path.write_text(rendered, encoding="utf-8")
+    print(json.dumps({"rows": len(main_rows), "reference_rows": len(rows),
+                      "information_types": Counter(entry["information_type"] for entry in main_rows),
+                      "interfaces": Counter(entry["interface"] for entry in main_rows),
                       "sumo_version": version, "mode": "check" if args.check else "write"}, ensure_ascii=False))
 
 

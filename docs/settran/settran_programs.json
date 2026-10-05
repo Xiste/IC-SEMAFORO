@@ -1,0 +1,3272 @@
+{
+  "schema_version": 1,
+  "signal_profile": "settran",
+  "status": "blocked",
+  "representation": "audited_intermediate_not_executable",
+  "source": {
+    "path": "RondonNorte.xlsx",
+    "sha256": "5d6014fb9978e55513beda8db8793dbec67c94b5555ea7989a7862cf56882d2a",
+    "sheet": "Plan1",
+    "range": "A1:S158",
+    "unit": "seconds",
+    "unit_source_cell": "A11",
+    "numeric_values": "stored_values_in_audited_xlsx"
+  },
+  "normalization_notes": [
+    "IDs dos planos preservados como strings; Plan1 é o nome da aba.",
+    "Tempos numéricos em segundos; somente espaços externos dos rótulos foram removidos.",
+    "A ordem dos estágios é a apresentação na fonte, não uma sequência SUMO confirmada.",
+    "offset_seconds preserva Defasagem; origem, sinal e marco não confirmados para SUMO.",
+    "Vermelho é residual do ciclo em 125 fórmulas; não é fase adicional a concatenar.",
+    "Os três vermelhos discrepantes são preservados sem correção automática.",
+    "null representa informação ausente ou não comprovada; não representa agenda de dia inteiro.",
+    "sumo_links conserva apenas associações físicas confirmadas na auditoria; não define permissões, estados ou transições.",
+    "sumo_tls_ids reúne somente TLS de estágios com vínculo físico confirmado; não inventaria toda a interseção."
+  ],
+  "programs": [
+    {
+      "intersection": "Av. Rondon Pacheco x Av. Benjamim Magalhães",
+      "plan_id": "2",
+      "cycle_seconds": 70,
+      "offset_seconds": 0,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 10,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 53,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A15",
+            "movement": "B15",
+            "green_seconds": "C7",
+            "yellow_seconds": "D7",
+            "clearance_red_seconds": "E7",
+            "red_seconds": "F7"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Benjamim Magalhães",
+          "green_seconds": 10,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 53,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A16",
+            "movement": "B16",
+            "green_seconds": "G7",
+            "yellow_seconds": "H7",
+            "clearance_red_seconds": "I7",
+            "red_seconds": "J7"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Alagoas",
+          "green_seconds": 10,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 53,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A17",
+            "movement": "B17",
+            "green_seconds": "K7",
+            "yellow_seconds": "L7",
+            "clearance_red_seconds": "M7",
+            "red_seconds": "N7"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 4,
+          "clearance_red_seconds": 0,
+          "red_seconds": 51,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A18",
+            "movement": "B18",
+            "green_seconds": "O7",
+            "yellow_seconds": "P7",
+            "clearance_red_seconds": "Q7",
+            "red_seconds": "R7"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A3",
+        "plan_id": "A7",
+        "cycle_seconds": "S7",
+        "offset_seconds": "B7"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. Benjamim Magalhães",
+      "plan_id": "4",
+      "cycle_seconds": 110,
+      "offset_seconds": 30,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 27,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 76,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A15",
+            "movement": "B15",
+            "green_seconds": "C8",
+            "yellow_seconds": "D8",
+            "clearance_red_seconds": "E8",
+            "red_seconds": "F8"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Benjamim Magalhães",
+          "green_seconds": 20,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 83,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A16",
+            "movement": "B16",
+            "green_seconds": "G8",
+            "yellow_seconds": "H8",
+            "clearance_red_seconds": "I8",
+            "red_seconds": "J8"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Alagoas",
+          "green_seconds": 23,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 80,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A17",
+            "movement": "B17",
+            "green_seconds": "K8",
+            "yellow_seconds": "L8",
+            "clearance_red_seconds": "M8",
+            "red_seconds": "N8"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 4,
+          "clearance_red_seconds": 0,
+          "red_seconds": 91,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A18",
+            "movement": "B18",
+            "green_seconds": "O8",
+            "yellow_seconds": "P8",
+            "clearance_red_seconds": "Q8",
+            "red_seconds": "R8"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A3",
+        "plan_id": "A8",
+        "cycle_seconds": "S8",
+        "offset_seconds": "B8"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. Benjamim Magalhães",
+      "plan_id": "16",
+      "cycle_seconds": 130,
+      "offset_seconds": 36,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 42,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 81,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A15",
+            "movement": "B15",
+            "green_seconds": "C9",
+            "yellow_seconds": "D9",
+            "clearance_red_seconds": "E9",
+            "red_seconds": "F9"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Benjamim Magalhães",
+          "green_seconds": 24,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 99,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A16",
+            "movement": "B16",
+            "green_seconds": "G9",
+            "yellow_seconds": "H9",
+            "clearance_red_seconds": "I9",
+            "red_seconds": "J9"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Alagoas",
+          "green_seconds": 24,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 99,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A17",
+            "movement": "B17",
+            "green_seconds": "K9",
+            "yellow_seconds": "L9",
+            "clearance_red_seconds": "M9",
+            "red_seconds": "N9"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 4,
+          "clearance_red_seconds": 0,
+          "red_seconds": 111,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A18",
+            "movement": "B18",
+            "green_seconds": "O9",
+            "yellow_seconds": "P9",
+            "clearance_red_seconds": "Q9",
+            "red_seconds": "R9"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A3",
+        "plan_id": "A9",
+        "cycle_seconds": "S9",
+        "offset_seconds": "B9"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. Benjamim Magalhães",
+      "plan_id": "24",
+      "cycle_seconds": 150,
+      "offset_seconds": 40,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 48,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 95,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A15",
+            "movement": "B15",
+            "green_seconds": "C10",
+            "yellow_seconds": "D10",
+            "clearance_red_seconds": "E10",
+            "red_seconds": "F10"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Benjamim Magalhães",
+          "green_seconds": 31,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 112,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A16",
+            "movement": "B16",
+            "green_seconds": "G10",
+            "yellow_seconds": "H10",
+            "clearance_red_seconds": "I10",
+            "red_seconds": "J10"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Alagoas",
+          "green_seconds": 31,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 112,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A17",
+            "movement": "B17",
+            "green_seconds": "K10",
+            "yellow_seconds": "L10",
+            "clearance_red_seconds": "M10",
+            "red_seconds": "N10"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 4,
+          "clearance_red_seconds": 0,
+          "red_seconds": 131,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A18",
+            "movement": "B18",
+            "green_seconds": "O10",
+            "yellow_seconds": "P10",
+            "clearance_red_seconds": "Q10",
+            "red_seconds": "R10"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A3",
+        "plan_id": "A10",
+        "cycle_seconds": "S10",
+        "offset_seconds": "B10"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Paraná",
+      "plan_id": "2",
+      "cycle_seconds": 70,
+      "offset_seconds": 0,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido Rio Uberabinha",
+          "green_seconds": 23,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 42,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A33",
+            "movement": "B33",
+            "green_seconds": "C25",
+            "yellow_seconds": "D25",
+            "clearance_red_seconds": "E25",
+            "red_seconds": "F25"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 10,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 55,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A34",
+            "movement": "B34",
+            "green_seconds": "G25",
+            "yellow_seconds": "H25",
+            "clearance_red_seconds": "I25",
+            "red_seconds": "J25"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Paraná sentido bairro Tibery",
+          "green_seconds": 9,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 56,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A35",
+            "movement": "B35",
+            "green_seconds": "K25",
+            "yellow_seconds": "L25",
+            "clearance_red_seconds": "M25",
+            "red_seconds": "N25"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Paraná sentido bairro Brasil",
+          "green_seconds": 8,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 57,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A36",
+            "movement": "B36",
+            "green_seconds": "O25",
+            "yellow_seconds": "P25",
+            "clearance_red_seconds": "Q25",
+            "red_seconds": "R25"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A21",
+        "plan_id": "A25",
+        "cycle_seconds": "S25",
+        "offset_seconds": "B25"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Paraná",
+      "plan_id": "4",
+      "cycle_seconds": 110,
+      "offset_seconds": 20,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido Rio Uberabinha",
+          "green_seconds": 36,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 69,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A33",
+            "movement": "B33",
+            "green_seconds": "C26",
+            "yellow_seconds": "D26",
+            "clearance_red_seconds": "E26",
+            "red_seconds": "F26"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 22,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 83,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A34",
+            "movement": "B34",
+            "green_seconds": "G26",
+            "yellow_seconds": "H26",
+            "clearance_red_seconds": "I26",
+            "red_seconds": "J26"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Paraná sentido bairro Tibery",
+          "green_seconds": 16,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 89,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A35",
+            "movement": "B35",
+            "green_seconds": "K26",
+            "yellow_seconds": "L26",
+            "clearance_red_seconds": "M26",
+            "red_seconds": "N26"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Paraná sentido bairro Brasil",
+          "green_seconds": 16,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 89,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A36",
+            "movement": "B36",
+            "green_seconds": "O26",
+            "yellow_seconds": "P26",
+            "clearance_red_seconds": "Q26",
+            "red_seconds": "R26"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A21",
+        "plan_id": "A26",
+        "cycle_seconds": "S26",
+        "offset_seconds": "B26"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Paraná",
+      "plan_id": "16",
+      "cycle_seconds": 130,
+      "offset_seconds": 78,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido Rio Uberabinha",
+          "green_seconds": 41,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 84,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A33",
+            "movement": "B33",
+            "green_seconds": "C27",
+            "yellow_seconds": "D27",
+            "clearance_red_seconds": "E27",
+            "red_seconds": "F27"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 27,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 98,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A34",
+            "movement": "B34",
+            "green_seconds": "G27",
+            "yellow_seconds": "H27",
+            "clearance_red_seconds": "I27",
+            "red_seconds": "J27"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Paraná sentido bairro Tibery",
+          "green_seconds": 21,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 104,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A35",
+            "movement": "B35",
+            "green_seconds": "K27",
+            "yellow_seconds": "L27",
+            "clearance_red_seconds": "M27",
+            "red_seconds": "N27"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Paraná sentido bairro Brasil",
+          "green_seconds": 21,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 104,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A36",
+            "movement": "B36",
+            "green_seconds": "O27",
+            "yellow_seconds": "P27",
+            "clearance_red_seconds": "Q27",
+            "red_seconds": "R27"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A21",
+        "plan_id": "A27",
+        "cycle_seconds": "S27",
+        "offset_seconds": "B27"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Paraná",
+      "plan_id": "24",
+      "cycle_seconds": 150,
+      "offset_seconds": 90,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido Rio Uberabinha",
+          "green_seconds": 46,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 99,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A33",
+            "movement": "B33",
+            "green_seconds": "C28",
+            "yellow_seconds": "D28",
+            "clearance_red_seconds": "E28",
+            "red_seconds": "F28"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 32,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 113,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A34",
+            "movement": "B34",
+            "green_seconds": "G28",
+            "yellow_seconds": "H28",
+            "clearance_red_seconds": "I28",
+            "red_seconds": "J28"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Paraná sentido bairro Tibery",
+          "green_seconds": 26,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 119,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A35",
+            "movement": "B35",
+            "green_seconds": "K28",
+            "yellow_seconds": "L28",
+            "clearance_red_seconds": "M28",
+            "red_seconds": "N28"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Paraná sentido bairro Brasil",
+          "green_seconds": 26,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 119,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A36",
+            "movement": "B36",
+            "green_seconds": "O28",
+            "yellow_seconds": "P28",
+            "clearance_red_seconds": "Q28",
+            "red_seconds": "R28"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A21",
+        "plan_id": "A28",
+        "cycle_seconds": "S28",
+        "offset_seconds": "B28"
+      }
+    },
+    {
+      "intersection": "Av. Cesário Alvin x Rua Paraná",
+      "plan_id": "2",
+      "cycle_seconds": 70,
+      "offset_seconds": 0,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Cesário Alvin",
+          "green_seconds": 14,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 17,
+          "red_seconds": 34,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                1,
+                2
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A51",
+            "movement": "B51",
+            "green_seconds": "C43",
+            "yellow_seconds": "D43",
+            "clearance_red_seconds": "E43",
+            "red_seconds": "F43"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Rua Paraná sentido bairro Tibery",
+          "green_seconds": 10,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 53,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                3,
+                4
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A52",
+            "movement": "B52",
+            "green_seconds": "G43",
+            "yellow_seconds": "H43",
+            "clearance_red_seconds": "I43",
+            "red_seconds": "J43"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Paraná sentido bairro Brasil",
+          "green_seconds": 10,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 53,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                0
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A53",
+            "movement": "B53",
+            "green_seconds": "K43",
+            "yellow_seconds": "L43",
+            "clearance_red_seconds": "M43",
+            "red_seconds": "N43"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_CESARIO_PARANA"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A39",
+        "plan_id": "A43",
+        "cycle_seconds": "S43",
+        "offset_seconds": "B43"
+      }
+    },
+    {
+      "intersection": "Av. Cesário Alvin x Rua Paraná",
+      "plan_id": "4",
+      "cycle_seconds": 110,
+      "offset_seconds": 80,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Cesário Alvin",
+          "green_seconds": 23,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 17,
+          "red_seconds": 65,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                1,
+                2
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A51",
+            "movement": "B51",
+            "green_seconds": "C44",
+            "yellow_seconds": "D44",
+            "clearance_red_seconds": "E44",
+            "red_seconds": "F44"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Rua Paraná sentido bairro Tibery",
+          "green_seconds": 26,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 77,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                3,
+                4
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A52",
+            "movement": "B52",
+            "green_seconds": "G44",
+            "yellow_seconds": "H44",
+            "clearance_red_seconds": "I44",
+            "red_seconds": "J44"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Paraná sentido bairro Brasil",
+          "green_seconds": 25,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 78,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                0
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A53",
+            "movement": "B53",
+            "green_seconds": "K44",
+            "yellow_seconds": "L44",
+            "clearance_red_seconds": "M44",
+            "red_seconds": "N44"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_CESARIO_PARANA"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A39",
+        "plan_id": "A44",
+        "cycle_seconds": "S44",
+        "offset_seconds": "B44"
+      }
+    },
+    {
+      "intersection": "Av. Cesário Alvin x Rua Paraná",
+      "plan_id": "16",
+      "cycle_seconds": 130,
+      "offset_seconds": 89,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Cesário Alvin",
+          "green_seconds": 30,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 17,
+          "red_seconds": 78,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                1,
+                2
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A51",
+            "movement": "B51",
+            "green_seconds": "C45",
+            "yellow_seconds": "D45",
+            "clearance_red_seconds": "E45",
+            "red_seconds": "F45"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Rua Paraná sentido bairro Tibery",
+          "green_seconds": 33,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 90,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                3,
+                4
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A52",
+            "movement": "B52",
+            "green_seconds": "G45",
+            "yellow_seconds": "H45",
+            "clearance_red_seconds": "I45",
+            "red_seconds": "J45"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Paraná sentido bairro Brasil",
+          "green_seconds": 31,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 92,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                0
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A53",
+            "movement": "B53",
+            "green_seconds": "K45",
+            "yellow_seconds": "L45",
+            "clearance_red_seconds": "M45",
+            "red_seconds": "N45"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_CESARIO_PARANA"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A39",
+        "plan_id": "A45",
+        "cycle_seconds": "S45",
+        "offset_seconds": "B45"
+      }
+    },
+    {
+      "intersection": "Av. Cesário Alvin x Rua Paraná",
+      "plan_id": "24",
+      "cycle_seconds": 150,
+      "offset_seconds": 103,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Cesário Alvin",
+          "green_seconds": 38,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 17,
+          "red_seconds": 90,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                1,
+                2
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A51",
+            "movement": "B51",
+            "green_seconds": "C46",
+            "yellow_seconds": "D46",
+            "clearance_red_seconds": "E46",
+            "red_seconds": "F46"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Rua Paraná sentido bairro Tibery",
+          "green_seconds": 37,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 106,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                3,
+                4
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A52",
+            "movement": "B52",
+            "green_seconds": "G46",
+            "yellow_seconds": "H46",
+            "clearance_red_seconds": "I46",
+            "red_seconds": "J46"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Paraná sentido bairro Brasil",
+          "green_seconds": 39,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 104,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "link_indices": [
+                0
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A53",
+            "movement": "B53",
+            "green_seconds": "K46",
+            "yellow_seconds": "L46",
+            "clearance_red_seconds": "M46",
+            "red_seconds": "N46"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_CESARIO_PARANA"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A39",
+        "plan_id": "A46",
+        "cycle_seconds": "S46",
+        "offset_seconds": "B46"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Porto Alegre",
+      "plan_id": "2",
+      "cycle_seconds": 70,
+      "offset_seconds": 61,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido BR050 e conversão à esquerda",
+          "green_seconds": 10,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 55,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A68",
+            "movement": "B68",
+            "green_seconds": "C60",
+            "yellow_seconds": "D60",
+            "clearance_red_seconds": "E60",
+            "red_seconds": "F60"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 16,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 49,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A69",
+            "movement": "B69",
+            "green_seconds": "G60",
+            "yellow_seconds": "H60",
+            "clearance_red_seconds": "I60",
+            "red_seconds": "J60"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Porto Alegre",
+          "green_seconds": 10,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 55,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "link_indices": [
+                3,
+                4
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A70",
+            "movement": "B70",
+            "green_seconds": "K60",
+            "yellow_seconds": "L60",
+            "clearance_red_seconds": "M60",
+            "red_seconds": "N60"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 4,
+          "clearance_red_seconds": 0,
+          "red_seconds": 51,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A71",
+            "movement": "B71",
+            "green_seconds": "O60",
+            "yellow_seconds": "P60",
+            "clearance_red_seconds": "Q60",
+            "red_seconds": "R60"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_PORTO_ALEGRE"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A56",
+        "plan_id": "A60",
+        "cycle_seconds": "S60",
+        "offset_seconds": "B60"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Porto Alegre",
+      "plan_id": "4",
+      "cycle_seconds": 110,
+      "offset_seconds": 75,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido BR050 e conversão à esquerda",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 90,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A68",
+            "movement": "B68",
+            "green_seconds": "C61",
+            "yellow_seconds": "D61",
+            "clearance_red_seconds": "E61",
+            "red_seconds": "F61"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 31,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 74,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A69",
+            "movement": "B69",
+            "green_seconds": "G61",
+            "yellow_seconds": "H61",
+            "clearance_red_seconds": "I61",
+            "red_seconds": "J61"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Porto Alegre",
+          "green_seconds": 30,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 75,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "link_indices": [
+                3,
+                4
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A70",
+            "movement": "B70",
+            "green_seconds": "K61",
+            "yellow_seconds": "L61",
+            "clearance_red_seconds": "M61",
+            "red_seconds": "N61"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 4,
+          "clearance_red_seconds": 0,
+          "red_seconds": 91,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A71",
+            "movement": "B71",
+            "green_seconds": "O61",
+            "yellow_seconds": "P61",
+            "clearance_red_seconds": "Q61",
+            "red_seconds": "R61"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_PORTO_ALEGRE"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A56",
+        "plan_id": "A61",
+        "cycle_seconds": "S61",
+        "offset_seconds": "B61"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Porto Alegre",
+      "plan_id": "16",
+      "cycle_seconds": 130,
+      "offset_seconds": 91,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido BR050 e conversão à esquerda",
+          "green_seconds": 20,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 105,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A68",
+            "movement": "B68",
+            "green_seconds": "C62",
+            "yellow_seconds": "D62",
+            "clearance_red_seconds": "E62",
+            "red_seconds": "F62"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 41,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 84,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A69",
+            "movement": "B69",
+            "green_seconds": "G62",
+            "yellow_seconds": "H62",
+            "clearance_red_seconds": "I62",
+            "red_seconds": "J62"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Porto Alegre",
+          "green_seconds": 35,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 90,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "link_indices": [
+                3,
+                4
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A70",
+            "movement": "B70",
+            "green_seconds": "K62",
+            "yellow_seconds": "L62",
+            "clearance_red_seconds": "M62",
+            "red_seconds": "N62"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 4,
+          "clearance_red_seconds": 0,
+          "red_seconds": 111,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A71",
+            "movement": "B71",
+            "green_seconds": "O62",
+            "yellow_seconds": "P62",
+            "clearance_red_seconds": "Q62",
+            "red_seconds": "R62"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_PORTO_ALEGRE"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A56",
+        "plan_id": "A62",
+        "cycle_seconds": "S62",
+        "offset_seconds": "B62"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Porto Alegre",
+      "plan_id": "24",
+      "cycle_seconds": 150,
+      "offset_seconds": 100,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido BR050 e conversão à esquerda",
+          "green_seconds": 25,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 120,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A68",
+            "movement": "B68",
+            "green_seconds": "C63",
+            "yellow_seconds": "D63",
+            "clearance_red_seconds": "E63",
+            "red_seconds": "F63"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 61,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 84,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A69",
+            "movement": "B69",
+            "green_seconds": "G63",
+            "yellow_seconds": "H63",
+            "clearance_red_seconds": "I63",
+            "red_seconds": "J63"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Porto Alegre",
+          "green_seconds": 30,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 115,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "link_indices": [
+                3,
+                4
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A70",
+            "movement": "B70",
+            "green_seconds": "K63",
+            "yellow_seconds": "L63",
+            "clearance_red_seconds": "M63",
+            "red_seconds": "N63"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 4,
+          "clearance_red_seconds": 0,
+          "red_seconds": 131,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A71",
+            "movement": "B71",
+            "green_seconds": "O63",
+            "yellow_seconds": "P63",
+            "clearance_red_seconds": "Q63",
+            "red_seconds": "R63"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_PORTO_ALEGRE"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A56",
+        "plan_id": "A63",
+        "cycle_seconds": "S63",
+        "offset_seconds": "B63"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Belém",
+      "plan_id": "2",
+      "cycle_seconds": 70,
+      "offset_seconds": 61,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 50,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A86",
+            "movement": "B86",
+            "green_seconds": "C78",
+            "yellow_seconds": "D78",
+            "clearance_red_seconds": "E78",
+            "red_seconds": "F78"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 10,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 55,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A87",
+            "movement": "B87",
+            "green_seconds": "G78",
+            "yellow_seconds": "H78",
+            "clearance_red_seconds": "I78",
+            "red_seconds": "J78"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 50,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A88",
+            "movement": "B88",
+            "green_seconds": "K78",
+            "yellow_seconds": "L78",
+            "clearance_red_seconds": "M78",
+            "red_seconds": "N78"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Belém",
+          "green_seconds": 10,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 55,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                7,
+                8,
+                9
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A89",
+            "movement": "B89",
+            "green_seconds": "O78",
+            "yellow_seconds": "P78",
+            "clearance_red_seconds": "Q78",
+            "red_seconds": "R78"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_BELEM"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A74",
+        "plan_id": "A78",
+        "cycle_seconds": "S78",
+        "offset_seconds": "B78"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Belém",
+      "plan_id": "4",
+      "cycle_seconds": 110,
+      "offset_seconds": 75,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 90,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A86",
+            "movement": "B86",
+            "green_seconds": "C79",
+            "yellow_seconds": "D79",
+            "clearance_red_seconds": "E79",
+            "red_seconds": "F79"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 30,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 75,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A87",
+            "movement": "B87",
+            "green_seconds": "G79",
+            "yellow_seconds": "H79",
+            "clearance_red_seconds": "I79",
+            "red_seconds": "J79"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 90,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A88",
+            "movement": "B88",
+            "green_seconds": "K79",
+            "yellow_seconds": "L79",
+            "clearance_red_seconds": "M79",
+            "red_seconds": "N79"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Belém",
+          "green_seconds": 30,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 75,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                7,
+                8,
+                9
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A89",
+            "movement": "B89",
+            "green_seconds": "O79",
+            "yellow_seconds": "P79",
+            "clearance_red_seconds": "Q79",
+            "red_seconds": "R79"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_BELEM"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A74",
+        "plan_id": "A79",
+        "cycle_seconds": "S79",
+        "offset_seconds": "B79"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Belém",
+      "plan_id": "16",
+      "cycle_seconds": 130,
+      "offset_seconds": 81,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 20,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 105,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A86",
+            "movement": "B86",
+            "green_seconds": "C80",
+            "yellow_seconds": "D80",
+            "clearance_red_seconds": "E80",
+            "red_seconds": "F80"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 45,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 80,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A87",
+            "movement": "B87",
+            "green_seconds": "G80",
+            "yellow_seconds": "H80",
+            "clearance_red_seconds": "I80",
+            "red_seconds": "J80"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 110,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A88",
+            "movement": "B88",
+            "green_seconds": "K80",
+            "yellow_seconds": "L80",
+            "clearance_red_seconds": "M80",
+            "red_seconds": "N80"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Belém",
+          "green_seconds": 30,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 95,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                7,
+                8,
+                9
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A89",
+            "movement": "B89",
+            "green_seconds": "O80",
+            "yellow_seconds": "P80",
+            "clearance_red_seconds": "Q80",
+            "red_seconds": "R80"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_BELEM"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A74",
+        "plan_id": "A80",
+        "cycle_seconds": "S80",
+        "offset_seconds": "B80"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Belém",
+      "plan_id": "24",
+      "cycle_seconds": 150,
+      "offset_seconds": 90,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 130,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A86",
+            "movement": "B86",
+            "green_seconds": "C81",
+            "yellow_seconds": "D81",
+            "clearance_red_seconds": "E81",
+            "red_seconds": "F81"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 60,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 85,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A87",
+            "movement": "B87",
+            "green_seconds": "G81",
+            "yellow_seconds": "H81",
+            "clearance_red_seconds": "I81",
+            "red_seconds": "J81"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 130,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A88",
+            "movement": "B88",
+            "green_seconds": "K81",
+            "yellow_seconds": "L81",
+            "clearance_red_seconds": "M81",
+            "red_seconds": "N81"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Belém",
+          "green_seconds": 40,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 105,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "link_indices": [
+                7,
+                8,
+                9
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A89",
+            "movement": "B89",
+            "green_seconds": "O81",
+            "yellow_seconds": "P81",
+            "clearance_red_seconds": "Q81",
+            "red_seconds": "R81"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_BELEM"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A74",
+        "plan_id": "A81",
+        "cycle_seconds": "S81",
+        "offset_seconds": "B81"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Antônio Crescêncio",
+      "plan_id": "2",
+      "cycle_seconds": 70,
+      "offset_seconds": 30,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 50,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A104",
+            "movement": "B104",
+            "green_seconds": "C96",
+            "yellow_seconds": "D96",
+            "clearance_red_seconds": "E96",
+            "red_seconds": "F96"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 10,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 55,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A105",
+            "movement": "B105",
+            "green_seconds": "G96",
+            "yellow_seconds": "H96",
+            "clearance_red_seconds": "I96",
+            "red_seconds": "J96"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 50,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A106",
+            "movement": "B106",
+            "green_seconds": "K96",
+            "yellow_seconds": "L96",
+            "clearance_red_seconds": "M96",
+            "red_seconds": "N96"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Antônio Crescêncio",
+          "green_seconds": 10,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 55,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A107",
+            "movement": "B107",
+            "green_seconds": "O96",
+            "yellow_seconds": "P96",
+            "clearance_red_seconds": "Q96",
+            "red_seconds": "R96"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A92",
+        "plan_id": "A96",
+        "cycle_seconds": "S96",
+        "offset_seconds": "B96"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Antônio Crescêncio",
+      "plan_id": "4",
+      "cycle_seconds": 110,
+      "offset_seconds": 20,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 90,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A104",
+            "movement": "B104",
+            "green_seconds": "C97",
+            "yellow_seconds": "D97",
+            "clearance_red_seconds": "E97",
+            "red_seconds": "F97"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 30,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 75,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A105",
+            "movement": "B105",
+            "green_seconds": "G97",
+            "yellow_seconds": "H97",
+            "clearance_red_seconds": "I97",
+            "red_seconds": "J97"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 90,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A106",
+            "movement": "B106",
+            "green_seconds": "K97",
+            "yellow_seconds": "L97",
+            "clearance_red_seconds": "M97",
+            "red_seconds": "N97"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Antônio Crescêncio",
+          "green_seconds": 30,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 75,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A107",
+            "movement": "B107",
+            "green_seconds": "O97",
+            "yellow_seconds": "P97",
+            "clearance_red_seconds": "Q97",
+            "red_seconds": "R97"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A92",
+        "plan_id": "A97",
+        "cycle_seconds": "S97",
+        "offset_seconds": "B97"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Antônio Crescêncio",
+      "plan_id": "16",
+      "cycle_seconds": 130,
+      "offset_seconds": 16,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 20,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 105,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A104",
+            "movement": "B104",
+            "green_seconds": "C98",
+            "yellow_seconds": "D98",
+            "clearance_red_seconds": "E98",
+            "red_seconds": "F98"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 45,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 80,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A105",
+            "movement": "B105",
+            "green_seconds": "G98",
+            "yellow_seconds": "H98",
+            "clearance_red_seconds": "I98",
+            "red_seconds": "J98"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 110,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A106",
+            "movement": "B106",
+            "green_seconds": "K98",
+            "yellow_seconds": "L98",
+            "clearance_red_seconds": "M98",
+            "red_seconds": "N98"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Antônio Crescêncio",
+          "green_seconds": 30,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 95,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A107",
+            "movement": "B107",
+            "green_seconds": "O98",
+            "yellow_seconds": "P98",
+            "clearance_red_seconds": "Q98",
+            "red_seconds": "R98"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A92",
+        "plan_id": "A98",
+        "cycle_seconds": "S98",
+        "offset_seconds": "B98"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Antônio Crescêncio",
+      "plan_id": "24",
+      "cycle_seconds": 150,
+      "offset_seconds": 40,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 130,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A104",
+            "movement": "B104",
+            "green_seconds": "C99",
+            "yellow_seconds": "D99",
+            "clearance_red_seconds": "E99",
+            "red_seconds": "F99"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 50,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 95,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A105",
+            "movement": "B105",
+            "green_seconds": "G99",
+            "yellow_seconds": "H99",
+            "clearance_red_seconds": "I99",
+            "red_seconds": "J99"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 130,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A106",
+            "movement": "B106",
+            "green_seconds": "K99",
+            "yellow_seconds": "L99",
+            "clearance_red_seconds": "M99",
+            "red_seconds": "N99"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Rua Antônio Crescêncio",
+          "green_seconds": 50,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 95,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A107",
+            "movement": "B107",
+            "green_seconds": "O99",
+            "yellow_seconds": "P99",
+            "clearance_red_seconds": "Q99",
+            "red_seconds": "R99"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A92",
+        "plan_id": "A99",
+        "cycle_seconds": "S99",
+        "offset_seconds": "B99"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Niterói",
+      "plan_id": "2",
+      "cycle_seconds": 70,
+      "offset_seconds": 40,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro e conversão à esquerda",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 50,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A122",
+            "movement": "B122",
+            "green_seconds": "C114",
+            "yellow_seconds": "D114",
+            "clearance_red_seconds": "E114",
+            "red_seconds": "F114"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 10,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 55,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A123",
+            "movement": "B123",
+            "green_seconds": "G114",
+            "yellow_seconds": "H114",
+            "clearance_red_seconds": "I114",
+            "red_seconds": "J114"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Niterói",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 50,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "link_indices": [
+                12,
+                13,
+                14,
+                15,
+                16
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A124",
+            "movement": "B124",
+            "green_seconds": "K114",
+            "yellow_seconds": "L114",
+            "clearance_red_seconds": "M114",
+            "red_seconds": "N114"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 10,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 55,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A125",
+            "movement": "B125",
+            "green_seconds": "O114",
+            "yellow_seconds": "P114",
+            "clearance_red_seconds": "Q114",
+            "red_seconds": "R114"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_NITEROI"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A110",
+        "plan_id": "A114",
+        "cycle_seconds": "S114",
+        "offset_seconds": "B114"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Niterói",
+      "plan_id": "4",
+      "cycle_seconds": 110,
+      "offset_seconds": 20,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro e conversão à esquerda",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 90,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A122",
+            "movement": "B122",
+            "green_seconds": "C115",
+            "yellow_seconds": "D115",
+            "clearance_red_seconds": "E115",
+            "red_seconds": "F115"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 40,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 65,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A123",
+            "movement": "B123",
+            "green_seconds": "G115",
+            "yellow_seconds": "H115",
+            "clearance_red_seconds": "I115",
+            "red_seconds": "J115"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Niterói",
+          "green_seconds": 20,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 85,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "link_indices": [
+                12,
+                13,
+                14,
+                15,
+                16
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A124",
+            "movement": "B124",
+            "green_seconds": "K115",
+            "yellow_seconds": "L115",
+            "clearance_red_seconds": "M115",
+            "red_seconds": "N115"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 33,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A125",
+            "movement": "B125",
+            "green_seconds": "O115",
+            "yellow_seconds": "P115",
+            "clearance_red_seconds": "Q115",
+            "red_seconds": "R115"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_NITEROI"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A110",
+        "plan_id": "A115",
+        "cycle_seconds": "S115",
+        "offset_seconds": "B115"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Niterói",
+      "plan_id": "16",
+      "cycle_seconds": 130,
+      "offset_seconds": 16,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro e conversão à esquerda",
+          "green_seconds": 25,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 100,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A122",
+            "movement": "B122",
+            "green_seconds": "C116",
+            "yellow_seconds": "D116",
+            "clearance_red_seconds": "E116",
+            "red_seconds": "F116"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 40,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 85,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A123",
+            "movement": "B123",
+            "green_seconds": "G116",
+            "yellow_seconds": "H116",
+            "clearance_red_seconds": "I116",
+            "red_seconds": "J116"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Niterói",
+          "green_seconds": 30,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 95,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "link_indices": [
+                12,
+                13,
+                14,
+                15,
+                16
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A124",
+            "movement": "B124",
+            "green_seconds": "K116",
+            "yellow_seconds": "L116",
+            "clearance_red_seconds": "M116",
+            "red_seconds": "N116"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 35,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A125",
+            "movement": "B125",
+            "green_seconds": "O116",
+            "yellow_seconds": "P116",
+            "clearance_red_seconds": "Q116",
+            "red_seconds": "R116"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_NITEROI"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A110",
+        "plan_id": "A116",
+        "cycle_seconds": "S116",
+        "offset_seconds": "B116"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Rua Niterói",
+      "plan_id": "24",
+      "cycle_seconds": 150,
+      "offset_seconds": 40,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro e conversão à esquerda",
+          "green_seconds": 25,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 120,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "link_indices": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A122",
+            "movement": "B122",
+            "green_seconds": "C117",
+            "yellow_seconds": "D117",
+            "clearance_red_seconds": "E117",
+            "red_seconds": "F117"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 50,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 95,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A123",
+            "movement": "B123",
+            "green_seconds": "G117",
+            "yellow_seconds": "H117",
+            "clearance_red_seconds": "I117",
+            "red_seconds": "J117"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Rua Niterói",
+          "green_seconds": 40,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 105,
+          "sumo_links": [
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "link_indices": [
+                12,
+                13,
+                14,
+                15,
+                16
+              ]
+            }
+          ],
+          "source_cells": {
+            "stage_id": "A124",
+            "movement": "B124",
+            "green_seconds": "K117",
+            "yellow_seconds": "L117",
+            "clearance_red_seconds": "M117",
+            "red_seconds": "N117"
+          }
+        },
+        {
+          "stage_id": "D",
+          "movement": "Pedestres",
+          "green_seconds": 15,
+          "yellow_seconds": 3,
+          "clearance_red_seconds": 2,
+          "red_seconds": 29,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A125",
+            "movement": "B125",
+            "green_seconds": "O117",
+            "yellow_seconds": "P117",
+            "clearance_red_seconds": "Q117",
+            "red_seconds": "R117"
+          }
+        }
+      ],
+      "sumo_tls_ids": [
+        "FAM_RONDON_NITEROI"
+      ],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A110",
+        "plan_id": "A117",
+        "cycle_seconds": "S117",
+        "offset_seconds": "B117"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. João Naves de Ávila",
+      "plan_id": "2",
+      "cycle_seconds": 70,
+      "offset_seconds": 51,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 23,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 7,
+          "red_seconds": 35,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A140",
+            "movement": "B140",
+            "green_seconds": "C132",
+            "yellow_seconds": "D132",
+            "clearance_red_seconds": "E132",
+            "red_seconds": "F132"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 23,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 7,
+          "red_seconds": 35,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A141",
+            "movement": "B141",
+            "green_seconds": "G132",
+            "yellow_seconds": "H132",
+            "clearance_red_seconds": "I132",
+            "red_seconds": "J132"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A128",
+        "plan_id": "A132",
+        "cycle_seconds": "S132",
+        "offset_seconds": "B132"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. João Naves de Ávila",
+      "plan_id": "4",
+      "cycle_seconds": 110,
+      "offset_seconds": 0,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 43,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 7,
+          "red_seconds": 55,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A140",
+            "movement": "B140",
+            "green_seconds": "C133",
+            "yellow_seconds": "D133",
+            "clearance_red_seconds": "E133",
+            "red_seconds": "F133"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 43,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 7,
+          "red_seconds": 55,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A141",
+            "movement": "B141",
+            "green_seconds": "G133",
+            "yellow_seconds": "H133",
+            "clearance_red_seconds": "I133",
+            "red_seconds": "J133"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A128",
+        "plan_id": "A133",
+        "cycle_seconds": "S133",
+        "offset_seconds": "B133"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. João Naves de Ávila",
+      "plan_id": "16",
+      "cycle_seconds": 130,
+      "offset_seconds": 0,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 53,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 7,
+          "red_seconds": 65,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A140",
+            "movement": "B140",
+            "green_seconds": "C134",
+            "yellow_seconds": "D134",
+            "clearance_red_seconds": "E134",
+            "red_seconds": "F134"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 53,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 7,
+          "red_seconds": 65,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A141",
+            "movement": "B141",
+            "green_seconds": "G134",
+            "yellow_seconds": "H134",
+            "clearance_red_seconds": "I134",
+            "red_seconds": "J134"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A128",
+        "plan_id": "A134",
+        "cycle_seconds": "S134",
+        "offset_seconds": "B134"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. João Naves de Ávila",
+      "plan_id": "24",
+      "cycle_seconds": 150,
+      "offset_seconds": 0,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido centro",
+          "green_seconds": 63,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 7,
+          "red_seconds": 75,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A140",
+            "movement": "B140",
+            "green_seconds": "C135",
+            "yellow_seconds": "D135",
+            "clearance_red_seconds": "E135",
+            "red_seconds": "F135"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco sentido BR050",
+          "green_seconds": 63,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 7,
+          "red_seconds": 75,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A141",
+            "movement": "B141",
+            "green_seconds": "G135",
+            "yellow_seconds": "H135",
+            "clearance_red_seconds": "I135",
+            "red_seconds": "J135"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A128",
+        "plan_id": "A135",
+        "cycle_seconds": "S135",
+        "offset_seconds": "B135"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
+      "plan_id": "2",
+      "cycle_seconds": 70,
+      "offset_seconds": 19,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido Rio Uberabinha",
+          "green_seconds": 13,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 50,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A156",
+            "movement": "B156",
+            "green_seconds": "C148",
+            "yellow_seconds": "D148",
+            "clearance_red_seconds": "E148",
+            "red_seconds": "F148"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 22,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 41,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A157",
+            "movement": "B157",
+            "green_seconds": "G148",
+            "yellow_seconds": "H148",
+            "clearance_red_seconds": "I148",
+            "red_seconds": "J148"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Anselmo Alves dos Santos",
+          "green_seconds": 14,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 49,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A158",
+            "movement": "B158",
+            "green_seconds": "K148",
+            "yellow_seconds": "L148",
+            "clearance_red_seconds": "M148",
+            "red_seconds": "N148"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A144",
+        "plan_id": "A148",
+        "cycle_seconds": "S148",
+        "offset_seconds": "B148"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
+      "plan_id": "4",
+      "cycle_seconds": 110,
+      "offset_seconds": 80,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido Rio Uberabinha",
+          "green_seconds": 13,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 90,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A156",
+            "movement": "B156",
+            "green_seconds": "C149",
+            "yellow_seconds": "D149",
+            "clearance_red_seconds": "E149",
+            "red_seconds": "F149"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 48,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 55,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A157",
+            "movement": "B157",
+            "green_seconds": "G149",
+            "yellow_seconds": "H149",
+            "clearance_red_seconds": "I149",
+            "red_seconds": "J149"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Anselmo Alves dos Santos",
+          "green_seconds": 28,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 75,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A158",
+            "movement": "B158",
+            "green_seconds": "K149",
+            "yellow_seconds": "L149",
+            "clearance_red_seconds": "M149",
+            "red_seconds": "N149"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A144",
+        "plan_id": "A149",
+        "cycle_seconds": "S149",
+        "offset_seconds": "B149"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
+      "plan_id": "16",
+      "cycle_seconds": 130,
+      "offset_seconds": 87,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido Rio Uberabinha",
+          "green_seconds": 13,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 110,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A156",
+            "movement": "B156",
+            "green_seconds": "C150",
+            "yellow_seconds": "D150",
+            "clearance_red_seconds": "E150",
+            "red_seconds": "F150"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 50,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 73,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A157",
+            "movement": "B157",
+            "green_seconds": "G150",
+            "yellow_seconds": "H150",
+            "clearance_red_seconds": "I150",
+            "red_seconds": "J150"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Anselmo Alves dos Santos",
+          "green_seconds": 46,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 77,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A158",
+            "movement": "B158",
+            "green_seconds": "K150",
+            "yellow_seconds": "L150",
+            "clearance_red_seconds": "M150",
+            "red_seconds": "N150"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A144",
+        "plan_id": "A150",
+        "cycle_seconds": "S150",
+        "offset_seconds": "B150"
+      }
+    },
+    {
+      "intersection": "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
+      "plan_id": "24",
+      "cycle_seconds": 150,
+      "offset_seconds": 100,
+      "stages": [
+        {
+          "stage_id": "A",
+          "movement": "Av. Rondon Pacheco sentido Rio Uberabinha",
+          "green_seconds": 13,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 130,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A156",
+            "movement": "B156",
+            "green_seconds": "C151",
+            "yellow_seconds": "D151",
+            "clearance_red_seconds": "E151",
+            "red_seconds": "F151"
+          }
+        },
+        {
+          "stage_id": "B",
+          "movement": "Av. Rondon Pacheco nos dois sentidos",
+          "green_seconds": 53,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 90,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A157",
+            "movement": "B157",
+            "green_seconds": "G151",
+            "yellow_seconds": "H151",
+            "clearance_red_seconds": "I151",
+            "red_seconds": "J151"
+          }
+        },
+        {
+          "stage_id": "C",
+          "movement": "Av. Anselmo Alves dos Santos",
+          "green_seconds": 63,
+          "yellow_seconds": 5,
+          "clearance_red_seconds": 2,
+          "red_seconds": 80,
+          "sumo_links": null,
+          "source_cells": {
+            "stage_id": "A158",
+            "movement": "B158",
+            "green_seconds": "K151",
+            "yellow_seconds": "L151",
+            "clearance_red_seconds": "M151",
+            "red_seconds": "N151"
+          }
+        }
+      ],
+      "sumo_tls_ids": [],
+      "sumo_phases": null,
+      "source_cells": {
+        "intersection": "A144",
+        "plan_id": "A151",
+        "cycle_seconds": "S151",
+        "offset_seconds": "B151"
+      }
+    }
+  ],
+  "schedule": null,
+  "operational_day_start": null,
+  "initial_plan_id": null,
+  "blockers": [
+    {
+      "id": "missing_schedule",
+      "detail": "Faltam horários, dias e vínculos horário→plano por interseção."
+    },
+    {
+      "id": "missing_operational_day_start",
+      "detail": "Falta o marco oficial para iniciar o relógio operacional de cada episódio."
+    },
+    {
+      "id": "unconfirmed_stage_links",
+      "detail": "Não há correspondência confirmada de todos os estágios com controlled links, permissões e travessias SUMO."
+    },
+    {
+      "id": "unconfirmed_transitions",
+      "detail": "Faltam estados, transições entre grupos e interpretação dos tempos de pedestres."
+    },
+    {
+      "id": "unconfirmed_offset_reference",
+      "detail": "Falta confirmar a referência e o sinal da defasagem para SUMO."
+    },
+    {
+      "id": "source_anomalies",
+      "detail": "Três vermelhos de Niterói e a divergência Nascimento/Santos exigem confirmação da SETTRAN."
+    }
+  ],
+  "anomalies": [
+    {
+      "kind": "red_cycle_mismatch",
+      "intersection": "Av. Rondon Pacheco x Rua Niterói",
+      "plan_id": "4",
+      "stage_id": "D",
+      "source_cell": "R115",
+      "source_red_seconds": 33,
+      "cycle_seconds": 110,
+      "arithmetic_residual_seconds": 90,
+      "resolution": "pending_settran_confirmation"
+    },
+    {
+      "kind": "red_cycle_mismatch",
+      "intersection": "Av. Rondon Pacheco x Rua Niterói",
+      "plan_id": "16",
+      "stage_id": "D",
+      "source_cell": "R116",
+      "source_red_seconds": 35,
+      "cycle_seconds": 130,
+      "arithmetic_residual_seconds": 110,
+      "resolution": "pending_settran_confirmation"
+    },
+    {
+      "kind": "red_cycle_mismatch",
+      "intersection": "Av. Rondon Pacheco x Rua Niterói",
+      "plan_id": "24",
+      "stage_id": "D",
+      "source_cell": "R117",
+      "source_red_seconds": 29,
+      "cycle_seconds": 150,
+      "arithmetic_residual_seconds": 130,
+      "resolution": "pending_settran_confirmation"
+    },
+    {
+      "kind": "intersection_name_mismatch",
+      "source_cells": [
+        "A144",
+        "B158"
+      ],
+      "source_values": [
+        "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
+        "Av. Anselmo Alves dos Santos"
+      ],
+      "resolution": "pending_settran_confirmation"
+    }
+  ]
+}

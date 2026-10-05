@@ -1,7 +1,7 @@
 # Comandos de teste e execução
 
 Guia operacional: preparar, executar, conferir e reproduzir. Todos os comandos
-partem da raiz do repositório. Visão geral: [README](../README.md).
+partem da raiz do repositório. Visão geral: [README](../../README.md).
 
 ## Preparação
 
@@ -15,7 +15,7 @@ sumo --version
 ```
 
 `sumo` e `duarouter` devem estar no `PATH`. Ao trocar de versão, confira o
-[catálogo de configurações](configuration_catalog.csv) e revalide
+[catálogo de configurações](../catalogos/configuration_catalog.csv) e revalide
 as opções de observação.
 
 ## Testar o código
@@ -61,6 +61,35 @@ Cada episódio sorteia uma seed, gera demanda, aguarda o SUMO e consolida seus
 dados. O próximo só começa depois. O terminal informa sua pasta exclusiva em
 `outputs/outputs-random/`; resultados anteriores não são substituídos.
 
+`current` é o perfil semafórico padrão e mantém os programas do mapa. A opção
+`--signal-profile settran` exige `--settran-plan` com um ID oficial (2/4/16/24),
+sem padrão implícito:
+
+```bash
+make run-random RUN_ARGS='--signal-profile current --duration 30 --period 5 --end 60'
+make run-random RUN_ARGS='--signal-profile settran --settran-plan 2 --duration 30 --period 5 --end 60'
+```
+
+O segundo comando valida a seleção para um teste de plano fixo e **ainda retorna
+erro**, pois os movimentos/transições e a referência da defasagem não estão
+completamente comprovados. A ausência de agenda não é motivo para bloquear a
+escolha explícita; impede a operação contextual por horário. O erro ocorre antes
+de sortear seed, gerar demanda ou iniciar SUMO, sem fallback para `current`.
+Nenhum plano inicial ou troca automática foi implementado.
+Consulte [a auditoria SETTRAN](../settran/settran_audit.csv) e o artefato normalizado
+([settran_programs.json](../settran/settran_programs.json)) para acompanhar as lacunas.
+
+As correções comprovadas dos controles estão na rede-base comum; conferir sem
+alterá-la: `python3 scripts/correct_signal_infrastructure.py --check`. Isso não
+ativa planos SETTRAN nem fornece a agenda ausente. As correções físicas valem
+para todos os perfis e podem mudar rotas/resultados. Os controles regulares novos
+mantêm prioridades; os sinais especiais do Batalhão ficam verdes no regime
+normal, sem acionamento emergencial. Travessias acrescentadas permanecem vermelhas
+na referência `current` até existir uma programação comprovada; os avisos SUMO
+de ausência de fase verde pedestre são esperados. A
+[conferência temporária dos TLS](../settran/current_tls_audit.csv) resume o mapa
+atual e separa infraestrutura de disponibilidade dos planos.
+
 O perfil padrão `core` prioriza indicadores consolidados. Para observações
 detalhadas adicionais:
 
@@ -100,15 +129,18 @@ descartáveis só depois de conferir se não são evidências necessárias.
 | `--net-file` | Rede Rondon Norte | Rede de entrada; identifica um baseline compartilhado. |
 | `--output-dir` | `outputs/outputs-random/` | Subpasta dentro desse diretório para organizar resultados. |
 | `--metrics-profile` | `core` | Seleciona observações `core` ou `full`; não altera demanda/controladores. |
+| `--signal-profile` | `current` | Escolhe a configuração semafórica, separada da demanda. |
+| `--settran-plan` | Sem plano presumido | ID oficial para validar teste fixo SETTRAN; execução ainda bloqueada por lacunas operacionais. Inválido com `current`. |
 
 ```bash
 python3 -m SistemaDeSemaforos.simulation.episode_runner --help
 make run-random RUN_ARGS='--output-dir outputs/outputs-random/verificacao --duration 30 --period 5'
 ```
 
-Essas são as opções do projeto, não todas as opções SUMO. O catálogo completo
-das superfícies auditadas está em
-[configuration_catalog.csv](configuration_catalog.csv).
+Essas são as opções do projeto, não todas as opções SUMO. O catálogo principal
+das configurações selecionadas está em
+[configuration_catalog.csv](../catalogos/configuration_catalog.csv); a cobertura
+completa fica em [configuration_reference.csv](../catalogos/configuration_reference.csv).
 
 ## Conferir uma execução
 
@@ -185,7 +217,7 @@ Use [Funcionamento — resultados](GUIA_DE_FUNCIONAMENTO.md#5-resultados-e-por-q
 para identificar o papel de cada output.
 Caches/temporários são regeneráveis; episódios e baselines referenciados são
 evidências. Não exclua um baseline enquanto algum episódio preservado depender
-dele. Os CSVs das planilhas antigas estão em `docs/auditoria_historica.zip`; basta abrir
+dele. Os CSVs das planilhas antigas estão em `../historico/auditoria_historica.zip`; basta abrir
 o ZIP e consultar `LEIA_ME.txt`. Eles não descrevem o estado atual.
 
 Os dados das validações anteriores foram removidos por solicitação do responsável.

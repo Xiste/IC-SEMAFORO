@@ -10,7 +10,7 @@ Consulta por assunto: [mapa](#1-mapa-e-condições-de-referência),
 [arquivos de saída](#5-resultados-e-por-que-são-separados) e
 [desempenho](#6-desempenho-já-medido).
 A direção estratégica e a distinção entre estado atual, consolidação em andamento
-e etapas futuras ficam no [README](../README.md#direção-estratégica).
+e etapas futuras ficam no [README](../../README.md#direção-estratégica).
 
 ## 1. Mapa e condições de referência
 
@@ -20,7 +20,7 @@ O nome é histórico; o responsável confirmou o cenário **Rondon Norte**.
 O XML contém geometria, faixas, conexões, permissões e programas semafóricos.
 Não há fontes OSM de construção versionadas neste repositório.
 
-| Característica | Valor conferido na reauditoria de 26/09/2026 |
+| Característica | Referência histórica V1 de 26/09/2026, anterior às correções abaixo |
 | --- | --- |
 | Vias direcionadas | 2.142 externas e 5.706 segmentos internos |
 | Faixas | 8.578, sendo 2.497 externas |
@@ -32,7 +32,7 @@ Não há fontes OSM de construção versionadas neste repositório.
 
 Um controlador pode atender vários nós. Coordenadas locais estão em metros
 (UTM zona 22/WGS84), não em latitude/longitude. Detalhes por elemento permanecem
-no XML, sem outro inventário por edge/lane. Rede auditada: 5.201.327 bytes,
+no XML, sem outro inventário por edge/lane. Fonte V1 auditada: 5.201.327 bytes,
 SHA-256 `46e7c4a4627cd511d419c01f15d65f66724941ac83360c4fc424b86626a5c10b`.
 
 **Baseline** é o conjunto de condições de referência, não uma simulação vazia:
@@ -49,16 +49,108 @@ não devem ser extrapolados para modelos ausentes.
 | Estrutural | Geometria, conexões, permissões, associação de semáforos | Preservar neste baseline; mudança define outro cenário. |
 | Resultado/derivado | Métricas, hashes, contagens estruturais | Não é entrada editável; recalcular a partir de suas fontes. |
 
-O [catálogo de configurações](configuration_catalog.csv) tem **2.005 entradas**:
-462 opções SUMO/sumo-gui, 124 duarouter, 64 randomTrips, 13 argumentos do projeto,
-1.185 atributos XML, 156 defaults de tipos embutidos e uma verificação agrupada
-de larguras omitidas. Conhecer uma opção SUMO não a torna uma flag do nosso CLI.
+O [catálogo principal de configurações](../catalogos/configuration_catalog.csv) tem
+**104 entradas selecionadas** para decisões experimentais, operacionais, estruturais
+e de proveniência. A [referência completa](../catalogos/configuration_reference.csv)
+mantém **2.007 entradas** agrupadas por classe/interface, incluindo opções SUMO,
+duarouter, randomTrips, argumentos do projeto, atributos XML e defaults auditados.
+Conhecer uma opção SUMO não a torna uma flag do nosso CLI.
 
 Filtre `currently_used`, `category` e `scientific_relevance`. Compare
 `native_default`, `current_core` e `current_full`; consulte `modifiable`,
 `change_impact`, `source_reference`, versão e hash. Ausência de default não é zero.
 Recursos inativos precisam de validação ao habilitar. A cobertura é versionada;
 extensões e chaves genéricas de `<param>` não formam um conjunto finito.
+
+### Perfil semafórico SETTRAN
+
+`current` usa os programas de referência presentes na rede geral corrigida
+e continua sendo o comportamento padrão. `settran` é uma possibilidade de configuração separada da
+demanda `random`. É possível indicar explicitamente um plano para validar sua
+seleção como teste fixo; atualmente a execução ainda é bloqueada por movimentos,
+transições e referência da defasagem não comprovados. A [auditoria](../settran/settran_audit.csv) conserva os campos
+originais, planos, ciclos e tempos; o [artefato normalizado](../settran/settran_programs.json)
+é intermediário, consultado somente ao selecionar SETTRAN. Associações físicas
+confirmadas não constituem permissões de verde nem fases SUMO executáveis.
+
+A rede-base corrigida é comum aos perfis: 36 TLS, 314 índices de controle
+(316 conexões controladas) e 43 travessias físicas. Benjamim recebeu quatro faixas
+contínuas e um único miolo físico; Porto Alegre, Niterói e Belém tiveram os
+fragmentos artificiais de suas aproximações eliminados. Foram representadas
+travessias comprovadas, corrigidas prioridades cedentes e recompostos cruzamentos
+fragmentados que provocavam bloqueios. Rio de Janeiro possui controle físico,
+sem plano SETTRAN no dataset. Anselmo conserva as três retas e o limite local
+comprovado. Fotografias de 2020 e março de 2026, referenciadas no CSV, distinguem
+os focos veiculares das retas do foco pedestre baixo na ilhota. O ramo direito
+se separa antes das retas; a representação veicular `priority` foi preservada,
+sem criar um TLS veicular a partir do foco pedestre. O
+[corretor determinístico](../../scripts/correct_signal_infrastructure.py)
+reproduz essas mudanças sobre a fonte auditada, sem uma rede exclusiva da SETTRAN.
+
+`current` é uma referência SUMO, não uma reprodução dos tempos reais. Os controles
+novos da Rondon usam `O/o` para conservar prioridades; os sinais do Batalhão ficam
+verdes no regime normal, com acesso pelo canteiro reservado a `emergency`, sem
+acionamento especial implementado. Cruzamentos cujo programa antigo não cobria
+as aproximações recuperadas receberam programas de referência calculados pelo
+SUMO. Nos demais, estados veiculares e durações foram preservados ou estendidos
+às faixas equivalentes. Travessias novas possuem geometria; seus links vinculados a TLS permanecem
+vermelhos em `current`: não foi inventada uma programação pedestre. Três zebras
+permanecem sem vínculo TLS comprovado. O SUMO avisa
+sobre essas fases verdes ausentes; a demanda atual é veicular.
+
+Benjamim, Paraná, Cesário × Paraná, Porto Alegre, Belém, Antônio Crescêncio/Rotary,
+Niterói e João Naves tiveram a cobertura veicular corrigida. O atendimento pedestre
+ainda está incompleto; em Belém também falta confirmar quais focos controlam as
+zebras. Isso não torna os planos executáveis: ainda faltam diagramas de grupos,
+permissões, sequência, transições e referência da defasagem. Niterói conserva
+os três vermelhos discrepantes, e Anselmo a identidade Nascimento/Santos.
+Antônio Crescêncio é saída de sentido único; nenhuma entrada artificial foi
+criada. A travessia OSM 13340894097 pertence ao acesso de serviço do shopping,
+e não indica um TLS ausente na pista principal da Rondon.
+
+Corrigir a malha pode mudar rotas e resultados: a mesma rede corrigida é usada
+na geração e simulação de todos os perfis. Acessos pedonais sintéticos tiveram
+seus envelopes limitados para preservar 24 contornos, incluindo Anselmo e
+João Naves, e a ilha do Rotary.
+A lógica de `random`, o sorteio de
+seeds, as métricas e os formatos de saída permanecem inalterados. A ausência de
+plano SETTRAN não impede preservar ou corrigir um semáforo físico comprovado.
+
+A [conferência temporária dos TLS atuais](../settran/current_tls_audit.csv) tem
+uma linha por TLS. `plan_capable` indica capacidade técnica de receber outro
+programa; `has_settran_plan` indica dados conhecidos para a interseção, sem
+certificar sua atribuição a cada controle. Os estados são independentes:
+`physical_status=OK` indica ausência de defeito veicular identificado nas
+evidências disponíveis; `EVIDENCIA_INSUFICIENTE` exige a confirmação de campo
+descrita em `note`. `real_world_status` conserva a confiança da associação.
+`pedestrian_status=DADOS_AUSENTES` registra a lacuna operacional já conhecida;
+`NAO_AVALIADO` não afirma ausência de travessias ou necessidade de novo controle.
+Pedestres estão fora desta etapa e não rebaixam o estado físico veicular.
+`settran_status` distingue `SEM_PLANOS`, `MAPEAMENTO_INCOMPLETO` e
+`DADOS_OPERACIONAIS_AUSENTES` (descrições de estágios vinculadas, mas ainda sem
+permissões/fases comprovadas). As contagens se sobrepõem; nenhum desses campos
+declara um plano SETTRAN executável.
+
+A classificação cobre os TLS, sem certificar todas as cargas da malha. Nos
+cruzamentos sem TLS de Suíça e Viena, colisões com ônibus também foram
+reproduzidas em lotes menores, sem teleports, variando com os encontros e o passo
+simulado. As conexões, prioridades e conflitos estão registrados; não foi
+comprovado um erro físico que autorize alterar curvas ou permissões. Faltam
+cotas de retenções/raios ou vídeo de trajetórias de veículos longos. O diagnóstico
+com passo de 0,1 s altera a dinâmica do modelo e não substitui o protocolo de
+1 s ([documentação SUMO](https://sumo.dlr.de/docs/Simulation/Safety.html)).
+
+Planos e agenda permanecem separados: existem 36 definições dos IDs oficiais
+2/4/16/24; `schedule`, `operational_day_start` e `initial_plan_id` continuam nulos.
+`--settran-plan` valida uma escolha explícita, sem assumir ordem temporal entre
+planos. Um teste fixo não precisa de agenda; precisa de programa compilado e
+comprovado, ainda indisponível. Não há scheduler, troca automática ou plano
+inicial presumido. A sugestão de 00:00 não foi convertida em regra operacional.
+Futuramente, com a agenda real, a seleção contextual poderá usar o tempo simulado
+do SUMO. Esse comportamento não está implementado. A
+[auditoria existente](../settran/settran_audit.csv) distingue a infraestrutura
+corrigida das lacunas operacionais. A fonte georreferenciada descartada não foi
+usada.
 
 ## 2. Demanda random
 
@@ -173,7 +265,7 @@ Esses utilitários usam o TraCI que acompanha `$SUMO_HOME/tools`.
 
 ## 4. Métricas: seleção e interpretação
 
-O [catálogo único de métricas](metrics_catalog.csv) contém **1.498 entradas**:
+O [catálogo único de métricas](../catalogos/metrics_catalog.csv) contém **1.498 entradas**:
 atributos de 25 schemas de saída, outras fontes, derivados, 596 getters TraCI e
 consultas adicionais. Famílias e fontes alternativas não são grandezas independentes.
 Filtre `priority`, `enabled_profiles` e `entity`; `result_name_regex` relaciona
@@ -379,9 +471,9 @@ critério de término compatíveis. `vehicles_halting_*` mede veículos parados,
 não o comprimento de uma fila. As filas existentes continuam por entidade;
 `queue_observation_steps` mede cobertura temporal da coleta, não congestionamento.
 
-As explicações técnicas completas continuam no [catálogo de métricas](metrics_catalog.csv).
+As explicações técnicas completas continuam no [catálogo de métricas](../catalogos/metrics_catalog.csv).
 As legendas curtas e regras de ordem ficam em
-[`metric_presentation.py`](../SistemaDeSemaforos/metrics/metric_presentation.py),
+[`metric_presentation.py`](../../SistemaDeSemaforos/metrics/metric_presentation.py),
 incluído no snapshot de código do baseline, sem carregar o CSV durante a execução.
 Essa separação prepara a leitura por dashboards futuros sem duplicar o catálogo
 em cada episódio nem implementar a visualização.
@@ -444,7 +536,7 @@ Observações XML são lidas incrementalmente; memória depende das entidades/m�
 Baselines podem ser apagados junto dos testes quando nenhum episódio preservado
 precisar deles. Procedimentos de reprodução ficam no guia de comandos.
 
-[auditoria_historica.zip](auditoria_historica.zip) reúne as 27 tabelas das
+[auditoria_historica.zip](../historico/auditoria_historica.zip) reúne as 27 tabelas das
 planilhas originais em CSV convencional, com índice e instruções dentro do ZIP.
 Há medições/notas históricas únicas; por isso foi preservado. Não é documentação
 corrente. Não há pasta `archive/` nem leitor especial para acessar seu conteúdo.
@@ -467,7 +559,7 @@ viagem coincidiram, exceto a lista de dispositivos observadores. No `full`, sér
 detalhadas elevaram sobretudo agregação e exportação. A observação mínima ainda
 gravava tripinfo; não é custo zero de coleta. Tempos não incluem geração/baseline compartilhados.
 
-Seeds, método e decomposição estão no [relatório incremental](../RELATORIO_INCREMENTAL.md).
+Seeds, método e decomposição estão no [relatório incremental](../../RELATORIO_INCREMENTAL.md).
 Os outputs de teste foram apagados a pedido do responsável; estes são registros
 históricos, não novas medições desta limpeza. Próxima investigação possível:
 paralelismo limitado de dois episódios, conferindo resultados por seed e

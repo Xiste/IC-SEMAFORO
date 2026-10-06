@@ -5,7 +5,8 @@ quando habilitado, `actions.csv`. O treino grava `manifest.json` com configuraç
 versões, hashes da rede, planilha e mapeamento e hiperparâmetros PPO. A avaliação
 grava `runs.csv`, `signals.csv`, `aggregate.csv`, `summary.json`, `report.md` e
 `comparison.png`. `aggregate.csv` contém média, desvio padrão amostral e número
-de observações por controlador. O relatório compara o PPO ao programa da rede.
+de observações por controlador. O relatório compara PPO, programa da rede e
+heurística reativa de filas (`queue_actuated`).
 
 | Métrica | Fonte e cálculo | Unidade/limite |
 | --- | --- | --- |

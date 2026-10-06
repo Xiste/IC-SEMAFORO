@@ -20,6 +20,7 @@ from semaforos.mapeamento import mapping_report
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT = ROOT / "config" / "cenario.json"
+CORRECTED_NETWORK = ROOT / "dados" / "rede" / "uberlandia.rondon_norte_corrigida.net.xml"
 RESULTS = ROOT / "resultados"
 
 
@@ -57,11 +58,13 @@ def start_job(command, config, model=None):
 
 st.set_page_config(page_title="Semáforos Rondon Norte", layout="wide")
 st.title("Controle semafórico — Rondon Norte")
-st.caption("Piloto PPO com SUMO/TraCI. O mapeamento validado atual contém apenas FAM_RONDON_PARANA.")
+st.caption("Piloto PPO com SUMO/TraCI. Há um sinal nominal em uso e 17 IDs candidatos; nenhum dos nove cruzamentos está plenamente validado.")
 
 base = read_config(DEFAULT)
 with st.expander("Arquivos e mapeamento", expanded=False):
-    network = st.text_input("Rede SUMO (.net.xml)", str(base["network"]))
+    network_profile = st.selectbox("Rede", ("Original (piloto)", "Rondon Norte corrigida"))
+    selected_network = CORRECTED_NETWORK if network_profile == "Rondon Norte corrigida" else base["network"]
+    network = st.text_input("Rede SUMO (.net.xml)", str(selected_network), key=f"network_{network_profile}")
     plans = st.text_input("Planilha (.xlsx)", str(base["plans"]))
     if st.button("Inspecionar arquivos"):
         try:
@@ -82,6 +85,7 @@ with st.expander("Arquivos e mapeamento", expanded=False):
             report = mapping_report(probe, base.get("mapping_path"))
             st.write(f"Validados: {report['validated_count']} de {report['total']}")
             st.dataframe(pd.DataFrame([{"cruzamento": item["name"], "id_sumo": item["tls_id"],
+                                        "ids_candidatos": ", ".join(c["tls_id"] for c in item["candidate_controllers"]),
                                         "validado": item["validated"],
                                         "pendências": "; ".join(item["issues"])}
                                        for item in report["intersections"]]), hide_index=True)

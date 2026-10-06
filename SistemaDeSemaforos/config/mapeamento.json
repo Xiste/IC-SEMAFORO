@@ -10,7 +10,11 @@
       "safety_verified": false,
       "review_source": "",
       "reconciliation_note": "",
-      "controlled_links_verified": false
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_BENJAMIM"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)"
     },
     {
       "name": "Av. Rondon Pacheco x Rua Paraná",
@@ -21,7 +25,11 @@
       "safety_verified": false,
       "review_source": "",
       "reconciliation_note": "",
-      "controlled_links_verified": false
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_PARANA"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)"
     },
     {
       "name": "Av. Cesário Alvin x Rua Paraná",
@@ -32,7 +40,11 @@
       "safety_verified": false,
       "review_source": "",
       "reconciliation_note": "",
-      "controlled_links_verified": false
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_CESARIO_PARANA"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)"
     },
     {
       "name": "Av. Rondon Pacheco x Rua Porto Alegre",
@@ -43,7 +55,14 @@
       "safety_verified": false,
       "review_source": "",
       "reconciliation_note": "",
-      "controlled_links_verified": false
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_PORTO_ALEGRE",
+        "3386573305",
+        "3386573306",
+        "5494111603"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)"
     },
     {
       "name": "Av. Rondon Pacheco x Rua Belém",
@@ -54,7 +73,11 @@
       "safety_verified": false,
       "review_source": "",
       "reconciliation_note": "",
-      "controlled_links_verified": false
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_BELEM"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)"
     },
     {
       "name": "Av. Rondon Pacheco x Rua Antônio Crescêncio",
@@ -65,7 +88,11 @@
       "safety_verified": false,
       "review_source": "",
       "reconciliation_note": "",
-      "controlled_links_verified": false
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_ROTARY_CLUB"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)"
     },
     {
       "name": "Av. Rondon Pacheco x Rua Niterói",
@@ -76,7 +103,13 @@
       "safety_verified": false,
       "review_source": "",
       "reconciliation_note": "",
-      "controlled_links_verified": false
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_NITEROI",
+        "5494111596",
+        "5494111597"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)"
     },
     {
       "name": "Av. Rondon Pacheco x Av. João Naves de Ávila",
@@ -87,7 +120,13 @@
       "safety_verified": false,
       "review_source": "",
       "reconciliation_note": "",
-      "controlled_links_verified": false
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "5494111589",
+        "5494111590",
+        "5494111594"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)"
     },
     {
       "name": "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
@@ -98,7 +137,12 @@
       "safety_verified": false,
       "review_source": "",
       "reconciliation_note": "",
-      "controlled_links_verified": false
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_ANSELMO",
+        "338654991"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)"
     }
   ]
 }

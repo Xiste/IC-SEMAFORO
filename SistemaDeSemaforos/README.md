@@ -1,10 +1,21 @@
 # Pipeline SUMO: Rondon Norte
 
+**Integração da rede corrigida:** a `main` agora inclui a rede corrigida, a auditoria
+dos 17 IDs candidatos para os nove cruzamentos e as contagens locais dos detectores
+5 e 6. Use `config/cenario_rede_corrigida.json` ou escolha a rede na interface.
+O comando `pipeline.py measurements` resume as contagens sem presumir que seus
+detectores correspondam a vias SUMO. Veja [rede corrigida e medições](docs/rede_corrigida_e_medicoes.md).
+O [mapeamento](docs/mapeamento_e_demanda.md) agora aceita vários controladores
+por cruzamento; `targets_from_mapping` só os ativa após validar os nove.
+Os programas da planilha e os pedestres ainda exigem validação operacional;
+o cenário padrão permanece na rede original.
+
 **Atualização do PPO:** a implementação inclui auditoria dos nove nomes,
 demanda por via com perfil temporal, destinos proporcionais e tipos de veículo,
 avaliação em sementes separadas e relatórios detalhados. Consulte
 [mapeamento e demanda](docs/mapeamento_e_demanda.md),
-[catálogo de métricas](docs/catalogo_metricas.md) e
+[catálogo de métricas](docs/catalogo_metricas.md),
+[pesquisa aplicada e auditoria espacial](docs/pesquisa_aplicada.md) e
 [requisitos e pendências](docs/requisitos_e_pendencias.md). O controle conjunto
 e a referência da planilha exigem validação dos IDs, movimentos, pedestres e
 planos; a demonstração executável usa um sinal nominal.

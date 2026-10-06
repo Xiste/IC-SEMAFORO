@@ -22,12 +22,18 @@ def read_config(path):
             raise ValueError("targets_from_mapping exige mapping_path")
         mapping = json.loads(data["mapping_path"].read_text(encoding="utf-8"))
         entries = mapping.get("intersections", [])
-        if len(entries) != 9 or any(not item.get("tls_id") or not item.get("stage_to_phase")
-                                    for item in entries):
-            raise ValueError("Mapeamento dos nove cruzamentos ainda incompleto")
-        data["targets"] = [{"name": item["name"], "tls_id": item["tls_id"],
-                            "phase_indices": sorted(set(item["stage_to_phase"].values()))}
-                           for item in entries]
+        from .mapeamento import mapping_report
+        report = mapping_report(data, data["mapping_path"])
+        if len(entries) != 9 or report["validated_count"] != 9:
+            raise ValueError(f"Mapeamento dos nove cruzamentos ainda incompleto: {report['validated_count']}/9 validados")
+        targets = []
+        for item in entries:
+            controllers = item.get("controllers", [{"tls_id": item.get("tls_id"),
+                                                     "stage_to_phase": item.get("stage_to_phase", {})}])
+            for controller in controllers:
+                targets.append({"name": item["name"], "tls_id": controller["tls_id"],
+                                "phase_indices": sorted(set(controller["stage_to_phase"].values()))})
+        data["targets"] = targets
     if data["duration_seconds"] <= 0 or data["step_seconds"] <= 0:
         raise ValueError("Duração e passo devem ser positivos")
     if data["demand"]["mode"] not in ("random", "flows", "edge_volumes"):

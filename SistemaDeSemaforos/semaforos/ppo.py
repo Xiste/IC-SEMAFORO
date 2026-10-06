@@ -39,6 +39,33 @@ def versions():
             "sumolib": getattr(sumolib, "__version__", "unknown")}
 
 
+def queue_actuated_action(env):
+    """Heurística reativa: favorece o verde com maior fila de entrada."""
+    actions = []
+    for target in env.targets:
+        tls_id = target["tls_id"]
+        current = traci.trafficlight.getPhase(tls_id)
+        phases = env.programs[tls_id]
+        if current not in target["phase_indices"]:
+            actions.append(1)
+            continue
+        following = next((index for offset in range(1, len(phases) + 1)
+                          if (index := (current + offset) % len(phases)) in target["phase_indices"]),
+                         current)
+        controlled_links = traci.trafficlight.getControlledLinks(tls_id)
+
+        def halted(index):
+            lanes = {connection[0] for link_index, color in enumerate(phases[index]["state"])
+                     if color in "Gg" and link_index < len(controlled_links)
+                     for connection in (controlled_links[link_index] or ())}
+            return sum(traci.lane.getLastStepHaltingNumber(lane) for lane in lanes)
+
+        current_queue, next_queue = halted(current), halted(following)
+        actions.append(0 if current_queue < next_queue else
+                       2 if current_queue > next_queue else 1)
+    return np.asarray(actions, dtype=np.int64)
+
+
 class ProgressCallback(BaseCallback):
     def __init__(self, output):
         super().__init__()
@@ -144,12 +171,14 @@ def evaluate_ppo(config, output, model_path, seeds=None):
     env = SemaforosEnv(config, output / "episodes", gui=bool(config.get("ppo", {}).get("gui", False)))
     try:
         for seed in seeds:
-            for controller in ("network_reference", "PPO"):
+            for controller in ("network_reference", "queue_actuated", "PPO"):
                 observation, _ = env.reset(seed=int(seed))
                 episode_reward = 0.0
                 while True:
                     if controller == "PPO":
                         action, _ = model.predict(observation, deterministic=True)
+                    elif controller == "queue_actuated":
+                        action = queue_actuated_action(env)
                     else:
                         action = np.ones(len(env.targets), dtype=np.int64)
                     observation, reward, done, truncated, info = env.step(action)

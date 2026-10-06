@@ -54,5 +54,7 @@ def write_evaluation_report(output, rows, signal_rows, metadata):
              "Viagens incompletas e sem chegada não entram na média de tempo de viagem.",
              "Não se declara superioridade automática; examine repetições, dispersão e pendências.",
              "", "Arquivos: `runs.csv`, `signals.csv`, `aggregate.csv`, `comparison.png` e `summary.json`."]
+    lines[0] = "# Comparação PPO, programa da rede e heurística de filas"
+    lines.append("`queue_actuated` reage a filas; não implementa max-pressure.")
     (output / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return summary

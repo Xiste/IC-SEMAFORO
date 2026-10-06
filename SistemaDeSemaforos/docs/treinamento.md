@@ -50,7 +50,7 @@ Para consultar os planos da planilha e as fases disponíveis na rede:
 python pipeline.py inspect > dados/inventario.json
 ```
 
-O `inventario.json` contém IDs, vias de entrada e fases dos semáforos. Confira a associação geográfica antes de adicionar IDs a `targets`. A configuração entregue seleciona apenas `FAM_RONDON_PARANA`, com as fases 0 a 5: dois verdes, dois amarelos e dois intervalos totalmente vermelhos.
+O `inventario.json` contém IDs, links controlados e fases dos semáforos. Confira a associação geográfica antes de adicionar IDs a `targets`. A configuração entregue seleciona apenas os verdes 0 e 3 de `FAM_RONDON_PARANA`.
 
 ### Alterar a quantidade de veículos
 
@@ -104,13 +104,13 @@ Os comandos aceitam outro arquivo de cenário com `--config caminho/para/cenario
 Cada tentativa escolhe uma duração, em segundos, para cada fase indicada em `targets`. O programa mantém os estados e a sequência de fases da rede, aplica as novas durações via TraCI, avança a simulação passo a passo e mede o resultado.
 
 1. A tentativa `0` usa as durações originais de todas as fases selecionadas na rede SUMO.
-2. As tentativas seguintes até `warmup_random - 1` escolhem durações aleatórias dentro dos limites. Para verde, o limite inferior é o maior entre `minimum_green_seconds` e 60% do tempo original; o superior é 140% do original. Para amarelo e totalmente vermelho, o limite inferior é pelo menos a duração atual da rede e os mínimos `minimum_yellow_seconds` e `minimum_all_red_seconds`. Esses dois tipos podem ser prolongados, mas não encurtados.
+2. As tentativas seguintes até `warmup_random - 1` escolhem durações aleatórias dentro dos limites. Para verde, o limite inferior é o maior entre `minimum_green_seconds` e 60% do tempo original; o superior é 140% do original. Amarelo e limpeza ficam fixos na duração da rede; seus mínimos configurados servem para rejeitar um plano abaixo do piso.
 3. A partir da tentativa `warmup_random`, uma rede neural pequena aprende a relação entre os tempos testados e as pontuações obtidas. Ela estima a pontuação de `candidate_pool` novas combinações; a mais promissora é executada no SUMO e acrescentada aos dados de treino.
 4. Após `iterations` tentativas, o pipeline grava a combinação com a menor pontuação medida. A rede neural ajuda a escolher o que testar; **a pontuação final sempre vem da simulação**.
 
-Com os valores atuais, são 20 tentativas: a primeira é a referência, as tentativas 1 a 9 são aleatórias e as tentativas 10 a 19 usam a rede neural para escolher o candidato. A rede recebe as durações normalizadas de verde, amarelo e totalmente vermelho e aprende a prever a pontuação do cenário atual. Ela não controla os semáforos a cada segundo durante a simulação.
+Com os valores atuais, são 20 tentativas: a primeira é a referência, as tentativas 1 a 9 são aleatórias e as tentativas 10 a 19 usam a rede neural para escolher o candidato. A rede recebe os dois tempos verdes normalizados e aprende a prever a pontuação do cenário atual. Ela não controla os semáforos a cada segundo durante a simulação.
 
-Na rede SUMO, um sinal pode permanecer vermelho enquanto outro movimento recebe verde ou amarelo. A duração total desse vermelho muda indiretamente quando as outras fases mudam. Os índices 2 e 5 de `FAM_RONDON_PARANA` são fases **totalmente vermelhas** de limpeza, que podem ter sua própria duração ajustada. Isso não equivale a configurar um tempo vermelho independente para cada via.
+Na rede SUMO, um sinal pode permanecer vermelho enquanto outro movimento recebe verde ou amarelo. A duração total desse vermelho muda indiretamente quando as outras fases mudam. Os índices 2 e 5 de `FAM_RONDON_PARANA` são fases **totalmente vermelhas** de limpeza, mantidas em 1 s neste piloto. Isso não equivale a configurar um tempo vermelho independente para cada via.
 
 ### Pontuação
 

@@ -1,0 +1,104 @@
+{
+  "plan_id": 4,
+  "intersections": [
+    {
+      "name": "Av. Rondon Pacheco x Av. Benjamim Magalhães",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Paraná",
+      "tls_id": "FAM_RONDON_PARANA",
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false
+    },
+    {
+      "name": "Av. Cesário Alvin x Rua Paraná",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Porto Alegre",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Belém",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Antônio Crescêncio",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Niterói",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false
+    },
+    {
+      "name": "Av. Rondon Pacheco x Av. João Naves de Ávila",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false
+    },
+    {
+      "name": "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false
+    }
+  ]
+}

@@ -5,9 +5,11 @@ import json
 import subprocess
 from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 
 from semaforos.configuracao import read_config, sumo_executable
 from semaforos.rede import inventory
+from semaforos.mapeamento import mapping_report
 from semaforos.simulacao import run
 from semaforos.treinamento import train
 
@@ -17,10 +19,11 @@ ROOT = Path(__file__).resolve().parent
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("inspect", "options", "run", "train"))
+    parser.add_argument("command", choices=("inspect", "mapping", "options", "run", "train", "ppo-train", "ppo-eval"))
     parser.add_argument("--config", default=str(ROOT / "config" / "cenario.json"))
     parser.add_argument("--candidate", help="JSON com durações das fases por ID:índice")
     parser.add_argument("--output", help="Pasta de saída da execução")
+    parser.add_argument("--model", help="Arquivo ppo_model.zip para ppo-eval")
     args = parser.parse_args()
     if args.command == "options":
         print(subprocess.run([str(sumo_executable()), "--help"], check=True,
@@ -30,13 +33,24 @@ def main():
     if args.command == "inspect":
         print(json.dumps(inventory(config), ensure_ascii=False, indent=2))
         return
-    output = Path(args.output).resolve() if args.output else ROOT / "resultados" / datetime.now().strftime("%Y%m%d_%H%M%S")
+    if args.command == "mapping":
+        print(json.dumps(mapping_report(config, config.get("mapping_path")), ensure_ascii=False, indent=2))
+        return
+    output = Path(args.output).resolve() if args.output else ROOT / "resultados" / (datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid4().hex[:8])
     if output.exists():
         raise ValueError(f"A pasta de saída já existe: {output}")
     if args.command == "run":
         run(config, output, args.candidate)
-    else:
+    elif args.command == "train":
         train(config, output)
+    elif args.command == "ppo-train":
+        from semaforos.ppo import train_ppo
+        print(json.dumps(train_ppo(config, output), indent=2))
+    else:
+        if not args.model:
+            parser.error("ppo-eval requer --model")
+        from semaforos.ppo import evaluate_ppo
+        print(json.dumps(evaluate_ppo(config, output, args.model), indent=2))
 
 
 if __name__ == "__main__":

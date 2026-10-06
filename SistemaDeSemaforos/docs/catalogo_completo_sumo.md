@@ -8,7 +8,7 @@ Os nomes das opções e seus valores padrão são os da instalação, não recom
 
 ## Configuração-base carregada pelo projeto
 
-O pipeline lê `config/cenario.json`. Ele não usa um arquivo `.sumocfg` fixo: monta os argumentos da execução e inicia `sumo` por TraCI. A planilha é referência; `plan_id` não aplica automaticamente os tempos dela ao programa do SUMO.
+O pipeline lê `config/cenario.json`. Ele não usa um arquivo `.sumocfg` fixo: monta os argumentos da execução e inicia `sumo` por TraCI. A tabela abaixo descreve o comando `run`; `ppo-train` e `ppo-eval` têm argumentos e saídas próprios. A planilha é referência; `plan_id` não aplica automaticamente os tempos dela ao programa do SUMO.
 
 | Item | Valor atual |
 | --- | --- |
@@ -18,7 +18,7 @@ O pipeline lê `config/cenario.json`. Ele não usa um arquivo `.sumocfg` fixo: m
 | Passo | `1` s |
 | Sementes | `11` |
 | Demanda de teste | `random`; `360` veículos/h |
-| Semáforo selecionado | `FAM_RONDON_PARANA`; fases `[0, 1, 2, 3, 4, 5]` |
+| Semáforo selecionado | `FAM_RONDON_PARANA`; fases `[0, 3]` |
 | Saídas | `tripinfo.xml`, `summary.xml`, `statistics.xml`, `metrics.json` |
 
 ### Programa-base de `FAM_RONDON_PARANA` na rede
@@ -28,11 +28,11 @@ Programa `1624`, tipo `static`, defasagem `0` s. Ciclo atual `90` s.
 | Fase | Estado SUMO | Categoria | Duração atual (s) | Treinada? |
 | ---: | --- | --- | ---: | --- |
 | 0 | `GGGGrrr` | verde | 41 | sim |
-| 1 | `yyyyrrr` | amarelo | 3 | sim |
-| 2 | `rrrrrrr` | totalmente vermelho | 1 | sim |
+| 1 | `yyyyrrr` | amarelo | 3 | não |
+| 2 | `rrrrrrr` | totalmente vermelho | 1 | não |
 | 3 | `rrrrGGG` | verde | 41 | sim |
-| 4 | `rrrryyy` | amarelo | 3 | sim |
-| 5 | `rrrrrrr` | totalmente vermelho | 1 | sim |
+| 4 | `rrrryyy` | amarelo | 3 | não |
+| 5 | `rrrrrrr` | totalmente vermelho | 1 | não |
 
 O vermelho de um movimento também depende do tempo concedido aos demais movimentos. As fases totalmente vermelhas acima são intervalos de limpeza; o pipeline não define um tempo vermelho independente para cada via.
 
@@ -47,6 +47,7 @@ O vermelho de um movimento também depende do tempo concedido aos demais movimen
 | `--step-length` | `step_seconds` |
 | `--seed` | Cada valor de `seeds` |
 | `--tripinfo-output` | `tripinfo.xml` da execução |
+| `--tripinfo-output.write-unfinished` | `true`; inclui viagens não concluídas |
 | `--summary-output` | `summary.xml` da execução |
 | `--statistic-output` | `statistics.xml` da execução |
 | `--no-step-log` | `true` |
@@ -61,6 +62,7 @@ Execute na pasta `SistemaDeSemaforos`:
 python pipeline.py inspect
 python pipeline.py run --config config/cenario.json
 python pipeline.py train --config config/cenario.json
+python pipeline.py ppo-train --config config/cenario.json
 python pipeline.py options
 ```
 

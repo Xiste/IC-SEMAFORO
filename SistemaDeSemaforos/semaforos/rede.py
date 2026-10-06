@@ -38,11 +38,13 @@ def phase_bounds(config, phase):
         lower = max(training["minimum_green_seconds"], int(duration * 0.6))
         upper = max(lower, ceil(duration * 1.4))
     elif kind == "yellow":
-        lower = max(training["minimum_yellow_seconds"], ceil(duration))
-        upper = max(lower + 1, ceil(duration * 1.4))
+        if duration < training["minimum_yellow_seconds"]:
+            raise ValueError("Amarelo da rede abaixo do mínimo configurado; valide o plano")
+        lower = upper = duration
     else:
-        lower = max(training["minimum_all_red_seconds"], ceil(duration))
-        upper = max(lower + 2, ceil(duration * 1.4))
+        if duration < training["minimum_all_red_seconds"]:
+            raise ValueError("Limpeza da rede abaixo do mínimo configurado; valide o plano")
+        lower = upper = duration
     return lower, upper
 
 
@@ -60,6 +62,7 @@ def validate_targets(config, programs):
             if not isinstance(index, int) or index < 0 or index >= len(programs[tls_id]):
                 raise ValueError(f"Índice de fase inválido: {tls_id}:{index}")
             phase_kind(programs[tls_id][index]["state"])
+            phase_bounds(config, programs[tls_id][index])
 
 
 def baseline_values(config, programs):
@@ -72,16 +75,27 @@ def baseline_values(config, programs):
 def inventory(config):
     network = sumolib.net.readNet(str(config["network"]))
     programs = network_programs(config["network"])
+    import xml.etree.ElementTree as ET
+    counts = {tag: 0 for tag in ("tlLogic", "route", "vehicle", "flow")}
+    for _, element in ET.iterparse(config["network"], events=("end",)):
+        if element.tag in counts:
+            counts[element.tag] += 1
+        element.clear()
     return {
         "spreadsheet_intersections": read_plans(config["plans"]),
+        "network_element_counts": counts,
         "network_traffic_lights": [
             {"id": light.getID(),
              "x": light.getConnections()[0][0].getEdge().getToNode().getCoord()[0],
              "y": light.getConnections()[0][0].getEdge().getToNode().getCoord()[1],
              "incoming_edges": sorted({connection[0].getEdge().getID()
                                        for connection in light.getConnections()}),
+             "controlled_movements": [
+                 {"index": connection[2], "from_lane": connection[0].getID(),
+                  "to_lane": connection[1].getID()}
+                 for connection in light.getConnections()],
              "phases": programs[light.getID()]}
             for light in network.getTrafficLights()
         ],
-        "note": "A planilha não contém IDs SUMO; confira a correspondência antes de adicionar targets.",
+        "note": "A planilha não contém IDs SUMO; confirme nomes, links e estágios antes de controlar os nove cruzamentos.",
     }

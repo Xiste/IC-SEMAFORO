@@ -34,17 +34,17 @@ Quando houver contagens por via, o modo `flows` aceitará `from_edge`, `to_edge`
 | Arquivos de resultado | `--tripinfo-output`, `--summary-output`, `--statistic-output` — cada um na pasta da execução |
 | Mensagens | `--no-step-log true` |
 
-`traci.start()` acrescenta a **11ª opção**, `--remote-port`, escolhendo uma porta livre para controlar a execução. As outras **451 opções** do `sumo` não são sobrescritas e seguem os padrões da instalação. Veja o [item 2](configuracoes_sumo.md) para as opções disponíveis e a [referência detalhada](referencia_parametros.md) para cada argumento usado.
+`traci.start()` acrescenta a porta `--remote-port`, escolhida para controlar a execução. O pipeline define **12 opções** entre as 462 do catálogo local; as outras **450** seguem os padrões da instalação. Veja o [item 2](configuracoes_sumo.md) e a [referência detalhada](referencia_parametros.md).
 
 ## 4. Aplicar um candidato e medir
 
-O programa original do semáforo tem seis fases: **verde 41 s → amarelo 3 s → totalmente vermelho 1 s**, repetidas para o outro movimento. O treino pode alterar a duração de cada uma; estados e ordem não mudam.
+O programa original do semáforo tem seis fases: **verde 41 s → amarelo 3 s → totalmente vermelho 1 s**, repetidas para o outro movimento. O piloto só altera os verdes; estados, ordem, amarelos e limpezas não mudam.
 
 A cada passo de 1 s, TraCI conta os veículos parados nas faixas controladas e os veículos que entraram ou chegaram. A pontuação é:
 
 ```text
 veículo-segundos parados nas faixas controladas
-+ 120 × veículos que entraram e não chegaram até o fim
++ 120 × veículos ativos ou aguardando inserção ao fim
 ```
 
 **Menor pontuação é melhor para essa medida.** Por exemplo, numa execução-base já verificada, foram **150 veículo-segundos parados** e **12 viagens não concluídas**: `150 + 120 × 12 = 1590`. Os valores de cada execução ficam em `metrics.json`. Se nenhum semáforo for selecionado, o código usa uma medida global de veículos parados em vez das faixas controladas.
@@ -61,7 +61,7 @@ veículo-segundos parados nas faixas controladas
 | Totalmente vermelho mínimo | 1 s | Nunca menor que o intervalo original. |
 | Penalidade por viagem não concluída | 120 s | Entra na fórmula da pontuação. |
 
-Para este semáforo, o treino testa **24–58 s de verde**, **3–5 s de amarelo** e **1–3 s de intervalo totalmente vermelho** por fase correspondente. A rede neural pequena (MLP) tem camadas **6 → 32 → 16 → 1** e ajuda a escolher configurações para testar. **A pontuação gravada sempre vem do SUMO.** Os detalhes do ajuste estão na [referência detalhada](referencia_parametros.md).
+Para este semáforo, o piloto testa **24–58 s de verde** nos índices 0 e 3; amarelos de 3 s e limpezas de 1 s ficam fixos. A rede neural pequena (MLP) tem camadas **2 → 32 → 16 → 1** e ajuda a escolher configurações para testar. **A pontuação gravada sempre vem do SUMO.** Os detalhes do ajuste estão na [referência detalhada](referencia_parametros.md).
 
 ## Rodar e encontrar os arquivos
 

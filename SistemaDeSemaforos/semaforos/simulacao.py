@@ -29,8 +29,13 @@ def apply_candidate(config, candidate):
         for index in target["phase_indices"]:
             if index >= len(logic.phases):
                 raise ValueError(f"Fase inválida: {tls_id}, índice {index}")
-            phase_kind(logic.phases[index].state)
-            logic.phases[index].duration = candidate[f"{tls_id}:{index}"]
+            phase = logic.phases[index]
+            phase_kind(phase.state)
+            value = candidate[f"{tls_id}:{index}"]
+            lower, upper = phase_bounds(config, {"duration": phase.duration, "state": phase.state})
+            if not isinstance(value, (int, float)) or not lower <= value <= upper:
+                raise ValueError(f"Duração inválida para {tls_id}:{index}: {value}")
+            phase.duration = value
         traci.trafficlight.setProgramLogic(tls_id, logic)
 
 
@@ -41,6 +46,7 @@ def simulate(config, plans, network, candidate, output, seed):
            "--begin", "0", "--end", str(config["duration_seconds"]),
            "--step-length", str(config["step_seconds"]), "--seed", str(seed),
            "--tripinfo-output", str(output / "tripinfo.xml"),
+           "--tripinfo-output.write-unfinished", "true",
            "--summary-output", str(output / "summary.xml"),
            "--statistic-output", str(output / "statistics.xml"),
            "--no-step-log", "true"]
@@ -74,16 +80,20 @@ def simulate(config, plans, network, candidate, output, seed):
             if not controlled_lanes:
                 global_halted_seconds += config["step_seconds"] * sum(
                     traci.vehicle.getSpeed(vehicle) < 0.1 for vehicle in traci.vehicle.getIDList())
+        expected_remaining = traci.simulation.getMinExpectedNumber()
     finally:
         if started:
             traci.close()
     unfinished = max(0, departed - arrived)
+    # Veículos ainda aguardando inserção não podem desaparecer da pontuação.
+    pending_departure = max(0, expected_remaining - unfinished)
     penalty = config["training"]["unfinished_penalty_seconds"]
     metrics = {"seed": seed, "departed": departed, "arrived": arrived,
-               "unfinished": unfinished, "target_halted_vehicle_seconds": halted_seconds,
+               "unfinished": unfinished, "pending_departure": pending_departure,
+               "target_halted_vehicle_seconds": halted_seconds,
                "global_halted_vehicle_seconds": global_halted_seconds,
                "score": (halted_seconds if controlled_lanes else global_halted_seconds)
-                        + unfinished * penalty}
+                        + (unfinished + pending_departure) * penalty}
     (output / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     return metrics
 

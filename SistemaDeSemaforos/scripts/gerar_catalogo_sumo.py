@@ -88,7 +88,8 @@ def main():
         "## Configuração-base carregada pelo projeto",
         "",
         "O pipeline lê `config/cenario.json`. Ele não usa um arquivo `.sumocfg` fixo: "
-        "monta os argumentos da execução e inicia `sumo` por TraCI. A planilha é referência; "
+        "monta os argumentos da execução e inicia `sumo` por TraCI. A tabela abaixo descreve "
+        "o comando `run`; `ppo-train` e `ppo-eval` têm argumentos e saídas próprios. A planilha é referência; "
         "`plan_id` não aplica automaticamente os tempos dela ao programa do SUMO.",
         "",
         "| Item | Valor atual |",
@@ -135,6 +136,7 @@ def main():
         "| `--step-length` | `step_seconds` |",
         "| `--seed` | Cada valor de `seeds` |",
         "| `--tripinfo-output` | `tripinfo.xml` da execução |",
+        "| `--tripinfo-output.write-unfinished` | `true`; inclui viagens não concluídas |",
         "| `--summary-output` | `summary.xml` da execução |",
         "| `--statistic-output` | `statistics.xml` da execução |",
         "| `--no-step-log` | `true` |",
@@ -150,6 +152,7 @@ def main():
         "python pipeline.py inspect",
         "python pipeline.py run --config config/cenario.json",
         "python pipeline.py train --config config/cenario.json",
+        "python pipeline.py ppo-train --config config/cenario.json",
         "python pipeline.py options",
         "```",
         "",

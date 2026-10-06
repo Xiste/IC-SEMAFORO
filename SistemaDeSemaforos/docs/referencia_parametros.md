@@ -2,9 +2,9 @@
 
 Este é o anexo técnico do [item 3: parâmetros usados](parametros_simulacao.md). Comece pelo item 3 para acompanhar a execução em ordem.
 
-Este documento registra **todos os parâmetros definidos pelo projeto** na configuração atual, incluindo geração de veículos, chamada ao `sumo`, controle por TraCI, avaliação e treinamento. Foi conferido com `config/cenario.json` e os módulos de `semaforos/` em 25/09/2026. O executável instalado é `sumo` 1.27.1.
+Este documento descreve os parâmetros do comando `run` e da busca anterior `train`, conforme revisão iniciada em 25/09/2026. **Não é o inventário completo do PPO nem do modo de demanda por via.** Para o escopo atual e as lacunas, consulte [requisitos e pendências](requisitos_e_pendencias.md) e [PPO e interface](ppo_interface.md). O executável instalado é `sumo` 1.27.1.
 
-O [catálogo das 462 opções possíveis de `sumo`](catalogo_completo_sumo.md) é o anexo do item 2 da documentação. Nesta execução, **11 opções de `sumo` recebem valor explícito**: dez pelo pipeline e uma porta escolhida pelo TraCI. As outras **451 opções não são sobrescritas pelo projeto** e seguem os padrões da instalação. Esse número não inclui parâmetros de `randomTrips.py`, dados dentro da rede XML ou decisões feitas por TraCI.
+O [catálogo das 462 opções possíveis de `sumo`](catalogo_completo_sumo.md) é o anexo do item 2 da documentação. Nesta execução, **12 opções de `sumo` recebem valor explícito**: onze pelo pipeline e uma porta escolhida pelo TraCI. As outras **450 opções não são sobrescritas pelo projeto** e seguem os padrões da instalação. Esse número não inclui parâmetros de `randomTrips.py`, dados dentro da rede XML ou decisões feitas por TraCI.
 
 ## 3.1. Arquivos e seleção do cenário
 
@@ -20,7 +20,7 @@ O arquivo [`config/cenario.json`](../config/cenario.json) é lido por [`configur
 | `seeds` | `[11]` | Cada semente gera uma execução; o mesmo valor alimenta `randomTrips.py`, `sumo` e a busca de candidatos. |
 | `targets[0].name` | `Av. Rondon Pacheco x Rua Paraná` | Nome usado para localizar o plano de referência na planilha. |
 | `targets[0].tls_id` | `FAM_RONDON_PARANA` | ID do semáforo que recebe o programa candidato via TraCI. |
-| `targets[0].phase_indices` | `[0, 1, 2, 3, 4, 5]` | Fases cujas durações podem variar no treino. |
+| `targets[0].phase_indices` | `[0, 3]` | Verdes cujas durações podem variar; amarelo e limpeza permanecem fixos. |
 
 `targets` pode conter outros semáforos após conferir os IDs e as fases no [inventário](../dados/inventario.json). Os demais semáforos da rede não recebem `setProgramLogic` e mantêm seus programas originais.
 
@@ -80,12 +80,13 @@ Se `demand.mode` passar a `flows`, `vehicles_per_hour` do modo aleatório deixa 
 | `--step-length` | `1` s | `step_seconds` |
 | `--seed` | `11` | `seeds` |
 | `--tripinfo-output` | `tripinfo.xml` na pasta da execução | Pipeline |
+| `--tripinfo-output.write-unfinished` | `true` | Pipeline |
 | `--summary-output` | `summary.xml` na pasta da execução | Pipeline |
 | `--statistic-output` | `statistics.xml` na pasta da execução | Pipeline |
 | `--no-step-log` | `true` | Fixo no código |
 | `--remote-port` | Porta TCP livre, escolhida em tempo de execução | Adicionada por `traci.start()` |
 
-Essas são as **11 opções explícitas** entre as 462 do template local. Nenhum `.sumocfg` fixo é passado ao `sumo`. As outras opções, como comportamento de veículos, roteamento, emissões e dispositivos, seguem os valores padrão da instalação e estão listadas com tipo e valor no template em [configuracoes_sumo.md](catalogo_completo_sumo.md). A [documentação oficial de configuração](https://sumo.dlr.de/docs/Basics/Using_the_Command_Line_Applications.html) explica a precedência entre arquivo e linha de comando.
+Essas são as **12 opções explícitas** entre as 462 do template local. Nenhum `.sumocfg` fixo é passado ao `sumo`. As outras opções, como comportamento de veículos, roteamento, emissões e dispositivos, seguem os valores padrão da instalação e estão listadas com tipo e valor no template em [configuracoes_sumo.md](catalogo_completo_sumo.md). A [documentação oficial de configuração](https://sumo.dlr.de/docs/Basics/Using_the_Command_Line_Applications.html) explica a precedência entre arquivo e linha de comando.
 
 ## 3.4. Controle e medições por TraCI
 
@@ -114,7 +115,7 @@ score = target_halted_vehicle_seconds
       + unfinished × unfinished_penalty_seconds
 ```
 
-Na configuração atual, `unfinished_penalty_seconds = 120`. Se não houver faixas controladas selecionadas, o código usa `global_halted_vehicle_seconds` no lugar do termo local de parada. O objetivo do treino é **minimizar** `score`. Para várias sementes, usa a média aritmética das pontuações. Os números `departed`, `arrived`, `unfinished` e os termos da pontuação são gravados em `metrics.json`.
+Na configuração atual, `unfinished_penalty_seconds = 120`. A penalidade inclui veículos ativos e aguardando inserção ao fim. Se não houver faixas controladas selecionadas, o código usa `global_halted_vehicle_seconds` no lugar do termo local de parada. O objetivo do treino é **minimizar** `score`. Para várias sementes, usa a média aritmética das pontuações. Os números `departed`, `arrived`, `unfinished`, `pending_departure` e os termos da pontuação são gravados em `metrics.json`.
 
 ## 3.5. Parâmetros do treinamento que afetam as simulações
 
@@ -126,19 +127,19 @@ Na configuração atual, `unfinished_penalty_seconds = 120`. Se não houver faix
 | `warmup_random` | 10 | Tentativa 0 usa a rede base; tentativas 1–9 são escolhidas aleatoriamente; da 10 em diante a rede neural escolhe. |
 | `candidate_pool` | 100 | Combinações propostas a cada escolha neural, antes da medição da melhor no SUMO. |
 | `minimum_green_seconds` | 8 s | Piso de verde, também limitado por 60% do tempo original. |
-| `minimum_yellow_seconds` | 3 s | Piso de amarelo; a duração original também é piso. |
-| `minimum_all_red_seconds` | 1 s | Piso do intervalo totalmente vermelho; a duração original também é piso. |
-| `unfinished_penalty_seconds` | 120 s | Penalidade da pontuação por veículo que entrou e não chegou até o fim. |
+| `minimum_yellow_seconds` | 3 s | Piso de validação; amarelo permanece fixo no valor da rede. |
+| `minimum_all_red_seconds` | 1 s | Piso de validação; limpeza permanece fixa no valor da rede. |
+| `unfinished_penalty_seconds` | 120 s | Penalidade por veículo ativo ou aguardando inserção ao fim. |
 
 Limites calculados para o semáforo atual:
 
 | Fases | Tipo | Original | Intervalo de candidatos |
 | --- | --- | ---: | ---: |
 | 0 e 3 | Verde | 41 s | 24–58 s |
-| 1 e 4 | Amarelo | 3 s | 3–5 s |
-| 2 e 5 | Totalmente vermelho | 1 s | 1–3 s |
+| 1 e 4 | Amarelo | 3 s | fixo em 3 s |
+| 2 e 5 | Totalmente vermelho | 1 s | fixo em 1 s |
 
-Detalhes fixos no código, sem campo próprio no JSON: gerador de candidatos `random.Random(seeds[0])`, inicialização do PyTorch com `torch.manual_seed(seeds[0])`, rede MLP com camadas `6 → 32 → 16 → 1` e ativações ReLU, otimizador Adam com taxa de aprendizado `0,01`, 150 épocas por ajuste e perda quadrática média. A entrada da MLP é cada duração dividida pelo limite superior de sua fase; o alvo é a pontuação dividida pelo desvio padrão das pontuações já observadas, com piso de `1`. O modelo é ajustado novamente a partir das amostras acumuladas quando precisa escolher outro candidato e após a última tentativa.
+Detalhes fixos no código, sem campo próprio no JSON: gerador de candidatos `random.Random(seeds[0])`, inicialização do PyTorch com `torch.manual_seed(seeds[0])`, rede MLP com camadas `2 → 32 → 16 → 1` e ativações ReLU, otimizador Adam com taxa de aprendizado `0,01`, 150 épocas por ajuste e perda quadrática média. A entrada da MLP é cada duração dividida pelo limite superior de sua fase; o alvo é a pontuação dividida pelo desvio padrão das pontuações já observadas, com piso de `1`. O modelo é ajustado novamente a partir das amostras acumuladas quando precisa escolher outro candidato e após a última tentativa.
 
 A MLP **prevê a pontuação para orientar a busca**. Cada pontuação registrada vem do SUMO; o modelo não faz controle adaptativo durante os passos da simulação. A primeira tentativa com os tempos originais funciona como referência.
 

@@ -13,10 +13,25 @@ def read_config(path):
         data[key] = (path.parent / data[key]).resolve()
         if not data[key].is_file():
             raise ValueError(f"Arquivo ausente: {data[key]}")
+    if "mapping_path" in data:
+        data["mapping_path"] = (path.parent / data["mapping_path"]).resolve()
+        if not data["mapping_path"].is_file():
+            raise ValueError(f"Mapeamento ausente: {data['mapping_path']}")
+    if data.get("targets_from_mapping"):
+        if not data.get("mapping_path"):
+            raise ValueError("targets_from_mapping exige mapping_path")
+        mapping = json.loads(data["mapping_path"].read_text(encoding="utf-8"))
+        entries = mapping.get("intersections", [])
+        if len(entries) != 9 or any(not item.get("tls_id") or not item.get("stage_to_phase")
+                                    for item in entries):
+            raise ValueError("Mapeamento dos nove cruzamentos ainda incompleto")
+        data["targets"] = [{"name": item["name"], "tls_id": item["tls_id"],
+                            "phase_indices": sorted(set(item["stage_to_phase"].values()))}
+                           for item in entries]
     if data["duration_seconds"] <= 0 or data["step_seconds"] <= 0:
         raise ValueError("Duração e passo devem ser positivos")
-    if data["demand"]["mode"] not in ("random", "flows"):
-        raise ValueError("demand.mode deve ser random ou flows")
+    if data["demand"]["mode"] not in ("random", "flows", "edge_volumes"):
+        raise ValueError("demand.mode deve ser random, flows ou edge_volumes")
     if not data["seeds"] or any(not isinstance(seed, int) for seed in data["seeds"]):
         raise ValueError("seeds deve conter ao menos um inteiro")
     training = data["training"]
@@ -43,5 +58,7 @@ def sumo_executable():
 def validate_reference_plan(config, plans):
     for target in config["targets"]:
         name = target.get("name")
-        if name in plans and str(config["plan_id"]) not in plans[name]["plans"]:
+        if name not in plans:
+            raise ValueError(f"Cruzamento ausente da planilha: {name}")
+        if str(config["plan_id"]) not in plans[name]["plans"]:
             raise ValueError(f'Plano {config["plan_id"]} ausente para {name}')

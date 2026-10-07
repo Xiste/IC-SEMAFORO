@@ -24,6 +24,18 @@ validação. Um exemplo inicial para auditoria (ainda sem estágios verificados)
 `candidate_tls_ids` apenas sugere controladores. Somente IDs em `controllers`
 entram na auditoria de atribuição. Os estágios de cada controlador podem ser
 subconjuntos dos estágios da planilha; o conjunto do cruzamento deve cobrir todos.
+Para marcar um cruzamento como completo, todos os IDs de `candidate_tls_ids`
+devem constar em `controllers`; se a revisão provar que um candidato pertence
+a outro local, corrija também a lista de candidatos e registre a fonte.
+Para criar um rascunho com os 17 controladores candidatos, sem sobrescrever o
+mapeamento atual, execute:
+
+```powershell
+.\.venv\Scripts\python.exe pipeline.py mapping-scaffold --config config/cenario_rede_corrigida.json --output resultados/rascunho_mapeamento
+```
+
+Edite `mapeamento_rascunho.json` e confira cada controlador com as fontes reais.
+Depois, aponte `mapping_path` de um cenário para esse arquivo e execute `mapping`.
 Depois que os nove cruzamentos estiverem validados, `"targets_from_mapping": true`
 cria um alvo PPO por controlador atribuído. Hoje essa opção continua recusada,
 pois faltam a correspondência de estágios, pedestres e tempos de segurança.

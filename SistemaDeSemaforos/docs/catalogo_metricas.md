@@ -1,5 +1,7 @@
 # Métricas do experimento PPO
 
+Atualização da interface: a [tabela completa de coleta](catalogos/metrics_catalog.csv) inclui paradas/pico na rede inteira, CO, HC, NOx, PMx, eletricidade e, para viagens concluídas, desvio populacional, mínimo, máximo e mediana além de média/p95. O [inventário TraCI](catalogos/traci_queries.csv) lista consultas disponíveis, sem presumir que todas sejam coletadas. Veja [escopo e instruções](interface_catalogos.md).
+
 Cada episódio conserva `run_config.json`, `routes.rou.xml`, `tripinfo.xml` e,
 quando habilitado, `actions.csv`. O treino grava `manifest.json` com configuração,
 versões, hashes da rede, planilha e mapeamento e hiperparâmetros PPO. A avaliação

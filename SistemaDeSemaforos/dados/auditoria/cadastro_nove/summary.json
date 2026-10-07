@@ -1,0 +1,12 @@
+{
+  "intersections": 9,
+  "controllers_assigned": 17,
+  "connections": 150,
+  "pedestrian_connections": 31,
+  "off_controllers": 6,
+  "stages_to_associate": 32,
+  "operationally_validated": 0,
+  "network_sha256": "f30b0807fa46e3d4fb65c573be68f6544d75a64e44a2c32fee71389fd4106d56",
+  "mapping": "C:\\Projetos\\IC-SEMAFORO\\SistemaDeSemaforos\\config\\mapeamento_associado.json",
+  "note": "Faixas e conversões extraídas da rede aceita pelo usuário. Grupos reais, estados e tempos não foram inventados; o mapeamento ativo permanece separado."
+}

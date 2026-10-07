@@ -1,0 +1,451 @@
+{
+  "plan_id": 4,
+  "intersections": [
+    {
+      "name": "Av. Rondon Pacheco x Av. Benjamim Magalhães",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_BENJAMIM"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "visual_review": {
+        "status": "preliminary",
+        "date": "2026-10-06",
+        "evidence_file": "../dados/auditoria/conferencia_visual_maps.json",
+        "evidence_key": "Av. Rondon Pacheco x Av. Benjamim Magalhães",
+        "maps_name": "Av. Rondon Pacheco & Av. Benjamin Magalhães",
+        "image_date": "2025-08",
+        "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=F_zTpbQu8sJiN5CXk_Q3nA&heading=137.56"
+      },
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Paraná",
+      "tls_id": "FAM_RONDON_PARANA",
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_PARANA"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "visual_review": {
+        "status": "preliminary",
+        "date": "2026-10-06",
+        "evidence_file": "../dados/auditoria/conferencia_visual_maps.json",
+        "evidence_key": "Av. Rondon Pacheco x Rua Paraná",
+        "maps_name": "Av. Rondon Pacheco & R. Paraná",
+        "image_date": "2025-06",
+        "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=dEHFs2HaX00qNKbjBCVf7g&heading=34.63"
+      },
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        }
+      ]
+    },
+    {
+      "name": "Av. Cesário Alvin x Rua Paraná",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_CESARIO_PARANA"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "visual_review": {
+        "status": "preliminary",
+        "date": "2026-10-06",
+        "evidence_file": "../dados/auditoria/conferencia_visual_maps.json",
+        "evidence_key": "Av. Cesário Alvin x Rua Paraná",
+        "maps_name": "Av. Cesário Alvim / R. Paraná",
+        "image_date": "2025-07",
+        "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=ZtCTxB0BC5RXGpjjjn_dUA&heading=97.46"
+      },
+      "controllers": [
+        {
+          "tls_id": "FAM_CESARIO_PARANA",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Porto Alegre",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_PORTO_ALEGRE",
+        "3386573305",
+        "3386573306",
+        "5494111603"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "visual_review": {
+        "status": "preliminary",
+        "date": "2026-10-06",
+        "evidence_file": "../dados/auditoria/conferencia_visual_maps.json",
+        "evidence_key": "Av. Rondon Pacheco x Rua Porto Alegre",
+        "maps_name": "Av. Rondon Pacheco / R. Porto Alegre",
+        "image_date": "2019-09",
+        "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=PPIfrg6fppt6gKtStnBxdg&heading=284.33"
+      },
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        },
+        {
+          "tls_id": "3386573305",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        },
+        {
+          "tls_id": "3386573306",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        },
+        {
+          "tls_id": "5494111603",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Belém",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_BELEM"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "visual_review": {
+        "status": "preliminary",
+        "date": "2026-10-06",
+        "evidence_file": "../dados/auditoria/conferencia_visual_maps.json",
+        "evidence_key": "Av. Rondon Pacheco x Rua Belém",
+        "maps_name": "Av. Rondon Pacheco / R. Belém",
+        "image_date": "2025-02",
+        "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=hdX7avQU9JQLgUCi6HJaaA&heading=285.51"
+      },
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Antônio Crescêncio",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_ROTARY_CLUB"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "visual_review": {
+        "status": "preliminary",
+        "date": "2026-10-06",
+        "evidence_file": "../dados/auditoria/conferencia_visual_maps.json",
+        "evidence_key": "Av. Rondon Pacheco x Rua Antônio Crescêncio",
+        "maps_name": "Av. Rondon Pacheco / R. Antônio Crescêncio / R. Rotary Club",
+        "image_date": "2025-06",
+        "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=ta4qAC9p7sXwpSLWG80Z_Q&heading=227.43"
+      },
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Niterói",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_NITEROI",
+        "5494111596",
+        "5494111597"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "visual_review": {
+        "status": "preliminary",
+        "date": "2026-10-06",
+        "evidence_file": "../dados/auditoria/conferencia_visual_maps.json",
+        "evidence_key": "Av. Rondon Pacheco x Rua Niterói",
+        "maps_name": "Av. Rondon Pacheco / R. Niterói",
+        "image_date": "2025-01",
+        "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=wR00VHCIofOm7zsDqvSXGg&heading=93.72"
+      },
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        },
+        {
+          "tls_id": "5494111596",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        },
+        {
+          "tls_id": "5494111597",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Av. João Naves de Ávila",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "5494111589",
+        "5494111590",
+        "5494111594"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "visual_review": {
+        "status": "preliminary",
+        "date": "2026-10-06",
+        "evidence_file": "../dados/auditoria/conferencia_visual_maps.json",
+        "evidence_key": "Av. Rondon Pacheco x Av. João Naves de Ávila",
+        "maps_name": "Viaduto João Naves Rondon e acessos laterais",
+        "image_date": "2025-11",
+        "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=nSnHt5r83CQ1v5FJdpwTpw&heading=351.45"
+      },
+      "controllers": [
+        {
+          "tls_id": "5494111589",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        },
+        {
+          "tls_id": "5494111590",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        },
+        {
+          "tls_id": "5494111594",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
+      "tls_id": null,
+      "stage_to_phase": {},
+      "movements_verified": false,
+      "pedestrians_verified": false,
+      "safety_verified": false,
+      "review_source": "",
+      "reconciliation_note": "",
+      "controlled_links_verified": false,
+      "candidate_tls_ids": [
+        "FAM_RONDON_ANSELMO",
+        "338654991"
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "visual_review": {
+        "status": "preliminary",
+        "date": "2026-10-06",
+        "evidence_file": "../dados/auditoria/conferencia_visual_maps.json",
+        "evidence_key": "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
+        "maps_name": "Av. Rondon Pacheco / Av. Anselmo Alves dos Santos",
+        "image_date": "2026-05",
+        "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=Cv_dPu0tazFDwAZyHtdejg&heading=199.36"
+      },
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        },
+        {
+          "tls_id": "338654991",
+          "stage_to_phase": {},
+          "controlled_links_verified": false,
+          "movements_verified": false,
+          "pedestrians_verified": false,
+          "safety_verified": false,
+          "review_source": "",
+          "reconciliation_note": "",
+          "association_source": "inventario_geografico_tls.json; conferência visual; geometria aceita pelo usuário em 06/10/2026",
+          "network_connections_extracted": true
+        }
+      ]
+    }
+  ]
+}

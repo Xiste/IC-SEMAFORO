@@ -19,13 +19,13 @@ O pipeline gera tráfego de teste, roda o SUMO por **600 segundos**, mede veícu
 
 ## 2. Gerar veículos
 
-O modo atual é `demand.mode: "random"`. [`demanda.py`](../semaforos/demanda.py) transforma **360 veículos/h** em uma partida a cada **10 s** (`3600 ÷ 360`) e chama `randomTrips.py`. Ele recebe a rede, os tempos **0–600 s**, a semente **11** e grava `trips.trips.xml` e `routes.rou.xml`.
+O modo atual é `demand.mode: "random"`. [`demanda.py`](../semaforos/cenario/demanda.py) transforma **360 veículos/h** em uma partida a cada **10 s** (`3600 ÷ 360`) e chama `randomTrips.py`. Ele recebe a rede, os tempos **0–600 s**, a semente **11** e grava `trips.trips.xml` e `routes.rou.xml`.
 
 Quando houver contagens por via, o modo `flows` aceitará `from_edge`, `to_edge` e `vehicles_per_hour` para cada fluxo. A configuração atual contém `flows: []`, então nenhuma taxa por via foi informada ainda.
 
 ## 3. Rodar o SUMO
 
-[`simulacao.py`](../semaforos/simulacao.py) passa **dez opções** ao executável:
+[`execucao.py`](../semaforos/simulacao/execucao.py) passa **dez opções** ao executável no fluxo de tempos fixos:
 
 | Grupo | Opções e valores atuais |
 | --- | --- |

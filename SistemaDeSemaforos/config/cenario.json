@@ -5,8 +5,16 @@
   "plan_id": 4,
   "duration_seconds": 600,
   "step_seconds": 1,
-  "seeds": [11],
-  "evaluation": {"seeds": [101, 102, 103]},
+  "seeds": [
+    11
+  ],
+  "evaluation": {
+    "seeds": [
+      101,
+      102,
+      103
+    ]
+  },
   "metrics": {
     "collect_lane_details": true,
     "collect_emissions": false,
@@ -14,13 +22,31 @@
     "collect_resources": true,
     "collect_actions": true
   },
-  "objectives": {"waiting": 1, "queues": 1, "travel": 1},
+  "objectives": {
+    "waiting": 1,
+    "queues": 1,
+    "travel": 1
+  },
   "ppo": {
     "decision_seconds": 5,
     "n_epochs": 10,
     "n_steps": 128,
     "batch_size": 64,
-    "total_timesteps": 2048
+    "total_timesteps": 2048,
+    "action_mode": "phase_durations",
+    "phase_types": [
+      "green",
+      "yellow",
+      "all_red"
+    ],
+    "duration_limits": {
+      "yellow": {
+        "maximum_seconds": 6
+      },
+      "all_red": {
+        "maximum_seconds": 3
+      }
+    }
   },
   "demand": {
     "mode": "random",
@@ -31,7 +57,10 @@
     {
       "name": "Av. Rondon Pacheco x Rua Paraná",
       "tls_id": "FAM_RONDON_PARANA",
-      "phase_indices": [0, 3]
+      "phase_indices": [
+        0,
+        3
+      ]
     }
   ],
   "training": {

@@ -1,0 +1,18 @@
+﻿cruzamento,tls_id,program_id,conexões,fases,ciclo_s,estado,links_sempre_vermelhos,associação,validação_operacional
+Av. Rondon Pacheco x Av. Benjamim Magalhães,FAM_RONDON_BENJAMIM,current,24,1,1.0,contém sinais desligados,18;19;20;21;22;23,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Rua Paraná,FAM_RONDON_PARANA,1624,15,6,90.0,programa com fases,11;12;13;14,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Cesário Alvin x Rua Paraná,FAM_CESARIO_PARANA,current,8,1,1.0,contém sinais desligados,5;6;7,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Rua Porto Alegre,FAM_RONDON_PORTO_ALEGRE,current,12,1,1.0,contém sinais desligados,10;11,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Rua Porto Alegre,3386573305,0,5,3,90.0,programa com fases,4,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Rua Porto Alegre,3386573306,0,3,3,90.0,programa com fases,2,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Rua Porto Alegre,5494111603,0,3,3,90.0,programa com fases,2,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Rua Belém,FAM_RONDON_BELEM,current,10,1,1.0,contém sinais desligados,,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Rua Antônio Crescêncio,FAM_RONDON_ROTARY_CLUB,1624,12,6,90.0,programa com fases,9;10;11,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Rua Niterói,FAM_RONDON_NITEROI,current,19,1,1.0,contém sinais desligados,17;18,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Rua Niterói,5494111596,0,5,3,90.0,programa com fases,4,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Rua Niterói,5494111597,0,5,3,90.0,programa com fases,4,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Av. João Naves de Ávila,5494111589,0,5,3,90.0,programa com fases,4,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Av. João Naves de Ávila,5494111590,0,6,3,90.0,programa com fases,5,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Av. João Naves de Ávila,5494111594,0,5,3,90.0,programa com fases,4,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento,FAM_RONDON_ANSELMO,current,10,1,1.0,contém sinais desligados,8;9,extraída do inventário; geografia confirmada pelo usuário,False
+Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento,338654991,0,3,3,90.0,programa com fases,2,extraída do inventário; geografia confirmada pelo usuário,False

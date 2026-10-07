@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from semaforos.configuracao import read_config
-from semaforos.mapeamento import audit_phase_kind, mapping_report, require_validated_targets
-from semaforos.metricas import trip_summary
+from semaforos.cenario.configuracao import read_config
+from semaforos.cenario.mapeamento import audit_phase_kind, mapping_report, require_validated_targets
+from semaforos.relatorios.metricas import trip_summary
 
 
 ROOT = Path(__file__).resolve().parents[1]

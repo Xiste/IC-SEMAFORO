@@ -1,5 +1,13 @@
 # Requisitos do pipeline e critérios de conclusão
 
+## Atualização: controle conjunto experimental pela interface
+
+A interface agora prepara e verifica os 17 controladores dos nove cruzamentos em uma cópia da rede, com programas sintéticos de atendimento serial. Permite teste curto no SUMO, treino, escolha do modelo, avaliação e exportação sem edição obrigatória de arquivos. Os demais controladores mantêm estados e tempos dos programas da rede corrigida, transportados para os índices reconstruídos. A validação dos planos reais continua separada e pendente; o usuário optou por não reproduzi-los nesta etapa. As descrições históricas de controle restrito ao piloto abaixo se referem ao cenário padrão. Veja [operação e limitações](controle_nove_interface.md). Treino longo, demanda representativa e evidência de melhoria continuam pendentes.
+
+## Confirmação do usuário em 06/10/2026
+
+O usuário confirmou: "todos os cruzamneto da rede do mapa que vc tem sao validos e sao reais". A existência dos cruzamentos e a validade geográfica da rede passam a ser premissas aceitas do projeto, com essa declaração como fonte. As pendências abaixo relativas à realidade/localização dos cruzamentos devem ser lidas à luz dessa confirmação. Continua necessária a associação dos controladores/grupos/movimentos às fases SUMO e a reconciliação dos planos e tempos: a confirmação geográfica não fornece esses dados operacionais. A interface apresenta essa distinção.
+
 Escopo: simulador **de pesquisa** para os nove cruzamentos de Rondon Norte.
 "Pronto" significa produzir experimentos reproduzíveis e comparações
 confiáveis no SUMO. Implantação em semáforos reais exigiria homologação

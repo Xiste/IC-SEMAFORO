@@ -1,0 +1,216 @@
+{
+  "retrieved_at": "2026-10-07T01:48:32.329191+00:00",
+  "query": "https://api.openstreetmap.org/api/0.6/ways.json?ways=1156272393,1156717163,1156717168,1156717170,1156717173,1156717175,152937136,154252437,299471494,30622933,30664532,331577748,331577750,462991286,463014795,576014290,576014296,576014301,576876311,602306713,625668273,665897556,666324302,853751181,901328279,930831032,930831033,931572689,965367672,965367673",
+  "ways": {
+    "30622933": {
+      "name": "Rua Niterói",
+      "highway": "residential",
+      "version": 19,
+      "osm_timestamp": "2026-02-27T07:29:57Z",
+      "source": "https://www.openstreetmap.org/way/30622933"
+    },
+    "30664532": {
+      "name": "Rua Porto Alegre",
+      "highway": "residential",
+      "version": 15,
+      "osm_timestamp": "2023-03-23T18:02:12Z",
+      "source": "https://www.openstreetmap.org/way/30664532"
+    },
+    "152937136": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 31,
+      "osm_timestamp": "2023-03-22T11:40:21Z",
+      "source": "https://www.openstreetmap.org/way/152937136"
+    },
+    "154252437": {
+      "name": "Rua Paraná",
+      "highway": "residential",
+      "version": 8,
+      "osm_timestamp": "2017-02-17T20:51:47Z",
+      "source": "https://www.openstreetmap.org/way/154252437"
+    },
+    "299471494": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 19,
+      "osm_timestamp": "2026-04-17T21:33:05Z",
+      "source": "https://www.openstreetmap.org/way/299471494"
+    },
+    "331577748": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 4,
+      "osm_timestamp": "2025-04-30T12:01:09Z",
+      "source": "https://www.openstreetmap.org/way/331577748"
+    },
+    "331577750": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 14,
+      "osm_timestamp": "2026-04-17T21:33:05Z",
+      "source": "https://www.openstreetmap.org/way/331577750"
+    },
+    "462991286": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 3,
+      "osm_timestamp": "2021-04-08T19:22:22Z",
+      "source": "https://www.openstreetmap.org/way/462991286"
+    },
+    "463014795": {
+      "name": "Rua Rotary Club",
+      "highway": "secondary",
+      "version": 5,
+      "osm_timestamp": "2021-12-16T00:00:18Z",
+      "source": "https://www.openstreetmap.org/way/463014795"
+    },
+    "576014290": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 10,
+      "osm_timestamp": "2026-08-11T01:14:25Z",
+      "source": "https://www.openstreetmap.org/way/576014290"
+    },
+    "576014296": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 3,
+      "osm_timestamp": "2020-10-01T13:00:51Z",
+      "source": "https://www.openstreetmap.org/way/576014296"
+    },
+    "576014301": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 1,
+      "osm_timestamp": "2018-04-03T15:53:19Z",
+      "source": "https://www.openstreetmap.org/way/576014301"
+    },
+    "576876311": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 6,
+      "osm_timestamp": "2021-04-15T00:46:33Z",
+      "source": "https://www.openstreetmap.org/way/576876311"
+    },
+    "602306713": {
+      "name": "Avenida Cesário Alvim",
+      "highway": "residential",
+      "version": 4,
+      "osm_timestamp": "2024-07-12T11:54:01Z",
+      "source": "https://www.openstreetmap.org/way/602306713"
+    },
+    "625668273": {
+      "name": "Avenida Governador Anselmo Alves dos Santos",
+      "highway": "primary",
+      "version": 3,
+      "osm_timestamp": "2020-10-01T10:46:47Z",
+      "source": "https://www.openstreetmap.org/way/625668273"
+    },
+    "665897556": {
+      "name": "Rua Paraná",
+      "highway": "residential",
+      "version": 2,
+      "osm_timestamp": "2020-10-01T11:50:40Z",
+      "source": "https://www.openstreetmap.org/way/665897556"
+    },
+    "666324302": {
+      "name": "Avenida Benjamin Magalhães",
+      "highway": "secondary",
+      "version": 9,
+      "osm_timestamp": "2023-03-23T17:10:44Z",
+      "source": "https://www.openstreetmap.org/way/666324302"
+    },
+    "853751181": {
+      "name": "",
+      "highway": "residential",
+      "version": 3,
+      "osm_timestamp": "2021-07-21T16:53:52Z",
+      "source": "https://www.openstreetmap.org/way/853751181"
+    },
+    "901328279": {
+      "name": "Rua Paraná",
+      "highway": "residential",
+      "version": 1,
+      "osm_timestamp": "2021-01-28T19:24:42Z",
+      "source": "https://www.openstreetmap.org/way/901328279"
+    },
+    "930831032": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 3,
+      "osm_timestamp": "2025-12-18T17:08:34Z",
+      "source": "https://www.openstreetmap.org/way/930831032"
+    },
+    "930831033": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 1,
+      "osm_timestamp": "2021-04-15T00:46:33Z",
+      "source": "https://www.openstreetmap.org/way/930831033"
+    },
+    "931572689": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 2,
+      "osm_timestamp": "2023-03-23T18:02:12Z",
+      "source": "https://www.openstreetmap.org/way/931572689"
+    },
+    "965367672": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 1,
+      "osm_timestamp": "2021-07-18T13:05:33Z",
+      "source": "https://www.openstreetmap.org/way/965367672"
+    },
+    "965367673": {
+      "name": "Rua Belém",
+      "highway": "tertiary",
+      "version": 1,
+      "osm_timestamp": "2021-07-18T13:05:33Z",
+      "source": "https://www.openstreetmap.org/way/965367673"
+    },
+    "1156272393": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 2,
+      "osm_timestamp": "2023-03-23T18:02:12Z",
+      "source": "https://www.openstreetmap.org/way/1156272393"
+    },
+    "1156717163": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 1,
+      "osm_timestamp": "2023-03-23T18:02:12Z",
+      "source": "https://www.openstreetmap.org/way/1156717163"
+    },
+    "1156717168": {
+      "name": "Rua Paraná",
+      "highway": "tertiary",
+      "version": 1,
+      "osm_timestamp": "2023-03-23T18:02:12Z",
+      "source": "https://www.openstreetmap.org/way/1156717168"
+    },
+    "1156717170": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 1,
+      "osm_timestamp": "2023-03-23T18:02:12Z",
+      "source": "https://www.openstreetmap.org/way/1156717170"
+    },
+    "1156717173": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 1,
+      "osm_timestamp": "2023-03-23T18:02:12Z",
+      "source": "https://www.openstreetmap.org/way/1156717173"
+    },
+    "1156717175": {
+      "name": "Avenida Governador Rondon Pacheco",
+      "highway": "primary",
+      "version": 1,
+      "osm_timestamp": "2023-03-23T18:02:12Z",
+      "source": "https://www.openstreetmap.org/way/1156717175"
+    }
+  }
+}

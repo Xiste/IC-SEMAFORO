@@ -1,0 +1,99 @@
+{
+  "scope": "Piloto: um controlador nominal, demanda sintética, SUMO-GUI desligado, emissões ligadas. Não comprova convergência.",
+  "config": {
+    "network": "C:\\Projetos\\IC-SEMAFORO\\SistemaDeSemaforos\\dados\\rede\\uberlandia.vehicular.families.16_2_4.net.xml",
+    "plans": "C:\\Projetos\\IC-SEMAFORO\\SistemaDeSemaforos\\dados\\planos\\RondonNorte.xlsx",
+    "mapping_path": "C:\\Projetos\\IC-SEMAFORO\\SistemaDeSemaforos\\config\\mapeamento.json",
+    "plan_id": 4,
+    "duration_seconds": 600,
+    "step_seconds": 1,
+    "seeds": [
+      11
+    ],
+    "evaluation": {
+      "seeds": [
+        101,
+        102,
+        103
+      ]
+    },
+    "metrics": {
+      "collect_lane_details": true,
+      "collect_emissions": true,
+      "collect_events": true,
+      "collect_resources": true,
+      "collect_actions": true
+    },
+    "objectives": {
+      "waiting": 1,
+      "queues": 1,
+      "travel": 1
+    },
+    "ppo": {
+      "decision_seconds": 5,
+      "n_epochs": 10,
+      "n_steps": 128,
+      "batch_size": 64,
+      "total_timesteps": 2048,
+      "action_mode": "phase_durations",
+      "phase_types": [
+        "green",
+        "yellow",
+        "all_red"
+      ],
+      "duration_limits": {
+        "yellow": {
+          "maximum_seconds": 6
+        },
+        "all_red": {
+          "maximum_seconds": 3
+        }
+      },
+      "gui": false
+    },
+    "demand": {
+      "mode": "random",
+      "vehicles_per_hour": 360,
+      "flows": []
+    },
+    "targets": [
+      {
+        "name": "Av. Rondon Pacheco x Rua Paraná",
+        "tls_id": "FAM_RONDON_PARANA",
+        "phase_indices": [
+          0,
+          3
+        ]
+      }
+    ],
+    "training": {
+      "iterations": 20,
+      "warmup_random": 10,
+      "candidate_pool": 100,
+      "minimum_green_seconds": 8,
+      "minimum_yellow_seconds": 3,
+      "minimum_all_red_seconds": 1,
+      "unfinished_penalty_seconds": 120
+    }
+  },
+  "workload": {
+    "épocas por coleta": 10,
+    "coletas completas previstas": 16,
+    "passos efetivos previstos": 2048,
+    "minibatches por época": 2,
+    "atualizações de gradiente previstas": 320,
+    "episódios completos previstos": 17
+  },
+  "training": {
+    "algorithm": "PPO",
+    "timesteps": 2048,
+    "episodes_completed": 17,
+    "cancelled": false,
+    "real_seconds": 204.99,
+    "model": "C:\\Projetos\\IC-SEMAFORO\\SistemaDeSemaforos\\resultados\\benchmark_10_epocas_20261006\\ppo_model.zip"
+  },
+  "result_folder": "C:\\Projetos\\IC-SEMAFORO\\SistemaDeSemaforos\\resultados\\benchmark_10_epocas_20261006",
+  "measurement_conditions": "Tempo de parede local. Testes de regressão executaram em paralelo durante parte do treino; não é benchmark isolado.",
+  "evaluation_runs": 3,
+  "same_planned_demand_per_seed": true
+}

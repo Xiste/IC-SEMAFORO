@@ -1,0 +1,2106 @@
+domínio,consulta,assinatura,descrição TraCI,cobertura
+busstop,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+busstop,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+busstop,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+busstop,getEndPos,(stopID),"getEndPos(string) -> double
+
+The end position of the stop along the lane measured in m.",API disponível; não implica coleta pelo pipeline
+busstop,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+busstop,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+busstop,getLaneID,(stopID),"getLaneID(string) -> string
+Returns the lane of this calibrator (if it applies to a single lane)",API disponível; não implica coleta pelo pipeline
+busstop,getName,(stopID),"getName(string) -> string
+
+Returns the name of this stop",API disponível; não implica coleta pelo pipeline
+busstop,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+busstop,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+busstop,getPersonCount,(stopID),"getPersonCount(string) -> integer
+Get the total number of waiting persons at the named bus stop.",API disponível; não implica coleta pelo pipeline
+busstop,getPersonIDs,(stopID),"getPersonIDs(string) -> tuple(string)
+Get the IDs of waiting persons at the named bus stop.",API disponível; não implica coleta pelo pipeline
+busstop,getStartPos,(stopID),"getStartPos(string) -> double
+
+The starting position of the stop along the lane measured in m.",API disponível; não implica coleta pelo pipeline
+busstop,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+busstop,getVehicleCount,(stopID),"getVehicleCount(string) -> integer
+Get the total number of vehicles stopped at the named bus stop.",API disponível; não implica coleta pelo pipeline
+busstop,getVehicleIDs,(stopID),"getVehicleIDs(stopID) -> tuple(string)
+Get the IDs of vehicles stopped at the named bus stop.",API disponível; não implica coleta pelo pipeline
+calibrator,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+calibrator,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+calibrator,getBegin,(calibratorID),"getBegin(string) -> double
+Returns the begin time of the current calibration interval",API disponível; não implica coleta pelo pipeline
+calibrator,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+calibrator,getEdgeID,(calibratorID),"getEdgeID(string) -> string
+Returns the edge of this calibrator",API disponível; não implica coleta pelo pipeline
+calibrator,getEnd,(calibratorID),"getEnd(string) -> double
+Returns the end time of the current calibration interval",API disponível; não implica coleta pelo pipeline
+calibrator,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+calibrator,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+calibrator,getInserted,(calibratorID),"getInserted(string) -> double
+Returns the number of inserted vehicles in the current calibration interval",API disponível; não implica coleta pelo pipeline
+calibrator,getLaneID,(calibratorID),"getLaneID(string) -> string
+Returns the lane of this calibrator (if it applies to a single lane)",API disponível; não implica coleta pelo pipeline
+calibrator,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+calibrator,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+calibrator,getPassed,(calibratorID),"getPassed(string) -> double
+Returns the number of passed vehicles in the current calibration interval",API disponível; não implica coleta pelo pipeline
+calibrator,getRemoved,(calibratorID),"getRemoved(string) -> double
+Returns the number of removed vehicles in the current calibration interval",API disponível; não implica coleta pelo pipeline
+calibrator,getRouteID,(calibratorID),"getRouteID(string) -> string
+Returns the route id for the current calibration interval",API disponível; não implica coleta pelo pipeline
+calibrator,getRouteProbeID,(calibratorID),"getRouteProbeID(string) -> string
+Returns the routeProbe id for this calibrator",API disponível; não implica coleta pelo pipeline
+calibrator,getSpeed,(calibratorID),"getSpeed(string) -> double
+Returns the target speed of the current calibration interval",API disponível; não implica coleta pelo pipeline
+calibrator,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+calibrator,getTypeID,(calibratorID),"getTypeID(string) -> string
+Returns the type id for the current calibration interval",API disponível; não implica coleta pelo pipeline
+calibrator,getVTypes,(calibratorID),"getVTypes(string) -> tuple(string)
+
+Returns a tuple of all types to which the calibrator applies (in a type filter is active)",API disponível; não implica coleta pelo pipeline
+calibrator,getVehsPerHour,(calibratorID),"getVehsPerHour(string) -> double
+Returns the number of vehicles per hour in the current calibration interval",API disponível; não implica coleta pelo pipeline
+chargingstation,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+chargingstation,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+chargingstation,getChargeDelay,(stopID),"getChargeDelay(string) -> double
+
+Get the charge delay in seconds.",API disponível; não implica coleta pelo pipeline
+chargingstation,getChargeInTransit,(stopID),"getChargeInTransit(string) -> integer
+
+Get whether charging when driving across the charging station works (0=no, 1=yes).",API disponível; não implica coleta pelo pipeline
+chargingstation,getChargingPower,(stopID),"getChargingPower(string) -> double
+
+The charging power.",API disponível; não implica coleta pelo pipeline
+chargingstation,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+chargingstation,getEfficiency,(stopID),"getEfficiency(string) -> double
+
+The efficiency [0,1].",API disponível; não implica coleta pelo pipeline
+chargingstation,getEndPos,(stopID),"getEndPos(string) -> double
+
+The end position of the stop along the lane measured in m.",API disponível; não implica coleta pelo pipeline
+chargingstation,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+chargingstation,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+chargingstation,getLaneID,(stopID),"getLaneID(string) -> string
+
+Returns the lane of this calibrator (if it applies to a single lane)",API disponível; não implica coleta pelo pipeline
+chargingstation,getName,(stopID),"getName(string) -> string
+
+Returns the name of this stop",API disponível; não implica coleta pelo pipeline
+chargingstation,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+chargingstation,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+chargingstation,getStartPos,(stopID),"getStartPos(string) -> double
+
+The starting position of the stop along the lane measured in m.",API disponível; não implica coleta pelo pipeline
+chargingstation,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+chargingstation,getTotalPower,(stopID),"getTotalPower(string) -> double
+
+Get the total charging power limit for all vehicles.",API disponível; não implica coleta pelo pipeline
+chargingstation,getVehicleCount,(stopID),"getVehicleCount(string) -> integer
+
+Get the total number of vehicles stopped at the named charging station.",API disponível; não implica coleta pelo pipeline
+chargingstation,getVehicleIDs,(stopID),"getVehicleIDs(string) -> tuple(string)
+
+Get the IDs of vehicles stopped at the named charging station.",API disponível; não implica coleta pelo pipeline
+edge,getAdaptedTraveltime,"(edgeID, time)","getAdaptedTraveltime(string, double) -> double
+
+Returns the travel time value (in s) used for (re-)routing
+which is valid on the edge at the given time.",API disponível; não implica coleta pelo pipeline
+edge,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+edge,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+edge,getAngle,"(edgeID, relativePosition=-1073741824.0)","getAngle(string, double) -> double
+Returns the heading of the straight line segment formed by the first lane of the edge at the given position.
+If the given position equals TraCI constant INVALID_DOUBLE_VALUE, it returns the total angle
+formed by the edge, from its start point to its end point. If the edge doesn't have any lanes,
+then INVALID_DOUBLE_VALUE is returned.",API disponível; não implica coleta pelo pipeline
+edge,getBidiEdge,(edgeID),"getBidiEdge(string) -> string
+
+Returns the id of the bidi edge or """"",API disponível; não implica coleta pelo pipeline
+edge,getCO2Emission,(edgeID),"getCO2Emission(string) -> double
+
+Returns the CO2 emission in mg for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getCOEmission,(edgeID),"getCOEmission(string) -> double
+
+Returns the CO emission in mg for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+edge,getEffort,"(edgeID, time)","getEffort(string, double) -> double
+
+Returns the effort value used for (re-)routing
+which is valid on the edge at the given time.",API disponível; não implica coleta pelo pipeline
+edge,getElectricityConsumption,(edgeID),"getElectricityConsumption(string) -> double
+
+Returns the electricity consumption in ml for the last time step.",API disponível; não implica coleta pelo pipeline
+edge,getFromJunction,(edgeID),"getFromJunction(string) -> string
+
+Returns the id of the junction at the start of this edge",API disponível; não implica coleta pelo pipeline
+edge,getFuelConsumption,(edgeID),"getFuelConsumption(string) -> double
+
+Returns the fuel consumption in ml for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getHCEmission,(edgeID),"getHCEmission(string) -> double
+
+Returns the HC emission in mg for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+edge,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+edge,getLaneNumber,(edgeID),"getLaneNumber(string) -> int
+
+Returns the number of lanes of this edge",API disponível; não implica coleta pelo pipeline
+edge,getLastStepHaltingNumber,(edgeID),"getLastStepHaltingNumber(string) -> integer
+
+Returns the total number of halting vehicles for the last time step on the given edge.
+A speed of less than 0.1 m/s is considered a halt.",API disponível; não implica coleta pelo pipeline
+edge,getLastStepLength,(edgeID),"getLastStepLength(string) -> double
+
+Returns the mean vehicle length in m for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getLastStepMeanSpeed,(edgeID),"getLastStepMeanSpeed(string) -> double
+
+Returns the average speed in m/s for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getLastStepOccupancy,(edgeID),"getLastStepOccupancy(string) -> double
+
+Returns the net occupancy (excluding inter-vehicle gaps) in % for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getLastStepPersonIDs,(edgeID),"getLastStepPersonIDs(string) -> tuple(string)
+
+Returns the ids of the persons on the given edge during the last time step.",API disponível; não implica coleta pelo pipeline
+edge,getLastStepVehicleIDs,(edgeID),"getLastStepVehicleIDs(string) -> tuple(string)
+
+Returns the ids of the vehicles for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getLastStepVehicleNumber,(edgeID),"getLastStepVehicleNumber(string) -> integer
+
+Returns the total number of vehicles for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getMeanFriction,(edgeID),"getMeanFriction(string) -> double
+
+Returns the average friction [0..1] for the last time step over all lanes on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getNOxEmission,(edgeID),"getNOxEmission(string) -> double
+
+Returns the NOx emission in mg for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getNoiseEmission,(edgeID),"getNoiseEmission(string) -> double
+
+Returns the noise emission in db for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getPMxEmission,(edgeID),"getPMxEmission(string) -> double
+
+Returns the particular matter emission in mg for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+edge,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+edge,getPendingVehicles,(edgeID),"getPendingVehicles(string) -> tuple(string)
+Returns a tuple of all vehicle ids waiting for insertion on this edge (with depart delay)",API disponível; não implica coleta pelo pipeline
+edge,getStreetName,(edgeID),"getStreetName(string) -> string
+
+Returns the street name of this edge",API disponível; não implica coleta pelo pipeline
+edge,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+edge,getToJunction,(edgeID),"getToJunction(string) -> string
+
+Returns the id of the junction at the end of this edge",API disponível; não implica coleta pelo pipeline
+edge,getTraveltime,(edgeID),"getTraveltime(string) -> double
+
+Returns the estimated travel time in s for the last time step on the given edge.",API disponível; não implica coleta pelo pipeline
+edge,getWaitingTime,(edgeID),"getWaitingTime(string) -> double
+Returns the sum of the waiting time of all vehicles currently on
+that edge (see traci.vehicle.getWaitingTime).",API disponível; não implica coleta pelo pipeline
+gui,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+gui,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+gui,getAngle,(viewID='View #0'),"getAngle(string): -> double
+
+Returns the angle of the current view.",API disponível; não implica coleta pelo pipeline
+gui,getBoundary,(viewID='View #0'),"getBoundary(string): -> ((double, double), (double, double))
+
+Returns the coordinates of the lower left and the upper right corner of the currently visible view.",API disponível; não implica coleta pelo pipeline
+gui,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+gui,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+gui,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+gui,getOffset,(viewID='View #0'),"getOffset(string): -> (double, double)
+
+Returns the x and y offset of the center of the current view.",API disponível; não implica coleta pelo pipeline
+gui,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+gui,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+gui,getSchema,(viewID='View #0'),"getSchema(string): -> string
+
+Returns the name of the current coloring scheme.",API disponível; não implica coleta pelo pipeline
+gui,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+gui,getTrackedVehicle,(viewID='View #0'),"getTrackedVehicle(string): -> string
+
+Returns the id of the currently tracked vehicle",API disponível; não implica coleta pelo pipeline
+gui,getZoom,(viewID='View #0'),"getZoom(string): -> double
+
+Returns the current zoom factor.",API disponível; não implica coleta pelo pipeline
+inductionloop,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+inductionloop,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+inductionloop,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+inductionloop,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+inductionloop,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+inductionloop,getIntervalMeanSpeed,(loopID),"getIntervalMeanSpeed(string) -> double
+
+Returns the average speed of vehicles during the current interval.",API disponível; não implica coleta pelo pipeline
+inductionloop,getIntervalOccupancy,(loopID),"getIntervalOccupancy(string) -> double
+
+Returns the percentage of time the detector was occupied by a vehicle
+during the current interval.",API disponível; não implica coleta pelo pipeline
+inductionloop,getIntervalVehicleIDs,(loopID),"getIntervalVehicleIDs(string) -> tuple(string)
+
+Returns the ids of vehicles that passed the detector during the current interval",API disponível; não implica coleta pelo pipeline
+inductionloop,getIntervalVehicleNumber,(loopID),"getIntervalVehicleNumber(string) -> integer
+
+Returns the number of vehicles that passed the detector during the current interval",API disponível; não implica coleta pelo pipeline
+inductionloop,getLaneID,(loopID),"getLaneID(string) -> string
+
+Returns the id of the lane the loop is on.",API disponível; não implica coleta pelo pipeline
+inductionloop,getLastIntervalMeanSpeed,(loopID),"getLastIntervalMeanSpeed(string) -> double
+
+Returns the average speed of vehicles during the previous interval.",API disponível; não implica coleta pelo pipeline
+inductionloop,getLastIntervalOccupancy,(loopID),"getLastIntervalOccupancy(string) -> double
+
+Returns the percentage of time the detector was occupied by a vehicle
+during the previous interval.",API disponível; não implica coleta pelo pipeline
+inductionloop,getLastIntervalVehicleIDs,(loopID),"getLastIntervalVehicleIDs(string) -> tuple(string)
+
+Returns the ids of vehicles that passed the detector during the previous interval",API disponível; não implica coleta pelo pipeline
+inductionloop,getLastIntervalVehicleNumber,(loopID),"getLastIntervalVehicleNumber(string) -> integer
+
+Returns the number of vehicles that passed the detector during the previous interval",API disponível; não implica coleta pelo pipeline
+inductionloop,getLastStepMeanLength,(loopID),"getLastStepMeanLength(string) -> double
+
+Returns the mean length in m of vehicles which were on the detector in the last step.",API disponível; não implica coleta pelo pipeline
+inductionloop,getLastStepMeanSpeed,(loopID),"getLastStepMeanSpeed(string) -> double
+
+Returns the mean speed in m/s of vehicles that were on the named induction loop within the last simulation step.",API disponível; não implica coleta pelo pipeline
+inductionloop,getLastStepOccupancy,(loopID),"getLastStepOccupancy(string) -> double
+
+Returns the percentage of time the detector was occupied by a vehicle.",API disponível; não implica coleta pelo pipeline
+inductionloop,getLastStepVehicleIDs,(loopID),"getLastStepVehicleIDs(string) -> tuple(string)
+
+Returns the tuple of ids of vehicles that were on the named induction loop in the last simulation step.",API disponível; não implica coleta pelo pipeline
+inductionloop,getLastStepVehicleNumber,(loopID),"getLastStepVehicleNumber(string) -> integer
+
+Returns the number of vehicles that were on the named induction loop within the last simulation step.",API disponível; não implica coleta pelo pipeline
+inductionloop,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+inductionloop,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+inductionloop,getPosition,(loopID),"getPosition(string) -> double
+
+Returns the position measured from the beginning of the lane in meters.",API disponível; não implica coleta pelo pipeline
+inductionloop,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+inductionloop,getTimeSinceDetection,(loopID),"getTimeSinceDetection(string) -> double
+
+Returns the time in s since last detection.",API disponível; não implica coleta pelo pipeline
+inductionloop,getVehicleData,(loopID),"getVehicleData(string) -> tuple((veh_id, veh_length, entry_time, exit_time, vType), ...)
+
+Returns a complex structure containing several information about vehicles which passed the detector.",API disponível; não implica coleta pelo pipeline
+junction,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+junction,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+junction,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+junction,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+junction,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+junction,getIncomingEdges,(junctionID),"getIncomingEdges(string) -> tuple(string)
+
+Returns the ids of the edges that end at this junction",API disponível; não implica coleta pelo pipeline
+junction,getOutgoingEdges,(junctionID),"getOutgoingEdges(string) -> tuple(string)
+
+Returns the ids of the edges that start at this junction",API disponível; não implica coleta pelo pipeline
+junction,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+junction,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+junction,getPosition,"(junctionID, includeZ=False)","getPosition(string, bool) -> (double, double) or (double, double, double)
+
+Returns the coordinates of the center of the junction.",API disponível; não implica coleta pelo pipeline
+junction,getShape,(junctionID),"getShape(string) -> tuple((double, double))
+
+Tuple of 2D positions (cartesian) describing the geometry.",API disponível; não implica coleta pelo pipeline
+junction,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+lane,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+lane,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+lane,getAllowed,(laneID),"getAllowed(string) -> tuple(string)
+
+Returns a tuple of allowed vehicle classes. An empty tuple means all vehicles are allowed.",API disponível; não implica coleta pelo pipeline
+lane,getAngle,"(laneID, relativePosition=-1073741824.0)","getAngle(string, double) -> double
+Returns the heading of the straight line segment formed by the lane at the given position.
+If the given position equals TraCI constant INVALID_DOUBLE_VALUE, it returns the total angle
+formed by the lane, from its start point to its end point.",API disponível; não implica coleta pelo pipeline
+lane,getBidiLane,(laneID),"getBidiLane(string) -> string
+
+Returns the id of the bidi lane or """"",API disponível; não implica coleta pelo pipeline
+lane,getCO2Emission,(laneID),"getCO2Emission(string) -> double
+
+Returns the CO2 emission in mg/s for the last time step on the given lane.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+lane,getCOEmission,(laneID),"getCOEmission(string) -> double
+
+Returns the CO emission in mg/s for the last time step on the given lane.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+lane,getChangePermissions,"(laneID, direction)","getChangePermissions(string, int) -> tuple(string)
+
+Returns a tuple of vehicle classesa allowed to change to the neighbor lane indicated by the direction
+(left=0, right=1).",API disponível; não implica coleta pelo pipeline
+lane,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+lane,getDisallowed,(laneID),"getDisallowed(string) -> tuple(string)
+
+Returns a tuple of disallowed vehicle classes.",API disponível; não implica coleta pelo pipeline
+lane,getEdgeID,(laneID),"getEdgeID(string) -> string
+
+Returns the id of the edge the lane belongs to.",API disponível; não implica coleta pelo pipeline
+lane,getElectricityConsumption,(laneID),"getElectricityConsumption(string) -> double
+
+Returns the electricity consumption in Wh/s for the last time step.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+lane,getFoes,"(laneID, toLaneID)","getFoes(string, string) -> tuple(string)
+Returns the ids of incoming lanes that have right of way over the connection from laneID to toLaneID.",API disponível; não implica coleta pelo pipeline
+lane,getFriction,(laneID),"getFriction(string) -> double
+
+Returns the friction on the lane.",API disponível; não implica coleta pelo pipeline
+lane,getFuelConsumption,(laneID),"getFuelConsumption(string) -> double
+
+Returns the fuel consumption in mg/s for the last time step on the given lane.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+lane,getHCEmission,(laneID),"getHCEmission(string) -> double
+
+Returns the HC emission in mg/s for the last time step on the given lane.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+lane,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+lane,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+lane,getInternalFoes,(laneID),"getFoes(string) -> tuple(string)
+Returns the ids of internal lanes that are in conflict with the given internal lane id.",API disponível; não implica coleta pelo pipeline
+lane,getLastStepHaltingNumber,(laneID),"getLastStepHaltingNumber(string) -> integer
+
+Returns the total number of halting vehicles for the last time step on the given lane.
+A speed of less than 0.1 m/s is considered a halt.",API disponível; não implica coleta pelo pipeline
+lane,getLastStepLength,(laneID),"getLastStepLength(string) -> double
+
+Returns the mean vehicle length in m for the last time step on the given lane.",API disponível; não implica coleta pelo pipeline
+lane,getLastStepMeanSpeed,(laneID),"getLastStepMeanSpeed(string) -> double
+
+Returns the average speed in m/s for the last time step on the given lane.",API disponível; não implica coleta pelo pipeline
+lane,getLastStepOccupancy,(laneID),"getLastStepOccupancy(string) -> double
+
+Returns the occupancy in % for the last time step on the given lane.",API disponível; não implica coleta pelo pipeline
+lane,getLastStepVehicleIDs,(laneID),"getLastStepVehicleIDs(string) -> tuple(string)
+
+Returns the ids of the vehicles for the last time step on the given lane.",API disponível; não implica coleta pelo pipeline
+lane,getLastStepVehicleNumber,(laneID),"getLastStepVehicleNumber(string) -> integer
+
+Returns the total number of vehicles for the last time step on the given lane.",API disponível; não implica coleta pelo pipeline
+lane,getLength,(laneID),"getLength(string) -> double
+
+Returns the length in m.",API disponível; não implica coleta pelo pipeline
+lane,getLinkNumber,(laneID),"getLinkNumber(string) -> integer
+
+Returns the number of connections to successive lanes.",API disponível; não implica coleta pelo pipeline
+lane,getLinks,"(laneID, extended=True)","getLinks(string) -> tuple((string, bool, bool, bool))
+A tuple containing id of successor lane together with priority, open and foe
+for each link.
+if extended=True, each result tuple contains
+(string approachedLane, bool hasPrio, bool isOpen, bool hasFoe,
+string approachedInternal, string state, string direction, float length)
+
+isOpen: whether a vehicle driving at the speed limit (minimum auf
+        incoming and outgoing lane) could safely pass the junction with
+        regard to approaching foes if it were to enter it in this step
+        (false for red traffic light).
+        Foe vehicles that are already on the junction are ignored!
+hasPrio: whether the link is the main road at a priority junction or
+         currently has green light ('G')
+hasFoe: whether any foe vehicles are approaching the junction or on the
+        junction that would interfere with passing it in the current time step",API disponível; não implica coleta pelo pipeline
+lane,getMaxSpeed,(laneID),"getMaxSpeed(string) -> double
+
+Returns the maximum allowed speed on the lane in m/s.",API disponível; não implica coleta pelo pipeline
+lane,getNOxEmission,(laneID),"getNOxEmission(string) -> double
+
+Returns the NOx emission in mg/s for the last time step on the given lane.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+lane,getNoiseEmission,(laneID),"getNoiseEmission(string) -> double
+
+Returns the noise emission in db for the last time step on the given lane.",API disponível; não implica coleta pelo pipeline
+lane,getPMxEmission,(laneID),"getPMxEmission(string) -> double
+
+Returns the particular matter emission in mg/s for the last time step on the given lane.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+lane,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+lane,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+lane,getPendingVehicles,(laneID),"getPendingVehicles(string) -> tuple(string)
+Returns a tuple of all vehicle ids waiting for insertion on this lane (with depart delay).",API disponível; não implica coleta pelo pipeline
+lane,getShape,(laneID),"getShape(string) -> tuple((double, double))
+
+Tuple of 2D positions (cartesian) describing the geometry.",API disponível; não implica coleta pelo pipeline
+lane,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+lane,getTraveltime,(laneID),"getTraveltime(string) -> double
+
+Returns the estimated travel time in s for the last time step on the given lane.",API disponível; não implica coleta pelo pipeline
+lane,getWaitingTime,(laneID),"getWaitingTime() -> double
+
+.",API disponível; não implica coleta pelo pipeline
+lane,getWidth,(laneID),"getWidth(string) -> double
+
+Returns the width of the lane in m.",API disponível; não implica coleta pelo pipeline
+lanearea,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+lanearea,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+lanearea,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+lanearea,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+lanearea,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+lanearea,getIntervalMaxJamLengthInMeters,(detID),"getIntervalMaxJamLengthInMeters(string) -> double
+
+Returns the max jam length during the current interval",API disponível; não implica coleta pelo pipeline
+lanearea,getIntervalMeanSpeed,(detID),"getIntervalMeanSpeed(string) -> double
+
+Returns the mean speed during the current interval",API disponível; não implica coleta pelo pipeline
+lanearea,getIntervalMeanTimeLoss,(detID),"getIntervalMeanTimeLoss(string) -> double
+
+Returns the mean timeLoss per vehicle during the current interval",API disponível; não implica coleta pelo pipeline
+lanearea,getIntervalOccupancy,(detID),"getIntervalOccupancy(string) -> double
+
+Returns the mean occupancy during the current interval",API disponível; não implica coleta pelo pipeline
+lanearea,getIntervalVehicleNumber,(detID),"getIntervalVehicleNumber(string) -> int
+
+Returns the number of seen vehicles during the current interval",API disponível; não implica coleta pelo pipeline
+lanearea,getJamLengthMeters,(detID),"getJamLengthMeters(string) -> double
+
+Returns the jam length in meters within the last simulation step.",API disponível; não implica coleta pelo pipeline
+lanearea,getJamLengthVehicle,(detID),"getJamLengthVehicle(string) -> integer
+
+Returns the jam length in vehicles within the last simulation step.",API disponível; não implica coleta pelo pipeline
+lanearea,getLaneID,(detID),"getLaneID(string) -> string
+
+Returns the id of the lane the detector is on.",API disponível; não implica coleta pelo pipeline
+lanearea,getLastIntervalMaxJamLengthInMeters,(detID),"getLastIntervalMaxJamLengthInMeters(string) -> double
+
+Returns the max jam length during the previous interval",API disponível; não implica coleta pelo pipeline
+lanearea,getLastIntervalMeanSpeed,(detID),"getLastIntervalMeanSpeed(string) -> double
+
+Returns the mean speed during the previous interval",API disponível; não implica coleta pelo pipeline
+lanearea,getLastIntervalMeanTimeLoss,(detID),"getLastIntervalMeanTimeLoss(string) -> double
+
+Returns the mean timeLoss per vehicle during the previous interval",API disponível; não implica coleta pelo pipeline
+lanearea,getLastIntervalOccupancy,(detID),"getLastIntervalOccupancy(string) -> double
+
+Returns the mean occupancy during the previous interval",API disponível; não implica coleta pelo pipeline
+lanearea,getLastIntervalVehicleNumber,(detID),"getLastIntervalVehicleNumber(string) -> int
+
+Returns the number of seen vehicles during the previous interval",API disponível; não implica coleta pelo pipeline
+lanearea,getLastStepHaltingNumber,(detID),"getLastStepHaltingNumber(string) -> integer
+
+Returns the number of vehicles which were halting during the last time step.",API disponível; não implica coleta pelo pipeline
+lanearea,getLastStepMeanSpeed,(detID),"getLastStepMeanSpeed(string) -> double
+
+Returns the current mean speed in m/s of vehicles that were on the named e2.",API disponível; não implica coleta pelo pipeline
+lanearea,getLastStepOccupancy,(detID),"getLastStepOccupancy(string) -> double
+
+Returns the percentage of space the detector was occupied by a vehicle [%]",API disponível; não implica coleta pelo pipeline
+lanearea,getLastStepVehicleIDs,(detID),"getLastStepVehicleIDs(string) -> tuple(string)
+
+Returns the tuple of ids of vehicles that were on the named detector in the last simulation step.",API disponível; não implica coleta pelo pipeline
+lanearea,getLastStepVehicleNumber,(detID),"getLastStepVehicleNumber(string) -> integer
+
+Returns the number of vehicles that were on the named detector within the last simulation step.",API disponível; não implica coleta pelo pipeline
+lanearea,getLength,(detID),"getLength(string) -> double
+
+Returns the length of the detector",API disponível; não implica coleta pelo pipeline
+lanearea,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+lanearea,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+lanearea,getPosition,(detID),"getPosition(string) -> double
+
+Returns the starting position of the detector measured from the beginning of the lane in meters.",API disponível; não implica coleta pelo pipeline
+lanearea,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+meandata,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+meandata,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+meandata,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+meandata,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+meandata,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+meandata,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+meandata,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+meandata,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+multientryexit,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+multientryexit,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+multientryexit,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+multientryexit,getEntryLanes,(detID),"getEntryLanes(string) -> tuple(string)
+
+Returns the tuple of ids of the detector's entry lanes.",API disponível; não implica coleta pelo pipeline
+multientryexit,getEntryPositions,(detID),"getEntryPositions(string) -> tuple(double)
+
+Returns the tuple of positions of the detector's entry lanes.",API disponível; não implica coleta pelo pipeline
+multientryexit,getExitLanes,(detID),"getExitLanes(string) -> tuple(string)
+
+Returns the tuple of ids of the detector's exit lanes.",API disponível; não implica coleta pelo pipeline
+multientryexit,getExitPositions,(detID),"getExitPositions(string) -> tuple(double)
+
+Returns the tuple of positions of the detector's exit lanes.",API disponível; não implica coleta pelo pipeline
+multientryexit,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+multientryexit,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+multientryexit,getLastIntervalMeanHaltsPerVehicle,(detID),"getLastIntervalMeanHaltsPerVehicle(string) -> double
+
+Returns the average number of halts of vehicles that passed the detector in
+the previous completed measurement interval",API disponível; não implica coleta pelo pipeline
+multientryexit,getLastIntervalMeanTimeLoss,(detID),"getLastIntervalMeanTimeLoss(string) -> double
+
+Returns the average time loss of vehicles that passed the detector in
+the previous completed measurement interval",API disponível; não implica coleta pelo pipeline
+multientryexit,getLastIntervalMeanTravelTime,(detID),"getLastIntervalMeanTravelTime(string) -> double
+
+Returns the average travel time of vehicles that passed the detector in
+the previous completed measurement interval",API disponível; não implica coleta pelo pipeline
+multientryexit,getLastIntervalVehicleSum,(detID),"getLastIntervalVehicleSum(string) -> integer
+
+Returns the number of vehicles that passed the detector in
+the previous completed measurement interval",API disponível; não implica coleta pelo pipeline
+multientryexit,getLastStepHaltingNumber,(detID),"getLastStepHaltingNumber(string) -> integer
+
+Returns the number of vehicles which were halting during the last time step.",API disponível; não implica coleta pelo pipeline
+multientryexit,getLastStepMeanSpeed,(detID),"getLastStepMeanSpeed(string) -> double
+
+Returns the mean speed in m/s of vehicles that have been within the named multi-entry/multi-exit detector
+within the last simulation step.",API disponível; não implica coleta pelo pipeline
+multientryexit,getLastStepVehicleIDs,(detID),"getLastStepVehicleIDs(string) -> tuple(string)
+
+Returns the tuple of ids of vehicles that have been within the named multi-entry/multi-exit detector in the
+last simulation step.",API disponível; não implica coleta pelo pipeline
+multientryexit,getLastStepVehicleNumber,(detID),"getLastStepVehicleNumber(string) -> integer
+
+Returns the number of vehicles that have been within the named multi-entry/multi-exit detector within the
+last simulation step.",API disponível; não implica coleta pelo pipeline
+multientryexit,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+multientryexit,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+multientryexit,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+overheadwire,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+overheadwire,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+overheadwire,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+overheadwire,getEndPos,(stopID),"getEndPos(string) -> double
+
+The end position of the stop along the lane measured in m.",API disponível; não implica coleta pelo pipeline
+overheadwire,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+overheadwire,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+overheadwire,getLaneID,(stopID),"getLaneID(string) -> string
+Returns the lane of this calibrator (if it applies to a single lane)",API disponível; não implica coleta pelo pipeline
+overheadwire,getName,(stopID),"getName(string) -> string
+
+Returns the name of this stop",API disponível; não implica coleta pelo pipeline
+overheadwire,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+overheadwire,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+overheadwire,getStartPos,(stopID),"getStartPos(string) -> double
+
+The starting position of the stop along the lane measured in m.",API disponível; não implica coleta pelo pipeline
+overheadwire,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+overheadwire,getVehicleCount,(stopID),"getVehicleCount() -> integer
+Get the total number of vehicles stopped at the named overhead wire.",API disponível; não implica coleta pelo pipeline
+overheadwire,getVehicleIDs,(stopID),"getVehicleIDs() -> tuple(string)
+Get the IDs of vehicles stopped at the named overhead wire.",API disponível; não implica coleta pelo pipeline
+parkingarea,getAcceptedBadges,(stopID),"getAcceptedBadges(string) -> tuple(string)
+Get the badge keywords which allow access to the parking area.",API disponível; não implica coleta pelo pipeline
+parkingarea,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+parkingarea,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+parkingarea,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+parkingarea,getEndPos,(stopID),"getEndPos(string) -> double
+
+The end position of the stop along the lane measured in m.",API disponível; não implica coleta pelo pipeline
+parkingarea,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+parkingarea,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+parkingarea,getLaneID,(stopID),"getLaneID(string) -> string
+Returns the lane of this calibrator (if it applies to a single lane)",API disponível; não implica coleta pelo pipeline
+parkingarea,getName,(stopID),"getName(string) -> string
+
+Returns the name of this stop",API disponível; não implica coleta pelo pipeline
+parkingarea,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+parkingarea,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+parkingarea,getStartPos,(stopID),"getStartPos(string) -> double
+
+The starting position of the stop along the lane measured in m.",API disponível; não implica coleta pelo pipeline
+parkingarea,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+parkingarea,getVehicleCount,(stopID),"getVehicleCount(string) -> integer
+Get the total number of vehicles stopped at the named parking area.",API disponível; não implica coleta pelo pipeline
+parkingarea,getVehicleIDs,(stopID),"getVehicleIDs(string) -> tuple(string)
+Get the IDs of vehicles stopped at the named parking area.",API disponível; não implica coleta pelo pipeline
+person,getAccel,(typeID),"getAccel(string) -> double
+
+Returns the maximum acceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getActionStepLength,(typeID),"getActionStepLength(string) -> double
+
+Returns the action step length for this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+person,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+person,getAngle,(personID),"getAngle(string) -> double
+
+Returns the angle in degrees of the named person within the last step.",API disponível; não implica coleta pelo pipeline
+person,getApparentDecel,(typeID),"getApparentDecel(string) -> double
+
+Returns the apparent deceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getBoardingDuration,(typeID),"getBoardingDuration(string) -> double
+
+Returns the boarding duration of this type",API disponível; não implica coleta pelo pipeline
+person,getColor,(typeID),"getColor(string) -> (integer, integer, integer, integer)
+
+Returns the color of this type.
+If called in the context of a person or vehicle, it will return their specific color if it has been set.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+person,getDecel,(typeID),"getDecel(string) -> double
+
+Returns the maximal comfortable deceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getEdges,"(personID, nextStageIndex=0)","getEdges(string, int) -> tuple(string)
+
+Returns a tuple of all edges in the nth next stage.
+For waiting stages this is a single edge
+For walking stages this is the complete route
+For driving stages this is [origin, destination]
+
+nextStageIndex 0 retrieves value for the current stage.
+nextStageIndex must be lower then value of getRemainingStages(personID)",API disponível; não implica coleta pelo pipeline
+person,getEmergencyDecel,(typeID),"getEmergencyDecel(string) -> double
+
+Returns the maximal physically possible deceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getEmissionClass,(typeID),"getEmissionClass(string) -> string
+
+Returns the emission class of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getHeight,(typeID),"getHeight(string) -> double
+
+Returns the height in m of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+person,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+person,getImpatience,(typeID),"getImpatience(string) -> double
+
+Returns the Impatience of this type",API disponível; não implica coleta pelo pipeline
+person,getImperfection,(typeID),"getImperfection(string) -> double
+
+Returns the driver's imperfection for this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getLaneID,(personID),"getLaneID(string) -> string
+
+Returns the id of the lane the named person was at within the last step.
+If the current person stage does not provide a lane, """" is returned.",API disponível; não implica coleta pelo pipeline
+person,getLanePosition,(personID),"getLanePosition(string) -> double
+
+The position of the person along the lane measured in m.",API disponível; não implica coleta pelo pipeline
+person,getLateralAlignment,(typeID),"getLateralAlignment(string) -> string
+
+Returns The preferred lateral alignment of the type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getLength,(typeID),"getLength(string) -> double
+
+Returns the length in m of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getMass,(typeID),"getMass(string) -> double
+
+Returns the mass in kg of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getMaxSpeed,(typeID),"getMaxSpeed(string) -> double
+
+Returns the maximum speed in m/s of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getMaxSpeedLat,(typeID),"getMaxSpeedLat(string) -> double
+
+Returns the maximum lateral speed in m/s of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getMinGap,(typeID),"getMinGap(string) -> double
+
+Returns the offset (gap to front vehicle if halting) of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getMinGapLat,(typeID),"getMinGapLat(string) -> double
+
+Returns The desired lateral gap of this type at 50km/h in m
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getNextEdge,(personID),"getNextEdge(string) -> string
+If the person is walking, returns the next edge on the persons route
+(including crossing and walkingareas). If there is no further edge or the
+person is in another stage, returns the empty string.",API disponível; não implica coleta pelo pipeline
+person,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+person,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+person,getPersonCapacity,(typeID),"getPersonCapacity(string) -> int
+
+Returns the person capacity of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getPosition,(personID),"getPosition(string) -> (double, double)
+
+Returns the position of the named person within the last step [m,m].",API disponível; não implica coleta pelo pipeline
+person,getPosition3D,(personID),"getPosition3D(string) -> (double, double, double)
+
+Returns the position of the named person within the last step [m,m,m].",API disponível; não implica coleta pelo pipeline
+person,getRemainingStages,(personID),"getRemainingStages(string) -> int
+Returns the number of remaining stages (at least 1)",API disponível; não implica coleta pelo pipeline
+person,getRoadID,(personID),"getRoadID(string) -> string
+
+Returns the id of the edge the named person was at within the last step.",API disponível; não implica coleta pelo pipeline
+person,getShapeClass,(typeID),"getShapeClass(string) -> string
+
+Returns the shape class of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getSlope,(personID),"getSlope(string) -> double
+
+Returns the slope at the current position of the person in degrees",API disponível; não implica coleta pelo pipeline
+person,getSpeed,(personID),"getSpeed(string) -> double
+
+Returns the speed in m/s of the named person within the last step.",API disponível; não implica coleta pelo pipeline
+person,getSpeedDeviation,(typeID),"getSpeedDeviation(string) -> double
+
+Returns the maximum speed deviation of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getSpeedFactor,(typeID),"getSpeedFactor(string) -> double
+
+Returns the speed factor of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getStage,"(personID, nextStageIndex=0)","getStage(string, int) -> stage
+Returns the nth stage object (type simulation.Stage)
+Attribute type of this object has the following meaning:
+  0 for not-yet-departed
+  1 for waiting
+  2 for walking
+  3 for driving
+  4 for access to busStop or trainStop
+  5 for personTrip
+nextStageIndex 0 retrieves value for the current stage.
+nextStageIndex must be lower then value of getRemainingStages(personID)",API disponível; não implica coleta pelo pipeline
+person,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+person,getTau,(typeID),"getTau(string) -> double
+
+Returns the driver's desired headway in s for this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getTaxiReservations,(onlyNew=0),"getTaxiReservations(int) -> tuple(Reservation)
+Returns all reservations. If onlyNew is 1, each reservation is returned
+only once",API disponível; não implica coleta pelo pipeline
+person,getTypeID,(personID),"getTypeID(string) -> string
+
+Returns the id of the type of the named person.",API disponível; não implica coleta pelo pipeline
+person,getVehicle,(personID),"getVehicle(string) -> string
+Returns the id of the current vehicle if the person is in stage driving
+and has entered a vehicle.
+Return the empty string otherwise",API disponível; não implica coleta pelo pipeline
+person,getVehicleClass,(typeID),"getVehicleClass(string) -> string
+
+Returns the class of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+person,getWaitingTime,(personID),"getWaitingTime(string) -> double
+The waiting time of a person is defined as the time (in seconds) spent with a
+speed below 0.1m/s since the last time it was faster than 0.1m/s.
+(basically, the waiting time of a person is reset to 0 every time it moves).",API disponível; não implica coleta pelo pipeline
+person,getWalkingDistance,"(personID, edgeID, pos, laneIndex=0)","getWalkingDistance(string, string, double, integer) -> double
+
+For a person in walking stage and an edge along the remaining route of
+personID, return the distance from the current position
+to the given edge and position along the walk.
+Otherwise, raise a TraCIException",API disponível; não implica coleta pelo pipeline
+person,getWalkingDistance2D,"(personID, x, y)","getWalkingDistance2D(string, double, double) -> integer
+
+Return the distance to the given network position along the walk (see getWalkingDistance)",API disponível; não implica coleta pelo pipeline
+person,getWidth,(typeID),"getWidth(string) -> double
+
+Returns the width in m of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+poi,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+poi,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+poi,getAngle,(poiID),"getAngle(string) -> double
+
+Returns the angle of the given poi.",API disponível; não implica coleta pelo pipeline
+poi,getColor,(poiID),"getColor(string) -> (integer, integer, integer, integer)
+
+Returns the rgba color of the given poi.",API disponível; não implica coleta pelo pipeline
+poi,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+poi,getHeight,(poiID),"getHeight(string) -> double
+
+Returns the height of the given poi.",API disponível; não implica coleta pelo pipeline
+poi,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+poi,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+poi,getImageFile,(poiID),"getImageFile(string) -> string
+
+Returns the image file of the given poi.",API disponível; não implica coleta pelo pipeline
+poi,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+poi,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+poi,getPosition,(poiID),"getPosition(string) -> (double, double)
+
+Returns the position coordinates of the given poi.",API disponível; não implica coleta pelo pipeline
+poi,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+poi,getType,(poiID),"getType(string) -> string
+
+Returns the (abstract) type of the poi.",API disponível; não implica coleta pelo pipeline
+poi,getWidth,(poiID),"getWidth(string) -> double
+
+Returns the width of the given poi.",API disponível; não implica coleta pelo pipeline
+polygon,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+polygon,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+polygon,getColor,(polygonID),"getColor(string) -> (integer, integer, integer, integer)
+
+Returns the rgba color of this polygon.",API disponível; não implica coleta pelo pipeline
+polygon,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+polygon,getFilled,(polygonID),"getFilled(string) -> bool
+Returns whether the polygon is filled",API disponível; não implica coleta pelo pipeline
+polygon,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+polygon,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+polygon,getLineWidth,(polygonID),"getLineWidth(string) -> double
+Returns drawing width of unfilled polygon",API disponível; não implica coleta pelo pipeline
+polygon,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+polygon,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+polygon,getShape,(polygonID),"getShape(string) -> tuple((double, double))
+
+Returns the shape (tuple of 2D-positions) of this polygon.",API disponível; não implica coleta pelo pipeline
+polygon,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+polygon,getType,(polygonID),"getType(string) -> string
+
+Returns the (abstract) type of the polygon.",API disponível; não implica coleta pelo pipeline
+rerouter,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+rerouter,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+rerouter,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+rerouter,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+rerouter,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+rerouter,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+rerouter,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+rerouter,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+route,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+route,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+route,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+route,getEdges,(routeID),"getEdges(string) -> tuple(string)
+
+Returns a tuple of all edges in the route.",API disponível; não implica coleta pelo pipeline
+route,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+route,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+route,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+route,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+route,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+routeprobe,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+routeprobe,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+routeprobe,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+routeprobe,getEdgeID,(probeID),"getEdgeID(string) -> string
+Returns the edge id of the given route probe",API disponível; não implica coleta pelo pipeline
+routeprobe,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+routeprobe,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+routeprobe,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+routeprobe,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+routeprobe,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+simulation,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+simulation,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+simulation,getArrivedIDList,(),"getArrivedIDList() -> tuple(string)
+
+Returns a tuple of ids of vehicles which arrived (have reached their destination and are removed from the road
+network) in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getArrivedNumber,(),"getArrivedNumber() -> integer
+
+Returns the number of vehicles which arrived (have reached their destination and are removed from the road
+network) in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getArrivedPersonIDList,(),"getArrivedPersonIDList() -> tuple(string)
+
+Returns a tuple of ids of persons which arrived (have reached their destination and are removed from the road
+network) in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getArrivedPersonNumber,(),"getArrivedPersonNumber() -> integer
+
+Returns the number of persons which arrived (have reached their destination and are removed from the road
+network) in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getBusStopIDList,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+simulation,getBusStopWaiting,(stopID),"getBusStopWaiting() -> integer
+Get the total number of waiting persons at the named bus stop.",API disponível; não implica coleta pelo pipeline
+simulation,getBusStopWaitingIDList,(stopID),"getBusStopWaiting() -> tuple(string)
+Get the IDs of waiting persons at the named bus stop.",API disponível; não implica coleta pelo pipeline
+simulation,getCollidingVehiclesIDList,(),"getCollidingVehiclesIDList() -> tuple(string)
+Return Ids of vehicles involved in a collision (typically 2 per
+collision).",API disponível; não implica coleta pelo pipeline
+simulation,getCollidingVehiclesNumber,(),"getCollidingVehiclesNumber() -> integer
+Return number of vehicles involved in a collision (typically 2 per
+collision).",API disponível; não implica coleta pelo pipeline
+simulation,getCollisions,(),"getCollisions() -> tuple(Collision)
+Returns a tuple of collision objects",API disponível; não implica coleta pelo pipeline
+simulation,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+simulation,getCurrentTime,(),"getCurrentTime() -> integer
+
+Returns the current simulation time in ms.",API disponível; não implica coleta pelo pipeline
+simulation,getDeltaT,(),"getDeltaT() -> double
+Returns the length of one simulation step in seconds",API disponível; não implica coleta pelo pipeline
+simulation,getDepartedIDList,(),"getDepartedIDList() -> tuple(string)
+
+Returns a tuple of ids of vehicles which departed (were inserted into the road network) in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getDepartedNumber,(),"getDepartedNumber() -> integer
+
+Returns the number of vehicles which departed (were inserted into the road network) in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getDepartedPersonIDList,(),"getDepartedPersonIDList() -> tuple(string)
+
+Returns a tuple of ids of persons which departed (were inserted into the road network) in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getDepartedPersonNumber,(),"getDepartedPersonNumber() -> integer
+
+Returns the number of persons which departed (were inserted into the road network) in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getDistance2D,"(x1, y1, x2, y2, isGeo=False, isDriving=False)","getDistance2D(double, double, double, double, boolean, boolean) -> double
+
+Returns the distance between the two coordinate pairs (x1,y1) and (x2,y2)
+
+If isGeo=True, coordinates are interpreted as longitude and latitude rather
+than cartesian coordinates in meters.
+
+If isDriving=True, the coordinates are mapped onto the road network and the
+length of the shortest route in the network is returned. Otherwise, the
+straight-line distance is returned.",API disponível; não implica coleta pelo pipeline
+simulation,getDistanceRoad,"(edgeID1, pos1, edgeID2, pos2, isDriving=False)","getDistanceRoad(string, double, string, double, boolean) -> double
+
+Reads two positions on the road network and an indicator whether the air or the driving distance shall be
+computed. Returns the according distance.",API disponível; não implica coleta pelo pipeline
+simulation,getEmergencyStoppingVehiclesIDList,(),"getEmergencyStoppingVehiclesIDList() -> tuple(string)
+Return Ids of vehicles that peformed an emergency stop in the last step",API disponível; não implica coleta pelo pipeline
+simulation,getEmergencyStoppingVehiclesNumber,(),"getEmergencyStoppingVehiclesNumber() -> integer
+Return number of vehicles that performed an emergency stop in the last step",API disponível; não implica coleta pelo pipeline
+simulation,getEndTime,(),"getEndTime() -> double
+
+Returns the configured end time of the simulation in s or -1",API disponível; não implica coleta pelo pipeline
+simulation,getEndingTeleportIDList,(),"getEndingTeleportIDList() -> tuple(string)
+
+Returns a tuple of ids of vehicles which ended to be teleported in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getEndingTeleportNumber,(),"getEndingTeleportNumber() -> integer
+
+Returns the number of vehicles which ended to be teleported in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+simulation,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+simulation,getLoadedIDList,(),"getLoadedIDList() -> tuple(string)
+
+Returns a tuple of ids of vehicles which were loaded in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getLoadedNumber,(),"getLoadedNumber() -> integer
+
+Returns the number of vehicles which were loaded in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getMinExpectedNumber,(),"getMinExpectedNumber() -> integer
+Returns the number of all active vehicles and persons which are in the net plus the
+ones still waiting to start. Vehicles and persons currently stopped with a
+'trigger' are excluded from this number (if only triggered objects
+remain, the trigger condition cannot be fulfilled and all objects remain
+stopped without user intervention).
+The returned number may also be smaller than
+the actual number of vehicles still to come because of delayed
+route file parsing. If the number is 0 however, it is
+guaranteed that all route files have been parsed completely.",API disponível; não implica coleta pelo pipeline
+simulation,getNetBoundary,(),"getNetBoundary() -> ((double, double), (double, double))
+
+The boundary box of the simulation network.",API disponível; não implica coleta pelo pipeline
+simulation,getOption,(option),"getOption(string) -> string
+
+Returns the value of the given SUMO option",API disponível; não implica coleta pelo pipeline
+simulation,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+simulation,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+simulation,getParkingEndingVehiclesIDList,(),"getParkingEndingVehiclesIDList() -> tuple(string)
+
+.",API disponível; não implica coleta pelo pipeline
+simulation,getParkingEndingVehiclesNumber,(),"getParkingEndingVehiclesNumber() -> integer
+
+.",API disponível; não implica coleta pelo pipeline
+simulation,getParkingStartingVehiclesIDList,(),"getParkingStartingVehiclesIDList() -> tuple(string)
+
+.",API disponível; não implica coleta pelo pipeline
+simulation,getParkingStartingVehiclesNumber,(),"getParkingStartingVehiclesNumber() -> integer
+
+.",API disponível; não implica coleta pelo pipeline
+simulation,getPendingVehicles,(),"getPendingVehicles() -> tuple(string)
+Returns a tuple of all vehicle ids waiting for insertion (with depart delay)",API disponível; não implica coleta pelo pipeline
+simulation,getScale,(),"getScale() -> double
+
+Returns the traffic scaling factor",API disponível; não implica coleta pelo pipeline
+simulation,getStartingTeleportIDList,(),"getStartingTeleportIDList() -> tuple(string)
+
+Returns a tuple of ids of vehicles which started to teleport in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getStartingTeleportNumber,(),"getStartingTeleportNumber() -> integer
+
+Returns the number of vehicles which started to teleport in this time step.",API disponível; não implica coleta pelo pipeline
+simulation,getStopEndingVehiclesIDList,(),"getStopEndingVehiclesIDList() -> tuple(string)
+
+.",API disponível; não implica coleta pelo pipeline
+simulation,getStopEndingVehiclesNumber,(),"getStopEndingVehiclesNumber() -> integer
+
+.",API disponível; não implica coleta pelo pipeline
+simulation,getStopStartingVehiclesIDList,(),"getStopStartingVehiclesIDList() -> tuple(string)
+
+.",API disponível; não implica coleta pelo pipeline
+simulation,getStopStartingVehiclesNumber,(),"getStopStartingVehiclesNumber() -> integer
+
+.",API disponível; não implica coleta pelo pipeline
+simulation,getSubscriptionResults,(),"getSubscriptionResults() -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+simulation,getTime,(),"getTime() -> double
+
+Returns the current simulation time in s.",API disponível; não implica coleta pelo pipeline
+trafficlight,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+trafficlight,getAllProgramLogics,(tlsID),"getAllProgramLogics(string) -> tuple(Logic)
+
+Returns a tuple of Logic objects.
+Each Logic encodes a traffic light program for the given tlsID.",API disponível; não implica coleta pelo pipeline
+trafficlight,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+trafficlight,getBlockingVehicles,"(tlsID, linkIndex)","getBlockingVehicles(string, int) -> tuple(string)
+Returns the tuple of vehicles that are blocking the subsequent block for
+the given tls-linkIndex",API disponível; não implica coleta pelo pipeline
+trafficlight,getCompleteRedYellowGreenDefinition,(tlsID),"getAllProgramLogics(string) -> tuple(Logic)
+
+Returns a tuple of Logic objects.
+Each Logic encodes a traffic light program for the given tlsID.",API disponível; não implica coleta pelo pipeline
+trafficlight,getConstraints,"(tlsID, tripId='')","getConstraints(string, string) -> tuple(Constraint)
+Returns the tuple of rail signal constraints for the given rail signal.
+If tripId is not """", only constraints with the given tripId are
+returned. Otherwise, all constraints are returned",API disponível; não implica coleta pelo pipeline
+trafficlight,getConstraintsByFoe,"(foeSignal, foeId='')","getConstraintsByFoe(string, string) -> tuple(Constraint)
+Returns the tuple of rail signal constraints that have the given rail
+signal id as their foeSignal.
+If foeId is not """", only constraints with the given foeId are
+returned. Otherwise, all constraints are returned",API disponível; não implica coleta pelo pipeline
+trafficlight,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+trafficlight,getControlledLanes,(tlsID),"getControlledLanes(string) -> tuple(string)
+
+Returns the tuple of lanes which are controlled by the named traffic light.",API disponível; não implica coleta pelo pipeline
+trafficlight,getControlledLinks,(tlsID),"getControlledLinks(string) -> tuple(tuple(tuple(string)))
+
+Returns the links controlled by the traffic light, sorted by the signal index and described by giving
+the incoming, outgoing, and via lane.",API disponível; não implica coleta pelo pipeline
+trafficlight,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+trafficlight,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+trafficlight,getNemaPhaseCalls,(tlsID),"getNemaPhaseCalls(string) -> tuple(string)
+Get the vehicle calls for the phases.
+The output is vehicle calls (coming from the detectors) for the phases.",API disponível; não implica coleta pelo pipeline
+trafficlight,getNextSwitch,(tlsID),"getNextSwitch(string) -> double
+
+Returns the absolute simulation time at which the traffic light is
+schedule to switch to the next phase (in seconds).",API disponível; não implica coleta pelo pipeline
+trafficlight,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+trafficlight,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+trafficlight,getPhase,(tlsID),"getPhase(string) -> integer
+
+Returns the index of the current phase within the list of all phases of
+the current program.",API disponível; não implica coleta pelo pipeline
+trafficlight,getPhaseDuration,(tlsID),"getPhaseDuration(string) -> double
+
+Returns the total duration of the current phase (in seconds). This value
+is not affected by the elapsed or remaining duration of the current phase.",API disponível; não implica coleta pelo pipeline
+trafficlight,getPhaseName,(tlsID),"getPhaseName(string) -> string
+Returns the name of the current phase.",API disponível; não implica coleta pelo pipeline
+trafficlight,getPriorityVehicles,"(tlsID, linkIndex)","getPriorityVehicles(string, int) -> tuple(string)
+Returns the tuple of vehicles that also wish to enter the subsequent block for
+the given tls-linkIndex (only those with higher priority)",API disponível; não implica coleta pelo pipeline
+trafficlight,getProgram,(tlsID),"getProgram(string) -> string
+
+Returns the id of the current program.",API disponível; não implica coleta pelo pipeline
+trafficlight,getRedYellowGreenState,(tlsID),"getRedYellowGreenState(string) -> string
+
+Returns the named tl's state as a tuple of light definitions from
+rugGyYoO, for red, yed-yellow, green, yellow, off, where lower case letters mean that the stream
+has to decelerate.",API disponível; não implica coleta pelo pipeline
+trafficlight,getRivalVehicles,"(tlsID, linkIndex)","getRivalVehicles(string, int) -> tuple(string)
+Returns the tuple of vehicles that also wish to enter the subsequent block for
+the given tls-linkIndex (regardless of priority)",API disponível; não implica coleta pelo pipeline
+trafficlight,getServedPersonCount,"(tlsID, index)","getServedPersonCount(string, int) -> int
+Returns the number of persons that would be served in the given phase",API disponível; não implica coleta pelo pipeline
+trafficlight,getSpentDuration,(tlsID),"getSpentDuration(string) -> double
+
+Returns the time in seconds for which the current phase has been active",API disponível; não implica coleta pelo pipeline
+trafficlight,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+variablespeedsign,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+variablespeedsign,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+variablespeedsign,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+variablespeedsign,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+variablespeedsign,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+variablespeedsign,getLanes,(vssID),"getLanes(string) -> tuple(string)
+
+Returns a tuple of all lanes controlled by the variablespeedsign.",API disponível; não implica coleta pelo pipeline
+variablespeedsign,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+variablespeedsign,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+variablespeedsign,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+vehicle,getAccel,(typeID),"getAccel(string) -> double
+
+Returns the maximum acceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getAcceleration,(vehID),"getAcceleration(string) -> double
+
+Returns the acceleration in m/s^2 of the named vehicle within the last step.",API disponível; não implica coleta pelo pipeline
+vehicle,getAccumulatedWaitingTime,(vehID),"getAccumulatedWaitingTime(string) -> double
+The accumulated waiting time of a vehicle collects the vehicle's waiting time
+over a certain time interval (interval length is set per option '--waiting-time-memory')",API disponível; não implica coleta pelo pipeline
+vehicle,getActionStepLength,(typeID),"getActionStepLength(string) -> double
+
+Returns the action step length for this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getAdaptedTraveltime,"(vehID, time, edgeID)","getAdaptedTraveltime(string, double, string) -> double
+
+Returns the information about the travel time of edge ""edgeID"" valid
+for the given time from the vehicle's internal edge weights
+container (see setAdaptedTraveltime).
+If there is no individual travel time set, INVALID_DOUBLE_VALUE is returned.",API disponível; não implica coleta pelo pipeline
+vehicle,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+vehicle,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+vehicle,getAllowedSpeed,(vehID),"getAllowedSpeed(string) -> double
+
+Returns the maximum allowed speed on the current lane regarding speed factor in m/s for this vehicle.",API disponível; não implica coleta pelo pipeline
+vehicle,getAngle,(vehID),"getAngle(string) -> double
+
+Returns the angle in degrees of the named vehicle within the last step.",API disponível; não implica coleta pelo pipeline
+vehicle,getApparentDecel,(typeID),"getApparentDecel(string) -> double
+
+Returns the apparent deceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getBestLanes,(vehID),"getBestLanes(string) -> tuple(data)
+where data is a tuple of (laneID, length, occupation, offset, allowsContinuation, tuple(nextLanes))
+
+For each lane of the current edge a data tuple is returned where the
+entries have the following meaning:
+- laneID: the id of that lane on the current edge
+- the length that can be driven without lane change (measured from the start of that lane)
+- the occupation on the future lanes (brutto vehicle lengths)
+- the offset of that lane from the lane that would be strategically
+  preferred (this is the lane that requires the least future lane
+  changes or a lane that needs to be used for stopping)
+- whether that lane allows continuing the route (for at least one more edge)
+- the sequence of lanes that would be driven starting at laneID if no
+  lane change were to take place",API disponível; não implica coleta pelo pipeline
+vehicle,getBoardingDuration,(typeID),"getBoardingDuration(string) -> double
+
+Returns the boarding duration of this type",API disponível; não implica coleta pelo pipeline
+vehicle,getCO2Emission,(vehID),"getCO2Emission(string) -> double
+
+Returns the CO2 emission in mg/s for the last time step.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+vehicle,getCOEmission,(vehID),"getCOEmission(string) -> double
+
+Returns the CO emission in mg/s for the last time step.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+vehicle,getColor,(typeID),"getColor(string) -> (integer, integer, integer, integer)
+
+Returns the color of this type.
+If called in the context of a person or vehicle, it will return their specific color if it has been set.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+vehicle,getDecel,(typeID),"getDecel(string) -> double
+
+Returns the maximal comfortable deceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getDepartDelay,(vehID),"getDepartDelay(string) -> double
+
+Returns the delay between intended and actual departure in seconds",API disponível; não implica coleta pelo pipeline
+vehicle,getDeparture,(vehID),"getDeparture(string) -> double
+
+Returns the actual departure time in seconds",API disponível; não implica coleta pelo pipeline
+vehicle,getDistance,(vehID),"getDistance(string) -> double
+
+Returns the distance to the starting point like an odometer.",API disponível; não implica coleta pelo pipeline
+vehicle,getDrivingDistance,"(vehID, edgeID, pos, laneIndex=0)","getDrivingDistance(string, string, double, integer) -> double
+
+For an edge along the remaining route of vehID, return the distance from the current vehicle position
+to the given edge and position along the vehicles route.
+Otherwise, return INVALID_DOUBLE_VALUE",API disponível; não implica coleta pelo pipeline
+vehicle,getDrivingDistance2D,"(vehID, x, y)","getDrivingDistance2D(string, double, double) -> integer
+
+Return the distance to the given network position along the vehicles route.",API disponível; não implica coleta pelo pipeline
+vehicle,getEffort,"(vehID, time, edgeID)","getEffort(string, double, string) -> double
+
+Returns the information about the effort needed for edge ""edgeID"" valid
+for the given time from the vehicle's internal effort
+container (see setEffort).
+If there is no individual travel time set, INVALID_DOUBLE_VALUE is returned.",API disponível; não implica coleta pelo pipeline
+vehicle,getElectricityConsumption,(vehID),"getElectricityConsumption(string) -> double
+
+Returns the electricity consumption in Wh/s for the last time step.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+vehicle,getEmergencyDecel,(typeID),"getEmergencyDecel(string) -> double
+
+Returns the maximal physically possible deceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getEmissionClass,(typeID),"getEmissionClass(string) -> string
+
+Returns the emission class of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getFollowSpeed,"(vehID, speed, gap, leaderSpeed, leaderMaxDecel, leaderID='')","getFollowSpeed(string, double, double, double, double, string) -> double
+Return the follow speed computed by the carFollowModel of vehID",API disponível; não implica coleta pelo pipeline
+vehicle,getFollower,"(vehID, dist=0.0)","getFollower(string, double) -> (string, double)
+
+Return the following vehicle id together with the distance. The distance
+is measured from the front + minGap of the follower to the back of vehID, so it does not include the
+minGap of the follower.
+The dist parameter defines the minimum lookback, 0 calculates the
+lookback distance from the braking distance at 4.5m/s^2 at 2*roadSpeedLimit.
+Due to junctions and lane merges, there may be multiple followers.
+In this case, the ""critical"" follower is returned. This is the follower
+where the value of (getSecureGap - gap) is maximal.
+Note that the returned follower may be further away than the given dist.",API disponível; não implica coleta pelo pipeline
+vehicle,getFuelConsumption,(vehID),"getFuelConsumption(string) -> double
+
+Returns the fuel consumption in mg/s for the last time step.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+vehicle,getHCEmission,(vehID),"getHCEmission(string) -> double
+
+Returns the HC emission in mg/s for the last time step.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+vehicle,getHeight,(typeID),"getHeight(string) -> double
+
+Returns the height in m of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+vehicle,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+vehicle,getImpatience,(typeID),"getImpatience(string) -> double
+
+Returns the Impatience of this type",API disponível; não implica coleta pelo pipeline
+vehicle,getImperfection,(typeID),"getImperfection(string) -> double
+
+Returns the driver's imperfection for this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getJunctionFoes,"(vehID, dist=0.0)","getJunctionFoes(string, double) -> complex
+
+Return tuple of junction foes [(foeId, egoDist, foeDist, egoExitDist, foeExitDist,
+egoLane, foeLane, egoResponse, foeResponse), ...] within the given distance to the given vehicle.",API disponível; não implica coleta pelo pipeline
+vehicle,getLaneChangeMode,(vehID),"getLaneChangeMode(string) -> integer
+
+Gets the vehicle's lane change mode as a bitset.",API disponível; não implica coleta pelo pipeline
+vehicle,getLaneChangeState,"(vehID, direction)","getLaneChangeState(string, int) -> (int, int)
+Return the lane change state for the vehicle. The first value returns
+the state as computed by the lane change model and the second value
+returns the state after incorporation TraCI requests.
+See getLaneChangeStatePretty for an interpretation of the integer/bitset
+results",API disponível; não implica coleta pelo pipeline
+vehicle,getLaneChangeStatePretty,"(vehID, direction)","getLaneChangeStatePretty(string, int) -> ([string, ...], [string, ...])
+Return the lane change state for the vehicle as two lists of string
+constants. The first tuple returns the state as computed by the lane change
+model and the second tuple returns the state after incorporation TraCI requests.",API disponível; não implica coleta pelo pipeline
+vehicle,getLaneID,(vehID),"getLaneID(string) -> string
+
+Returns the id of the lane the named vehicle was at within the last step.",API disponível; não implica coleta pelo pipeline
+vehicle,getLaneIndex,(vehID),"getLaneIndex(string) -> integer
+
+Returns the index of the lane the named vehicle was at within the last step.",API disponível; não implica coleta pelo pipeline
+vehicle,getLanePosition,(vehID),"getLanePosition(string) -> double
+
+The position of the vehicle along the lane measured in m.",API disponível; não implica coleta pelo pipeline
+vehicle,getLastActionTime,(vehID),"getLastActionTime(string) -> double
+
+Returns the time in s of last action point for this vehicle.",API disponível; não implica coleta pelo pipeline
+vehicle,getLateralAlignment,(typeID),"getLateralAlignment(string) -> string
+
+Returns The preferred lateral alignment of the type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getLateralLanePosition,(vehID),"getLateralLanePosition(string) -> double
+
+Returns the lateral position of the vehicle on its current lane measured in m.",API disponível; não implica coleta pelo pipeline
+vehicle,getLateralSpeed,(vehID),"getLateralSpeed(string) -> double
+
+Returns the lateral speed in m/s of the named vehicle within the last step.",API disponível; não implica coleta pelo pipeline
+vehicle,getLeader,"(vehID, dist=100.0)","getLeader(string, double) -> (string, double)
+
+Return the leading vehicle id together with the distance. The distance
+is measured from the front + minGap to the back of the leader, so it does not include the
+minGap of the vehicle.
+The dist parameter defines the minimum lookahead, 0 calculates a lookahead from the brake gap.
+Note that the returned leader may be further away than the given dist and that the vehicle
+will only look on its current best lanes and not look beyond the end of its final route edge.
+
+In the case where no leader is found, the function returns 'None'.
+This special case is deprecated. The future behavior is to return the
+pair ("""", -1) when no leader is found.
+The function 'traci.setLegacyGetLeader(bool) can be used to switch
+between both behaviors.",API disponível; não implica coleta pelo pipeline
+vehicle,getLeftFollowers,"(vehID, blockingOnly=False)","getLeftFollowers(string, bool) -> tuple(tuple(string, double))
+Convenience method, see getNeighbors()",API disponível; não implica coleta pelo pipeline
+vehicle,getLeftLeaders,"(vehID, blockingOnly=False)","getLeftLeaders(string, bool) -> tuple(tuple(string, double))
+Convenience method, see getNeighbors()",API disponível; não implica coleta pelo pipeline
+vehicle,getLength,(typeID),"getLength(string) -> double
+
+Returns the length in m of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getLine,(vehID),"getLine(string) -> string
+
+Returns the line information of this vehicle.",API disponível; não implica coleta pelo pipeline
+vehicle,getLoadedIDList,(),"getLoadedIDList() -> tuple(string)
+returns all loaded vehicles that have not yet left the simulation",API disponível; não implica coleta pelo pipeline
+vehicle,getMass,(typeID),"getMass(string) -> double
+
+Returns the mass in kg of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getMaxSpeed,(typeID),"getMaxSpeed(string) -> double
+
+Returns the maximum speed in m/s of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getMaxSpeedLat,(typeID),"getMaxSpeedLat(string) -> double
+
+Returns the maximum lateral speed in m/s of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getMinGap,(typeID),"getMinGap(string) -> double
+
+Returns the offset (gap to front vehicle if halting) of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getMinGapLat,(typeID),"getMinGapLat(string) -> double
+
+Returns The desired lateral gap of this type at 50km/h in m
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getNOxEmission,(vehID),"getNOxEmission(string) -> double
+
+Returns the NOx emission in mg/s for the last time step.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+vehicle,getNeighbors,"(vehID, mode)","getNeighbors(string, byte) -> tuple(tuple(string, double))
+
+The parameter mode is a bitset (UBYTE), specifying the following:
+bit 1: query lateral direction (left:0, right:1)
+bit 2: query longitudinal direction (followers:0, leaders:1)
+bit 3: blocking (return all:0, return only blockers:1)
+
+The returned tuple contains pairs (ID, dist) for all lane change relevant neighboring leaders, resp. followers,
+along with their longitudinal distance to the ego vehicle (egoFront - egoMinGap to leaderBack, resp.
+followerFront - followerMinGap to egoBack. The value can be negative for overlapping neighs).
+For the non-sublane case, the lists will contain at most one entry.
+
+Note: The exact set of blockers in case blocking==1 is not determined for the sublane model,
+but either all neighboring vehicles are returned (in case LCA_BLOCKED) or
+none is returned (in case !LCA_BLOCKED).",API disponível; não implica coleta pelo pipeline
+vehicle,getNextLinks,(vehID),"getNextLinks(string) -> tuple(tuple(string, string, bool, bool, bool, string, string, double))
+
+Return tuple of upcoming links along the route ((lane, via, priority, opened, foe,
+ state, direction, length), ...)",API disponível; não implica coleta pelo pipeline
+vehicle,getNextStops,(vehID),"getNextStops(string) -> tuple(tuple(string, double, string, int, double, double))
+
+Return tuple of upcoming stops ((lane, endPos, stoppingPlaceID, stopFlags, duration, until), ...)
+where integer stopFlag is defined as:
+       1 * stopped +
+       2 * parking +
+       4 * personTriggered +
+       8 * containerTriggered +
+      16 * isBusStop +
+      32 * isContainerStop +
+      64 * chargingStation +
+     128 * parkingarea
+with each of these flags defined as 0 or 1.",API disponível; não implica coleta pelo pipeline
+vehicle,getNextTLS,(vehID),"getNextTLS(string) -> tuple(tuple(string, int, double, string))
+
+Return tuple of upcoming traffic lights [(tlsID, tlsIndex, distance, state), ...]",API disponível; não implica coleta pelo pipeline
+vehicle,getNoiseEmission,(vehID),"getNoiseEmission(string) -> double
+
+Returns the noise emission in db for the last time step.",API disponível; não implica coleta pelo pipeline
+vehicle,getPMxEmission,(vehID),"getPMxEmission(string) -> double
+
+Returns the particular matter emission in mg/s for the last time step.
+Multiply by the step length to get the value for one step.",API disponível; não implica coleta pelo pipeline
+vehicle,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+vehicle,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+vehicle,getPersonCapacity,(typeID),"getPersonCapacity(string) -> int
+
+Returns the person capacity of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getPersonIDList,(vehID),"getPersonIDList(string) -> tuple(string)
+Returns the tuple of persons who are riding in this vehicle.",API disponível; não implica coleta pelo pipeline
+vehicle,getPersonNumber,(vehID),"getPersonNumber(string) -> integer
+Returns the total number of persons which includes those defined
+using attribute 'personNumber' as well as <person>-objects who are riding in
+this vehicle.",API disponível; não implica coleta pelo pipeline
+vehicle,getPosition,(vehID),"getPosition(string) -> (double, double)
+
+Returns the position of the named vehicle within the last step [m,m].",API disponível; não implica coleta pelo pipeline
+vehicle,getPosition3D,(vehID),"getPosition3D(string) -> (double, double, double)
+
+Returns the position of the named vehicle within the last step [m,m,m].",API disponível; não implica coleta pelo pipeline
+vehicle,getReferenceDistance,(vehID),"getReferenceDistance(string) -> double
+Returns the distance along the linear reference system
+in which the current edge takes part (i.e. kilometrage/mile markers)",API disponível; não implica coleta pelo pipeline
+vehicle,getRightFollowers,"(vehID, blockingOnly=False)","getRightFollowers(string, bool) -> tuple(tuple(string, double))
+Convenience method, see getNeighbors()",API disponível; não implica coleta pelo pipeline
+vehicle,getRightLeaders,"(vehID, blockingOnly=False)","getRightLeaders(string, bool) -> tuple(tuple(string, double))
+Convenience method, see getNeighbors()",API disponível; não implica coleta pelo pipeline
+vehicle,getRoadID,(vehID),"getRoadID(string) -> string
+
+Returns the id of the edge the named vehicle was at within the last step.",API disponível; não implica coleta pelo pipeline
+vehicle,getRoute,(vehID),"getRoute(string) -> tuple(string)
+
+Returns the ids of the edges the vehicle's route is made of.",API disponível; não implica coleta pelo pipeline
+vehicle,getRouteID,(vehID),"getRouteID(string) -> string
+
+Returns the id of the route of the named vehicle.",API disponível; não implica coleta pelo pipeline
+vehicle,getRouteIndex,(vehID),"getRouteIndex(string) -> int
+
+Returns the index of the current edge within the vehicles route or -1 if the
+vehicle has not yet departed",API disponível; não implica coleta pelo pipeline
+vehicle,getRoutingMode,(vehID),"getRoutingMode(string)
+returns the current routing mode:
+tc.ROUTING_MODE_DEFAULT    : use weight storages and fall-back to edge speeds (default)
+tc.ROUTING_MODE_AGGREGATED : use global smoothed travel times from device.rerouting",API disponível; não implica coleta pelo pipeline
+vehicle,getSecureGap,"(vehID, speed, leaderSpeed, leaderMaxDecel, leaderID='')","getSecureGap(string, double, double, double, string) -> double
+Return the secure gap computed by the carFollowModel of vehID",API disponível; não implica coleta pelo pipeline
+vehicle,getSegmentID,(vehID),"getSegmentID(string) -> string
+
+Returns the id of the segment the named vehicle was at within the last step (mesosim).",API disponível; não implica coleta pelo pipeline
+vehicle,getSegmentIndex,(vehID),"getSegmentIndex(string) -> integer
+
+Returns the index of the segment the named vehicle was at within the last step (mesosim).",API disponível; não implica coleta pelo pipeline
+vehicle,getShapeClass,(typeID),"getShapeClass(string) -> string
+
+Returns the shape class of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getSignals,(vehID),"getSignals(string) -> integer
+
+Returns an integer encoding the state of a vehicle's signals.",API disponível; não implica coleta pelo pipeline
+vehicle,getSlope,(vehID),"getSlope(string) -> double
+The slope at the current position of the vehicle in degrees",API disponível; não implica coleta pelo pipeline
+vehicle,getSpeed,(vehID),"getSpeed(string) -> double
+
+Returns the (longitudinal) speed in m/s of the named vehicle within the last step.",API disponível; não implica coleta pelo pipeline
+vehicle,getSpeedDeviation,(typeID),"getSpeedDeviation(string) -> double
+
+Returns the maximum speed deviation of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getSpeedFactor,(typeID),"getSpeedFactor(string) -> double
+
+Returns the speed factor of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getSpeedMode,(vehID),"getSpeedMode(string) -> int
+The speed mode of a vehicle",API disponível; não implica coleta pelo pipeline
+vehicle,getSpeedWithoutTraCI,(vehID),"getSpeedWithoutTraCI(string) -> double
+Returns the speed that the vehicle would drive if no speed-influencing
+command such as setSpeed or slowDown was given.",API disponível; não implica coleta pelo pipeline
+vehicle,getStopArrivalDelay,(vehID),"getStopArrivalDelay(string) -> double
+Returns the expected arrival delay at the next stop (if that stop defines the
+arrival-attribute) in seconds. The returned value may be negative to
+indicate early arrival.  Returns INVALID_DOUBLE if the next stop is not applicable",API disponível; não implica coleta pelo pipeline
+vehicle,getStopDelay,(vehID),"getStopDelay(string) -> double
+Returns the expected depart delay at the next stop (if that stop defines the
+until-attribute) in seconds. Returns -1 if the next stop is not applicable",API disponível; não implica coleta pelo pipeline
+vehicle,getStopParameter,"(vehID, nextStopIndex, param, customParam=False)","getStopParameter(string, int, string) -> string
+Gets the value of the given parameter for the stop at the given index
+Negative indices permit access to past stops.
+Supported params correspond to all legal stop xml-attributes
+If customParam is set to True, the user defined stop parameter with the
+specified param name will be returned instead (or """" if undefined)",API disponível; não implica coleta pelo pipeline
+vehicle,getStopSpeed,"(vehID, speed, gap)","getStopSpeed(string, double, double) -> double
+Return the speed for stopping at gap computed by the carFollowModel of vehID",API disponível; não implica coleta pelo pipeline
+vehicle,getStopState,(vehID),"getStopState(string) -> integer
+
+Returns information in regard to stopping:
+The returned integer is defined as 1 * stopped + 2 * parking
++ 4 * personTriggered + 8 * containerTriggered + 16 * isBusStop
++ 32 * isContainerStop
+with each of these flags defined as 0 or 1",API disponível; não implica coleta pelo pipeline
+vehicle,getStops,"(vehID, limit=0)","getStops(string, int) -> tuple(StopData)
+
+Return a tuple of StopData object. The flags are the same as for setStop and
+replaceStop (and different from getNextStops(!) for backward compatibility):
+       1 * parking +
+       2 * personTriggered +
+       4 * containerTriggered +
+       8 * isBusStop +
+      16 * isContainerStop +
+      32 * chargingStation +
+      64 * parkingarea
+with each of these flags defined as 0 or 1.
+
+The optional argument limit can be used to limit the returned stops to
+the next INT number (i.e. limit=1 if only the next stop is required).
+Setting a negative limit returns up to 'limit' previous stops (or fewer
+if the vehicle stopped fewer times previously)",API disponível; não implica coleta pelo pipeline
+vehicle,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+vehicle,getTau,(typeID),"getTau(string) -> double
+
+Returns the driver's desired headway in s for this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getTaxiFleet,(taxiState=0),"getTaxiFleet(int) -> tuple(string)
+Return the tuple of all taxis with the given taxiState:
+0 : empty
+1 : pickup
+2 : occupied",API disponível; não implica coleta pelo pipeline
+vehicle,getTeleportingIDList,(),"getTeleportingIDList() -> tuple(string)
+returns all teleporting or jumping vehicles",API disponível; não implica coleta pelo pipeline
+vehicle,getTimeLoss,(vehID),"getTimeLoss(string) -> double
+Returns the time loss since departure",API disponível; não implica coleta pelo pipeline
+vehicle,getTypeID,(vehID),"getTypeID(string) -> string
+
+Returns the id of the type of the named vehicle.",API disponível; não implica coleta pelo pipeline
+vehicle,getVehicleClass,(typeID),"getVehicleClass(string) -> string
+
+Returns the class of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicle,getVia,(vehID),"getVia(string) -> tuple(string)
+
+Returns the ids of via edges for this vehicle",API disponível; não implica coleta pelo pipeline
+vehicle,getWaitingTime,(vehID),"getWaitingTime(string) -> double
+The waiting time of a vehicle is defined as the time (in seconds) spent with a
+speed below 0.1m/s since the last time it was faster than 0.1m/s.
+(basically, the waiting time of a vehicle is reset to 0 every time it moves).
+A vehicle that is stopping intentionally with a <stop> does not accumulate waiting time.",API disponível; não implica coleta pelo pipeline
+vehicle,getWidth,(typeID),"getWidth(string) -> double
+
+Returns the width in m of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getAccel,(typeID),"getAccel(string) -> double
+
+Returns the maximum acceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getActionStepLength,(typeID),"getActionStepLength(string) -> double
+
+Returns the action step length for this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getAllContextSubscriptionResults,(),Sem documentação local,API disponível; não implica coleta pelo pipeline
+vehicletype,getAllSubscriptionResults,(),"getAllSubscriptionResults() -> dict(string: dict(integer: <value_type>))
+
+Returns the subscription results for the last time step and all objects of the domain.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+vehicletype,getApparentDecel,(typeID),"getApparentDecel(string) -> double
+
+Returns the apparent deceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getBoardingDuration,(typeID),"getBoardingDuration(string) -> double
+
+Returns the boarding duration of this type",API disponível; não implica coleta pelo pipeline
+vehicletype,getColor,(typeID),"getColor(string) -> (integer, integer, integer, integer)
+
+Returns the color of this type.
+If called in the context of a person or vehicle, it will return their specific color if it has been set.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getContextSubscriptionResults,(objectID),Sem documentação local,API disponível; não implica coleta pelo pipeline
+vehicletype,getDecel,(typeID),"getDecel(string) -> double
+
+Returns the maximal comfortable deceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getEmergencyDecel,(typeID),"getEmergencyDecel(string) -> double
+
+Returns the maximal physically possible deceleration in m/s^2 of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getEmissionClass,(typeID),"getEmissionClass(string) -> string
+
+Returns the emission class of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getHeight,(typeID),"getHeight(string) -> double
+
+Returns the height in m of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getIDCount,(),"getIDCount() -> integer
+
+Returns the number of currently loaded objects.",API disponível; não implica coleta pelo pipeline
+vehicletype,getIDList,(),"getIDList() -> tuple(string)
+
+Returns a tuple of all objects in the network.",API disponível; não implica coleta pelo pipeline
+vehicletype,getImpatience,(typeID),"getImpatience(string) -> double
+
+Returns the Impatience of this type",API disponível; não implica coleta pelo pipeline
+vehicletype,getImperfection,(typeID),"getImperfection(string) -> double
+
+Returns the driver's imperfection for this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getLateralAlignment,(typeID),"getLateralAlignment(string) -> string
+
+Returns The preferred lateral alignment of the type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getLength,(typeID),"getLength(string) -> double
+
+Returns the length in m of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getMass,(typeID),"getMass(string) -> double
+
+Returns the mass in kg of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getMaxSpeed,(typeID),"getMaxSpeed(string) -> double
+
+Returns the maximum speed in m/s of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getMaxSpeedLat,(typeID),"getMaxSpeedLat(string) -> double
+
+Returns the maximum lateral speed in m/s of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getMinGap,(typeID),"getMinGap(string) -> double
+
+Returns the offset (gap to front vehicle if halting) of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getMinGapLat,(typeID),"getMinGapLat(string) -> double
+
+Returns The desired lateral gap of this type at 50km/h in m
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getParameter,"(objectID, key)","getParameter(string, string) -> string
+
+Returns the value of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+vehicletype,getParameterWithKey,"(objectID, key)","getParameterWithKey(string, string) -> (string, string)
+
+Returns the (key, value) tuple of the given parameter for the given objectID",API disponível; não implica coleta pelo pipeline
+vehicletype,getPersonCapacity,(typeID),"getPersonCapacity(string) -> int
+
+Returns the person capacity of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getScale,(typeID),"getScale(string) -> double
+Returns the traffic scaling factor",API disponível; não implica coleta pelo pipeline
+vehicletype,getShapeClass,(typeID),"getShapeClass(string) -> string
+
+Returns the shape class of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getSpeedDeviation,(typeID),"getSpeedDeviation(string) -> double
+
+Returns the maximum speed deviation of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getSpeedFactor,(typeID),"getSpeedFactor(string) -> double
+
+Returns the speed factor of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getSubscriptionResults,(objectID),"getSubscriptionResults(string) -> dict(integer: <value_type>)
+
+Returns the subscription results for the last time step and the given object.
+If the object id is unknown or the subscription did for any reason return no data,
+'None' is returned.
+It is not possible to retrieve older subscription results than the ones
+from the last time step.",API disponível; não implica coleta pelo pipeline
+vehicletype,getTau,(typeID),"getTau(string) -> double
+
+Returns the driver's desired headway in s for this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getVehicleClass,(typeID),"getVehicleClass(string) -> string
+
+Returns the class of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline
+vehicletype,getWidth,(typeID),"getWidth(string) -> double
+
+Returns the width in m of this type.
+If called in the context of a person or vehicle, it will return the value for their current type.
+Use the respective object ID as typeID value in said context.",API disponível; não implica coleta pelo pipeline

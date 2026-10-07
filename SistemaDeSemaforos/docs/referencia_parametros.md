@@ -8,7 +8,7 @@ O [catálogo das 462 opções possíveis de `sumo`](catalogo_completo_sumo.md) �
 
 ## 3.1. Arquivos e seleção do cenário
 
-O arquivo [`config/cenario.json`](../config/cenario.json) é lido por [`configuracao.py`](../semaforos/configuracao.py). Caminhos `network` e `plans` são resolvidos em relação à pasta `config/`.
+O arquivo [`config/cenario.json`](../config/cenario.json) é lido por [`configuracao.py`](../semaforos/cenario/configuracao.py). Caminhos network e plans são resolvidos em relação ao arquivo de cenário.
 
 | Parâmetro | Valor atual | Como é usado |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ O vermelho de um movimento também dura enquanto outro movimento recebe verde ou
 
 ## 3.2. Demanda de veículos
 
-[`demanda.py`](../semaforos/demanda.py) usa `demand.mode` para escolher um dos modos abaixo.
+[`demanda.py`](../semaforos/cenario/demanda.py) usa demand.mode para escolher um dos modos abaixo.
 
 | Parâmetro | Valor atual | Uso |
 | --- | --- | --- |
@@ -69,7 +69,7 @@ Se `demand.mode` passar a `flows`, `vehicles_per_hour` do modo aleatório deixa 
 
 ## 3.3. Opções passadas ao `sumo`
 
-[`simulacao.py`](../semaforos/simulacao.py) monta a chamada sem abrir `sumo-gui`. `traci.start()` acrescenta `--remote-port` com uma porta livre. Os caminhos das saídas mudam a cada execução.
+[`execucao.py`](../semaforos/simulacao/execucao.py) monta a chamada de tempos fixos sem abrir sumo-gui. traci.start() acrescenta --remote-port com uma porta livre. Os caminhos das saídas mudam a cada execução.
 
 | Opção do `sumo` | Valor efetivo atual | Origem |
 | --- | --- | --- |
@@ -119,7 +119,7 @@ Na configuração atual, `unfinished_penalty_seconds = 120`. A penalidade inclui
 
 ## 3.5. Parâmetros do treinamento que afetam as simulações
 
-[`treinamento.py`](../semaforos/treinamento.py) usa os campos abaixo de `training` em `config/cenario.json`.
+[`busca_surrogate.py`](../semaforos/algoritmos/busca_surrogate.py) usa os campos abaixo de training em config/cenario.json.
 
 | Parâmetro | Valor atual | Efeito |
 | --- | ---: | --- |

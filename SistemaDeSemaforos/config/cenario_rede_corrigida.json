@@ -32,7 +32,21 @@
     "n_epochs": 10,
     "n_steps": 128,
     "batch_size": 64,
-    "total_timesteps": 2048
+    "total_timesteps": 2048,
+    "action_mode": "phase_durations",
+    "phase_types": [
+      "green",
+      "yellow",
+      "all_red"
+    ],
+    "duration_limits": {
+      "yellow": {
+        "maximum_seconds": 6
+      },
+      "all_red": {
+        "maximum_seconds": 3
+      }
+    }
   },
   "demand": {
     "mode": "random",

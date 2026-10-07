@@ -30,9 +30,10 @@ continua sendo a busca por modelo substituto; não é PPO.
 O ambiente `SemaforosEnv` usa `gymnasium.Env`; `reset` gera demanda e inicia
 SUMO, `step` aplica a ação por TraCI e avança a simulação, e `close` encerra
 a conexão. O agente é **centralizado**: uma observação reúne os sinais em
-`targets` e `MultiDiscrete([3] × N)` contém uma ação por sinal. Neste momento,
-`N=1`, pois só `FAM_RONDON_PARANA` está associado nominalmente. Os outros
-semáforos mantêm seus programas da rede.
+`targets`. No modo padrão `phase_durations`, `MultiDiscrete([3] × F)` contém
+uma ação por fase controlada: hoje `F=6` no sinal nominal `FAM_RONDON_PARANA`.
+Os outros semáforos mantêm seus programas da rede. Consulte
+[controle das três fases](ppo_duracoes.md) para limites e formato das ações.
 
 Por sinal, a observação vetorial contém seis valores escalados para `[0,1]`:
 fila aproximada de veículos parados nas faixas controladas, número de
@@ -41,12 +42,12 @@ a troca. A observação vem do estado TraCI atual, sem conhecimento da demanda
 futura. Escalas de 20 veículos/faixa, 20 m/s e 60 s são escolhas explícitas
 do piloto, não calibração de tráfego real.
 
-Durante um verde selecionado, a ação `0` solicita encerramento após o mínimo,
-`1` mantém o programa e `2` estende o verde em um intervalo de decisão, sem
-exceder o máximo. Em amarelo e vermelho de limpeza, a ação é ignorada. A
-transição é executada pelo programa SUMO existente, sem mudar estado de link,
-ordem de fase, amarelo ou limpeza. O mínimo e máximo atuais dos verdes são
-24–58 s. O passo SUMO é 1 s e a decisão ocorre a cada 5 s por padrão.
+Cada ação `0/1/2` escolhe mínimo/original/máximo da duração de uma fase.
+A escolha é aplicada ao entrar nessa fase, incluindo amarelo e limpeza entre
+decisões. A transição é executada pelo programa SUMO existente, preservando
+estados dos links e ordem das fases. Os limites experimentais são 24–58 s de
+verde, 3–6 s de amarelo e 1–3 s de limpeza. O passo SUMO é 1 s e a decisão
+ocorre a cada 5 s por padrão. O modo antigo `green_extension` continua disponível.
 O ciclo e o vermelho dos movimentos resultam dessas fases; não são ações
 independentes. Esta é uma **restrição de software no piloto**, não certificação
 dos tempos para operação na rua. Compatibilidade de movimentos, pedestres e

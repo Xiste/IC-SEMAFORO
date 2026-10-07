@@ -1,0 +1,463 @@
+categoria,opção,categoria em português,tipo,padrão no template,aliases,descrição SUMO
+configuration,configuration-file,Arquivos de configuração,FILE,,c configuration,Loads the named config on startup
+configuration,save-configuration,Arquivos de configuração,FILE,,C save-config,Saves current configuration into FILE
+configuration,save-configuration.relative,Arquivos de configuração,BOOL,false,save-config.relative,Enforce relative paths when saving the configuration
+configuration,save-template,Arquivos de configuração,FILE,,,Saves a configuration template (empty) into FILE
+configuration,save-schema,Arquivos de configuração,FILE,,,Saves the configuration schema into FILE
+configuration,save-commented,Arquivos de configuração,BOOL,,save-template.commented,"Adds comments to saved template, configuration, or schema"
+input,net-file,Arquivos de entrada,FILE,,n net,Load road network description from FILE
+input,route-files,Arquivos de entrada,FILE,,r routes,Load routes descriptions from FILE(s)
+input,additional-files,Arquivos de entrada,FILE,,a additional,Load further descriptions from FILE(s)
+input,weight-files,Arquivos de entrada,FILE,,w weights,Load edge/lane weights for online rerouting from FILE
+input,weight-attribute,Arquivos de entrada,STR,traveltime,measure x,Name of the xml attribute which gives the edge weight
+input,load-state,Arquivos de entrada,FILE,,,Loads a network state from FILE
+input,load-state.offset,Arquivos de entrada,TIME,0,,Shifts all times loaded from a saved state by the given offset
+input,load-state.remove-vehicles,Arquivos de entrada,STR[],,,Removes vehicles with the given IDs from the loaded state
+input,junction-taz,Arquivos de entrada,BOOL,false,,Initialize a TAZ for every junction to use attributes toJunction and fromJunction
+output,write-license,Arquivos e métricas de saída,BOOL,false,,Include license info into every output file
+output,write-metadata,Arquivos e métricas de saída,BOOL,false,,Write parsable metadata (configuration etc.) instead of comments
+output,output-prefix,Arquivos e métricas de saída,STR,,,Prefix which is applied to all output files. The special string &apos;TIME&apos; is replaced by the current time.
+output,output-suffix,Arquivos e métricas de saída,STR,,,Suffix which is applied to all output files. The special string &apos;TIME&apos; is replaced by the current time.
+output,precision,Arquivos e métricas de saída,INT,2,,Defines the number of digits after the comma for floating point output
+output,precision.geo,Arquivos e métricas de saída,INT,6,,"Defines the number of digits after the comma for lon,lat output"
+output,output.compression,Arquivos e métricas de saída,STR,,,Defines the standard compression algorithm (currently only for parquet output)
+output,output.format,Arquivos e métricas de saída,STR,xml,,"Defines the standard output format if not derivable from the file name (&apos;xml&apos;, &apos;csv&apos;, &apos;parquet&apos;)"
+output,output.column-header,Arquivos e métricas de saída,STR,tag,,"How to derive column headers from attribute names (&apos;none&apos;, &apos;tag&apos;, &apos;auto&apos;, &apos;plain&apos;)"
+output,output.column-separator,Arquivos e métricas de saída,STR,;,,Separator in CSV output
+output,human-readable-time,Arquivos e métricas de saída,BOOL,false,H,Write time values as hour:minute:second or day:hour:minute:second rather than seconds
+output,netstate-dump,Arquivos e métricas de saída,FILE,,ndump netstate netstate-output,Save complete network states into FILE
+output,netstate-dump.empty-edges,Arquivos e métricas de saída,BOOL,false,dump-empty-edges netstate-output.empty-edges netstate.empty-edges,Write also empty edges completely when dumping
+output,netstate-dump.precision,Arquivos e métricas de saída,INT,2,dump-precision netstate-output.precision netstate.precision,Write positions and speeds with the given precision (default 2)
+output,emission-output,Arquivos e métricas de saída,FILE,,,Save the emission values of each vehicle
+output,emission-output.precision,Arquivos e métricas de saída,INT,2,,Write emission values with the given precision (default 2)
+output,emission-output.geo,Arquivos e métricas de saída,BOOL,false,,Save the positions in emission output using geo-coordinates (lon/lat)
+output,emission-output.step-scaled,Arquivos e métricas de saída,BOOL,false,,Write emission values scaled to the step length rather than as per-second values
+output,emission-output.attributes,Arquivos e métricas de saída,STR[],,,List attributes that should be included in the emission output
+output,battery-output,Arquivos e métricas de saída,FILE,,,Save the battery values of each vehicle
+output,battery-output.precision,Arquivos e métricas de saída,INT,2,,Write battery values with the given precision (default 2)
+output,elechybrid-output,Arquivos e métricas de saída,FILE,,,Save the elecHybrid values of each vehicle
+output,elechybrid-output.precision,Arquivos e métricas de saída,INT,2,,Write elecHybrid values with the given precision (default 2)
+output,elechybrid-output.aggregated,Arquivos e métricas de saída,BOOL,false,,Write elecHybrid values into one aggregated file
+output,chargingstations-output,Arquivos e métricas de saída,FILE,,,Write data of charging stations
+output,chargingstations-output.aggregated,Arquivos e métricas de saída,BOOL,false,,Write aggregated charging event data instead of single time steps
+output,chargingstations-output.aggregated.write-unfinished,Arquivos e métricas de saída,BOOL,false,,Write aggregated charging event data for vehicles which have not arrived at simulation end
+output,overheadwiresegments-output,Arquivos e métricas de saída,FILE,,,Write data of overhead wire segments
+output,substations-output,Arquivos e métricas de saída,FILE,,,Write data of electrical substation stations
+output,substations-output.precision,Arquivos e métricas de saída,INT,2,,Write substation values with the given precision (default 2)
+output,fcd-output,Arquivos e métricas de saída,FILE,,,Save the Floating Car Data
+output,fcd-output.geo,Arquivos e métricas de saída,BOOL,false,,Save the Floating Car Data using geo-coordinates (lon/lat)
+output,fcd-output.utm,Arquivos e métricas de saída,BOOL,false,,Save the Floating Car Data using utm/unshifted coordinates (x/y)
+output,fcd-output.signals,Arquivos e métricas de saída,BOOL,false,,Add the vehicle signal state to the FCD output (brake lights etc.)
+output,fcd-output.distance,Arquivos e métricas de saída,BOOL,false,,Add kilometrage to the FCD output (linear referencing)
+output,fcd-output.acceleration,Arquivos e métricas de saída,BOOL,false,,Add acceleration to the FCD output
+output,fcd-output.speed-relative,Arquivos e métricas de saída,BOOL,false,,Add relative speed (vehicle speed / edge speed limit) to the FCD output
+output,fcd-output.max-leader-distance,Arquivos e métricas de saída,FLOAT,-1,,Add leader vehicle information to the FCD output (within the given distance)
+output,fcd-output.params,Arquivos e métricas de saída,STR[],,,Add generic parameter values to the FCD output
+output,fcd-output.filter-edges.input-file,Arquivos e métricas de saída,FILE,,,Restrict fcd output to the edge selection from the given input file
+output,fcd-output.attributes,Arquivos e métricas de saída,STR[],,,List attributes that should be included in the FCD output
+output,fcd-output.filter-shapes,Arquivos e métricas de saída,STR[],,,List shape names that should be used to filter the FCD output
+output,fcd-output.skip-empty,Arquivos e métricas de saída,BOOL,false,,Do not save data for time steps which have no vehicles / transportables
+output,person-fcd-output,Arquivos e métricas de saída,FILE,,person-fcd,Save fcd for persons and container to separate FILE
+output,device.ssm.filter-edges.input-file,Arquivos e métricas de saída,FILE,,,Restrict SSM device output to the edge selection from the given input file
+output,full-output,Arquivos e métricas de saída,FILE,,,Save a lot of information for each timestep (very redundant)
+output,queue-output,Arquivos e métricas de saída,FILE,,,Save the vehicle queues at the junctions (experimental)
+output,queue-output.period,Arquivos e métricas de saída,TIME,-1,,Save vehicle queues with the given period
+output,vtk-output,Arquivos e métricas de saída,FILE,,,Save complete vehicle positions inclusive speed values in the VTK Format (usage: /path/out will produce /path/out_$TIMESTEP$.vtp files)
+output,amitran-output,Arquivos e métricas de saída,FILE,,,Save the vehicle trajectories in the Amitran format
+output,summary-output,Arquivos e métricas de saída,FILE,,summary,Save aggregated vehicle departure info into FILE
+output,summary-output.period,Arquivos e métricas de saída,TIME,-1,,Save summary-output with the given period
+output,person-summary-output,Arquivos e métricas de saída,FILE,,,Save aggregated person counts into FILE
+output,tripinfo-output,Arquivos e métricas de saída,FILE,,tripinfo,Save single vehicle trip info into FILE
+output,tripinfo-output.write-unfinished,Arquivos e métricas de saída,BOOL,false,,Write tripinfo output for vehicles which have not arrived at simulation end
+output,tripinfo-output.write-undeparted,Arquivos e métricas de saída,BOOL,false,,Write tripinfo output for vehicles which have not departed at simulation end because of depart delay
+output,personinfo-output,Arquivos e métricas de saída,FILE,,personinfo,Save personinfo and containerinfo to separate FILE
+output,vehroute-output,Arquivos e métricas de saída,FILE,,vehroutes,Save single vehicle route info into FILE
+output,vehroute-output.exit-times,Arquivos e métricas de saída,BOOL,false,vehroutes.exit-times,Write the exit times for all edges
+output,vehroute-output.last-route,Arquivos e métricas de saída,BOOL,false,vehroutes.last-route,Write the last route only
+output,vehroute-output.sorted,Arquivos e métricas de saída,BOOL,false,vehroutes.sorted,Sorts the output by departure time
+output,vehroute-output.dua,Arquivos e métricas de saída,BOOL,false,vehroutes.dua,Write the output in the duarouter alternatives style
+output,vehroute-output.cost,Arquivos e métricas de saída,BOOL,false,,Write costs for all routes
+output,vehroute-output.intended-depart,Arquivos e métricas de saída,BOOL,false,vehroutes.intended-depart,Write the output with the intended instead of the real departure time
+output,vehroute-output.route-length,Arquivos e métricas de saída,BOOL,false,vehroutes.route-length,Include total route length in the output
+output,vehroute-output.write-unfinished,Arquivos e métricas de saída,BOOL,false,,Write vehroute output for vehicles which have not arrived at simulation end
+output,vehroute-output.skip-ptlines,Arquivos e métricas de saída,BOOL,false,,Skip vehroute output for public transport vehicles
+output,vehroute-output.incomplete,Arquivos e métricas de saída,BOOL,false,,Include invalid routes and route stubs in vehroute output
+output,vehroute-output.stop-edges,Arquivos e métricas de saída,BOOL,false,,Include information about edges between stops
+output,vehroute-output.speedfactor,Arquivos e métricas de saída,BOOL,false,,Write the vehicle speedFactor (defaults to &apos;true&apos; if departSpeed is written)
+output,vehroute-output.internal,Arquivos e métricas de saída,BOOL,false,,Include internal edges in the output
+output,personroute-output,Arquivos e métricas de saída,FILE,,personroutes,Save person and container routes to separate FILE
+output,link-output,Arquivos e métricas de saída,FILE,,,Save links states into FILE
+output,railsignal-block-output,Arquivos e métricas de saída,FILE,,,Save railsignal-blocks into FILE
+output,railsignal-vehicle-output,Arquivos e métricas de saída,FILE,,,Record entry and exit times of vehicles for railsignal blocks into FILE
+output,bt-output,Arquivos e métricas de saída,FILE,,,Save bluetooth visibilities into FILE (in conjunction with device.btreceiver and device.btsender)
+output,lanechange-output,Arquivos e métricas de saída,FILE,,,Record lane changes and their motivations for all vehicles into FILE
+output,lanechange-output.started,Arquivos e métricas de saída,BOOL,false,,Record start of lane change manoeuvres
+output,lanechange-output.ended,Arquivos e métricas de saída,BOOL,false,,Record end of lane change manoeuvres
+output,lanechange-output.xy,Arquivos e métricas de saída,BOOL,false,,Record coordinates of lane change manoeuvres
+output,stop-output,Arquivos e métricas de saída,FILE,,,Record stops and loading/unloading of passenger and containers for all vehicles into FILE
+output,stop-output.write-unfinished,Arquivos e métricas de saída,BOOL,false,,Write stop output for stops which have not ended at simulation end
+output,collision-output,Arquivos e métricas de saída,FILE,,,Write collision information into FILE
+output,edgedata-output,Arquivos e métricas de saída,FILE,,,Write aggregated traffic statistics for all edges into FILE
+output,lanedata-output,Arquivos e métricas de saída,FILE,,,Write aggregated traffic statistics for all lanes into FILE
+output,statistic-output,Arquivos e métricas de saída,FILE,,statistics-output,Write overall statistics into FILE
+output,deadlock-output,Arquivos e métricas de saída,FILE,,,Write reports on deadlocks FILE
+output,save-state.times,Arquivos e métricas de saída,STR[],,,Use TIME[] as times at which a network state written
+output,save-state.period,Arquivos e métricas de saída,TIME,-1,,save state repeatedly after TIME period
+output,save-state.period.keep,Arquivos e métricas de saída,INT,0,,Keep only the last INT periodic state files
+output,save-state.prefix,Arquivos e métricas de saída,FILE,state,,Prefix for network states
+output,save-state.suffix,Arquivos e métricas de saída,STR,.xml.gz,,Suffix for network states (.xml.gz or .xml)
+output,save-state.files,Arquivos e métricas de saída,FILE,,,Files for network states
+output,save-state.rng,Arquivos e métricas de saída,BOOL,false,,Save random number generator states
+output,save-state.transportables,Arquivos e métricas de saída,BOOL,false,,Save person and container states (experimental)
+output,save-state.constraints,Arquivos e métricas de saída,BOOL,false,,Save rail signal constraints
+output,save-state.precision,Arquivos e métricas de saída,INT,2,,Write internal state values with the given precision (default 2)
+time,begin,Tempo da simulação,TIME,0,b,Defines the begin time in seconds; The simulation starts at this time
+time,end,Tempo da simulação,TIME,-1,e,Defines the end time in seconds; The simulation ends at this time
+time,step-length,Tempo da simulação,TIME,1,,Defines the step duration in seconds
+processing,step-method.ballistic,Processamento e comportamento da simulação,BOOL,false,,Whether to use ballistic method for the positional update of vehicles (default is a semi-implicit Euler method).
+processing,extrapolate-departpos,Processamento e comportamento da simulação,BOOL,false,,Whether vehicles that depart between simulation steps should extrapolate the depart position
+processing,threads,Processamento e comportamento da simulação,INT,1,,Defines the number of threads for parallel simulation
+processing,lateral-resolution,Processamento e comportamento da simulação,FLOAT,-1,,Defines the resolution in m when handling lateral positioning within a lane (with -1 all vehicles drive at the center of their lane
+processing,route-steps,Processamento e comportamento da simulação,TIME,200,s,Load routes for the next number of seconds ahead
+processing,no-internal-links,Processamento e comportamento da simulação,BOOL,false,,Disable (junction) internal links
+processing,ignore-junction-blocker,Processamento e comportamento da simulação,TIME,-1,,Ignore vehicles which block the junction after they have been standing for SECONDS (-1 means never ignore)
+processing,ignore-route-errors,Processamento e comportamento da simulação,BOOL,false,,Do not check whether routes are connected
+processing,ignore-accidents,Processamento e comportamento da simulação,BOOL,false,,Do not check whether accidents occur
+processing,collision.action,Processamento e comportamento da simulação,STR,teleport,,"How to deal with collisions: [none,warn,teleport,remove]"
+processing,intermodal-collision.action,Processamento e comportamento da simulação,STR,warn,,"How to deal with collisions between vehicle and pedestrian: [none,warn,teleport,remove]"
+processing,collision.stoptime,Processamento e comportamento da simulação,TIME,0,,Let vehicle stop for TIME before performing collision.action (except for action &apos;none&apos;)
+processing,intermodal-collision.stoptime,Processamento e comportamento da simulação,TIME,0,,Let vehicle stop for TIME before performing intermodal-collision.action (except for action &apos;none&apos;)
+processing,collision.check-junctions,Processamento e comportamento da simulação,BOOL,false,,Enables collisions checks on junctions
+processing,collision.check-junctions.mingap,Processamento e comportamento da simulação,FLOAT,0,,Increase or decrease sensitivity for junction collision check
+processing,collision.mingap-factor,Processamento e comportamento da simulação,FLOAT,-1,,"Sets the fraction of minGap that must be maintained to avoid collision detection. If a negative value is given, the carFollowModel parameter is used"
+processing,keep-after-arrival,Processamento e comportamento da simulação,TIME,0,,"After a vehicle arrives, keep it in memory for the given TIME (for TraCI access)"
+processing,max-num-vehicles,Processamento e comportamento da simulação,INT,-1,,Delay vehicle insertion to stay within the given maximum number
+processing,max-num-persons,Processamento e comportamento da simulação,INT,-1,,Delay person insertion to stay within the given maximum number
+processing,max-num-teleports,Processamento e comportamento da simulação,INT,-1,,Abort the simulation if the given maximum number of teleports is exceeded
+processing,scale,Processamento e comportamento da simulação,FLOAT,1,,Scale demand by the given factor (by discarding or duplicating vehicles)
+processing,scale-suffix,Processamento e comportamento da simulação,STR,.,,Suffix to be added when creating ids for cloned vehicles
+processing,time-to-teleport,Processamento e comportamento da simulação,TIME,300,,"Specify how long a vehicle may wait until being teleported, defaults to 300, non-positive values disable teleporting"
+processing,time-to-teleport.highways,Processamento e comportamento da simulação,TIME,0,,The waiting time after which vehicles on a fast road (speed &gt; 69km/h) are teleported if they are on a non-continuing lane
+processing,time-to-teleport.highways.min-speed,Processamento e comportamento da simulação,FLOAT,19.1667,,The waiting time after which vehicles on a fast road (default: speed &gt; 69km/h) are teleported if they are on a non-continuing lane
+processing,time-to-teleport.disconnected,Processamento e comportamento da simulação,TIME,-1,,The waiting time after which vehicles with a disconnected route are teleported. Negative values disable teleporting
+processing,time-to-teleport.remove,Processamento e comportamento da simulação,BOOL,false,,Whether vehicles shall be removed after waiting too long instead of being teleported
+processing,time-to-teleport.remove-constraint,Processamento e comportamento da simulação,BOOL,false,,Whether rail-signal-constraint based deadlocks shall be cleared by removing a constraint
+processing,time-to-teleport.ride,Processamento e comportamento da simulação,TIME,-1,,The waiting time after which persons / containers waiting for a pickup are teleported. Negative values disable teleporting
+processing,time-to-teleport.bidi,Processamento e comportamento da simulação,TIME,-1,,The waiting time after which vehicles on bidirectional edges are teleported
+processing,time-to-teleport.railsignal-deadlock,Processamento e comportamento da simulação,TIME,-1,,The waiting time after which vehicles in a rail-signal based deadlock are teleported
+processing,waiting-time-memory,Processamento e comportamento da simulação,TIME,100,,"Length of time interval, over which accumulated waiting time is taken into account (default is 100s.)"
+processing,startup-wait-threshold,Processamento e comportamento da simulação,TIME,2,,Minimum consecutive waiting time before applying startupDelay
+processing,max-depart-delay,Processamento e comportamento da simulação,TIME,-1,,"How long vehicles wait for departure before being skipped, defaults to -1 which means vehicles are never skipped"
+processing,sloppy-insert,Processamento e comportamento da simulação,BOOL,false,,Whether insertion on an edge shall not be repeated in same step once failed
+processing,eager-insert,Processamento e comportamento da simulação,BOOL,false,,Whether each vehicle is checked separately for insertion on an edge
+processing,emergency-insert,Processamento e comportamento da simulação,BOOL,false,,Allow inserting a vehicle in a situation which requires emergency braking
+processing,insertion-checks,Processamento e comportamento da simulação,STR,all,,Override default value for vehicle attribute insertionChecks
+processing,random-depart-offset,Processamento e comportamento da simulação,TIME,0,,"Each vehicle receives a random offset to its depart value drawn uniformly from [0, TIME]"
+processing,lanechange.duration,Processamento e comportamento da simulação,TIME,0,,Duration of a lane change maneuver (default 0)
+processing,lanechange.overtake-right,Processamento e comportamento da simulação,BOOL,false,,Whether overtaking on the right on motorways is permitted
+processing,tls.all-off,Processamento e comportamento da simulação,BOOL,false,,Switches off all traffic lights.
+processing,tls.actuated.show-detectors,Processamento e comportamento da simulação,BOOL,false,,Sets default visibility for actuation detectors
+processing,tls.actuated.jam-threshold,Processamento e comportamento da simulação,FLOAT,-1,,Sets default jam-threshold parameter for all actuation detectors
+processing,tls.actuated.detector-length,Processamento e comportamento da simulação,FLOAT,0,,Sets default detector length parameter for all actuation detectors
+processing,tls.delay_based.detector-range,Processamento e comportamento da simulação,FLOAT,100,,Sets default range for detecting delayed vehicles
+processing,tls.yellow.min-decel,Processamento e comportamento da simulação,FLOAT,3,,Minimum deceleration when braking at yellow
+processing,railsignal-moving-block,Processamento e comportamento da simulação,BOOL,false,railsignal.moving-block,Let railsignals operate in moving-block mode by default
+processing,railsignal.moving-block.default-classes,Processamento e comportamento da simulação,STR[],"tram,cable_car",,List vehicle classes that default to moving-block operations
+processing,railsignal.moving-block.max-dist,Processamento e comportamento da simulação,FLOAT,200,,Maximum signal distance above which zipper conflicts are ignored
+processing,railsignal.max-block-length,Processamento e comportamento da simulação,FLOAT,20000,,Do not build blocks longer than FLOAT and issue a warning instead
+processing,railsignal.default-classes,Processamento e comportamento da simulação,STR[],"rail,rail_fast,rail_electric,rail_urban,subway",,List vehicle classes that uses block-based insertion checks even when the network has no rail signals for them
+processing,time-to-impatience,Processamento e comportamento da simulação,TIME,180,,"Specify how long a vehicle may wait until impatience grows from 0 to 1, defaults to 300, non-positive values disable impatience growth"
+processing,default.departspeed,Processamento e comportamento da simulação,STR,avg,,Select default depart speed
+processing,default.departlane,Processamento e comportamento da simulação,STR,best_prob,,Select default depart lane
+processing,default.action-step-length,Processamento e comportamento da simulação,FLOAT,0,,"Length of the default interval length between action points for the car-following and lane-change models (in seconds). If not specified, the simulation step-length is used per default. Vehicle- or VType-specific settings override the default. Must be a multiple of the simulation step-length."
+processing,default.carfollowmodel,Processamento e comportamento da simulação,STR,Krauss,carfollow.model,"Select default car following model (Krauss, IDM, ...)"
+processing,default.speeddev,Processamento e comportamento da simulação,FLOAT,-1,,Select default speed deviation. A negative value implies vClass specific defaults (0.1 for the default passenger class)
+processing,default.emergencydecel,Processamento e comportamento da simulação,STR,default,,"Select default emergencyDecel value among (&apos;decel&apos;, &apos;default&apos;, FLOAT) which sets the value either to the same as the deceleration value, a vClass-class specific default or the given FLOAT in m/s^2"
+processing,overhead-wire.solver,Processamento e comportamento da simulação,BOOL,true,,Use Kirchhoff&apos;s laws for solving overhead wire circuit
+processing,overhead-wire.recuperation,Processamento e comportamento da simulação,BOOL,true,,Enable recuperation from the vehicle equipped with elecHybrid device into the overhead wire.
+processing,overhead-wire.substation-current-limits,Processamento e comportamento da simulação,BOOL,true,,Enable current limits of traction substation during solving the overhead wire electrical circuit.
+processing,emergencydecel.warning-threshold,Processamento e comportamento da simulação,FLOAT,1,,Sets the fraction of emergency decel capability that must be used to trigger a warning.
+processing,parking.maneuver,Processamento e comportamento da simulação,BOOL,false,,Whether parking simulation includes maneuvering time and associated lane blocking
+processing,use-stop-ended,Processamento e comportamento da simulação,BOOL,false,,Override stop until times with stop ended times when given
+processing,use-stop-started,Processamento e comportamento da simulação,BOOL,false,,Override stop arrival times with stop started times when given
+processing,pedestrian.model,Processamento e comportamento da simulação,STR,striping,,"Select among pedestrian models [&apos;nonInteracting&apos;, &apos;striping&apos;, &apos;jupedsim&apos;, &apos;remote&apos;]"
+processing,pedestrian.timegap-crossing,Processamento e comportamento da simulação,FLOAT,2,,Minimal acceptable gap (in seconds) between two vehicles before starting to cross
+processing,pedestrian.striping.stripe-width,Processamento e comportamento da simulação,FLOAT,0.64,,Width of parallel stripes for segmenting a sidewalk (meters) for use with model &apos;striping&apos;
+processing,pedestrian.striping.dawdling,Processamento e comportamento da simulação,FLOAT,0.2,,"Factor for random slow-downs [0,1] for use with model &apos;striping&apos;"
+processing,pedestrian.striping.mingap-to-vehicle,Processamento e comportamento da simulação,FLOAT,0.25,,Minimal gap / safety buffer (in meters) from a pedestrian to another vehicle for use with model &apos;striping&apos;
+processing,pedestrian.striping.jamtime,Processamento e comportamento da simulação,TIME,300,,Time in seconds after which pedestrians start squeezing through a jam when using model &apos;striping&apos; (non-positive values disable squeezing)
+processing,pedestrian.striping.jamtime.crossing,Processamento e comportamento da simulação,TIME,10,,Time in seconds after which pedestrians start squeezing through a jam while on a pedestrian crossing when using model &apos;striping&apos; (non-positive values disable squeezing)
+processing,pedestrian.striping.jamtime.narrow,Processamento e comportamento da simulação,TIME,1,,Time in seconds after which pedestrians start squeezing through a jam while on a narrow lane when using model &apos;striping&apos;
+processing,pedestrian.striping.jamfactor,Processamento e comportamento da simulação,FLOAT,0.25,,Factor for reducing speed of pedestrian in jammed state
+processing,pedestrian.striping.reserve-oncoming,Processamento e comportamento da simulação,FLOAT,0,,Fraction of stripes to reserve for oncoming pedestrians
+processing,pedestrian.striping.reserve-oncoming.junctions,Processamento e comportamento da simulação,FLOAT,0.34,,Fraction of stripes to reserve for oncoming pedestrians on crossings and walkingareas
+processing,pedestrian.striping.reserve-oncoming.max,Processamento e comportamento da simulação,FLOAT,1.28,,Maximum width in m to reserve for oncoming pedestrians
+processing,pedestrian.striping.legacy-departposlat,Processamento e comportamento da simulação,BOOL,false,,Interpret departPosLat for walks in legacy style
+processing,pedestrian.striping.walkingarea-detail,Processamento e comportamento da simulação,INT,4,,Generate INT intermediate points to smooth out lanes within the walkingarea
+processing,ride.stop-tolerance,Processamento e comportamento da simulação,FLOAT,10,,Tolerance to apply when matching pedestrian and vehicle positions on boarding at individual stops
+processing,mapmatch.distance,Processamento e comportamento da simulação,FLOAT,100,,Maximum distance when mapping input coordinates (fromXY etc.) to the road network
+processing,mapmatch.junctions,Processamento e comportamento da simulação,BOOL,false,,Match positions to junctions instead of edges
+processing,mapmatch.taz,Processamento e comportamento da simulação,BOOL,false,,Match positions to taz instead of edges
+processing,weights.turnaround-penalty,Processamento e comportamento da simulação,FLOAT,5,,Apply the given time penalty when computing routing costs for turnaround internal lanes
+processing,weights.reversal-penalty,Processamento e comportamento da simulação,FLOAT,60,,Apply the given time penalty when computing routing costs for train reversal. Negative values disable reversal
+processing,persontrip.walk-opposite-factor,Processamento e comportamento da simulação,FLOAT,1,,Use FLOAT as a factor on walking speed against vehicle traffic direction
+routing,routing-algorithm,Cálculo de rotas,STR,dijkstra,,"Select among routing algorithms [&apos;dijkstra&apos;, &apos;astar&apos;, &apos;CH&apos;, &apos;CHWrapper&apos;]"
+routing,weights.random-factor,Cálculo de rotas,FLOAT,1,,"Edge weights for routing are dynamically disturbed by a random factor drawn uniformly from [1,FLOAT)"
+routing,weights.random-factor.dynamic,Cálculo de rotas,BOOL,false,,"When using option --weights.random-factor, vary the randomness over time"
+routing,weights.minor-penalty,Cálculo de rotas,FLOAT,1.5,,Apply the given time penalty when computing minimum routing costs for minor-link internal lanes
+routing,weights.tls-penalty,Cálculo de rotas,FLOAT,0,,Apply scaled travel time penalties based on green split when computing minimum routing costs for internal lanes at traffic lights
+routing,weights.priority-factor,Cálculo de rotas,FLOAT,0,,"Consider edge priorities in addition to travel times, weighted by factor"
+routing,weights.separate-turns,Cálculo de rotas,FLOAT,0,,Distinguish travel time by turn direction and shift a fraction of the estimated time loss ahead of the intersection onto the internal edges
+routing,astar.all-distances,Cálculo de rotas,FILE,,,Initialize lookup table for astar from the given file (generated by marouter --all-pairs-output)
+routing,astar.landmark-distances,Cálculo de rotas,FILE,,,Initialize lookup table for astar ALT-variant from the given file
+routing,persontrip.walkfactor,Cálculo de rotas,FLOAT,0.75,,Use FLOAT as a factor on pedestrian maximum speed during intermodal routing
+routing,persontrip.transfer.car-walk,Cálculo de rotas,STR[],parkingAreas,,"Where are mode changes from car to walking allowed (possible values: &apos;parkingAreas&apos;, &apos;ptStops&apos;, &apos;allJunctions&apos; and combinations)"
+routing,persontrip.transfer.taxi-walk,Cálculo de rotas,STR[],,,"Where taxis can drop off customers (&apos;allJunctions, &apos;ptStops&apos;, &apos;parkingAreas&apos;)"
+routing,persontrip.transfer.walk-taxi,Cálculo de rotas,STR[],,,"Where taxis can pick up customers (&apos;allJunctions, &apos;ptStops&apos;, &apos;parkingAreas&apos;)"
+routing,persontrip.default.group,Cálculo de rotas,STR,,,"When set, trips between the same origin and destination will share a taxi by default"
+routing,persontrip.taxi.waiting-time,Cálculo de rotas,TIME,300,,Estimated time for taxi pickup
+routing,persontrip.ride-public-line,Cálculo de rotas,BOOL,false,,Only use the intended public transport line rather than any alternative line that stops at the destination
+routing,railway.max-train-length,Cálculo de rotas,FLOAT,1000,,Use FLOAT as a maximum train length when initializing the railway router
+routing,replay-rerouting,Cálculo de rotas,BOOL,false,,Replay exact rerouting sequence from vehroute-output
+routing,device.rerouting.probability,Cálculo de rotas,FLOAT,-1,,The probability for a vehicle to have a &apos;rerouting&apos; device
+routing,device.rerouting.explicit,Cálculo de rotas,STR[],,device.rerouting.knownveh,Assign a &apos;rerouting&apos; device to named vehicles
+routing,device.rerouting.deterministic,Cálculo de rotas,BOOL,false,,The &apos;rerouting&apos; devices are set deterministic using a fraction of 1000
+routing,device.rerouting.period,Cálculo de rotas,TIME,0,device.routing.period,The period with which the vehicle shall be rerouted
+routing,device.rerouting.pre-period,Cálculo de rotas,TIME,60,device.routing.pre-period,The rerouting period before depart
+routing,device.rerouting.adaptation-weight,Cálculo de rotas,FLOAT,0,device.routing.adaptation-weight,The weight of prior edge weights for exponential moving average
+routing,device.rerouting.adaptation-steps,Cálculo de rotas,INT,180,device.routing.adaptation-steps,The number of steps for moving average weight of prior edge weights
+routing,device.rerouting.adaptation-interval,Cálculo de rotas,TIME,1,device.routing.adaptation-interval,The interval for updating the edge weights
+routing,device.rerouting.threshold.factor,Cálculo de rotas,FLOAT,1,,Only reroute if the new route is faster than the current route by the given factor
+routing,device.rerouting.threshold.constant,Cálculo de rotas,TIME,0,,Only reroute if the new route is faster than the current route by the given TIME
+routing,device.rerouting.with-taz,Cálculo de rotas,BOOL,false,device.routing.with-taz with-taz,Use zones (districts) as routing start- and endpoints
+routing,device.rerouting.mode,Cálculo de rotas,STR,0,,Set routing flags (8 ignores temporary blockages)
+routing,device.rerouting.init-with-loaded-weights,Cálculo de rotas,BOOL,false,,Use weight files given with option --weight-files for initializing edge weights
+routing,device.rerouting.threads,Cálculo de rotas,INT,0,routing-threads,The number of parallel execution threads used for rerouting
+routing,device.rerouting.synchronize,Cálculo de rotas,BOOL,false,,Let rerouting happen at the same time for all vehicles
+routing,device.rerouting.railsignal,Cálculo de rotas,BOOL,false,,Allow rerouting triggered by rail signals.
+routing,device.rerouting.bike-speeds,Cálculo de rotas,BOOL,false,,Compute separate average speeds for bicycles
+routing,device.rerouting.output,Cálculo de rotas,FILE,,,Save adapting weights to FILE
+routing,person-device.rerouting.probability,Cálculo de rotas,FLOAT,-1,,The probability for a person to have a &apos;rerouting&apos; device
+routing,person-device.rerouting.explicit,Cálculo de rotas,STR[],,person-device.rerouting.knownveh,Assign a &apos;rerouting&apos; device to named persons
+routing,person-device.rerouting.deterministic,Cálculo de rotas,BOOL,false,,The &apos;rerouting&apos; devices are set deterministic using a fraction of 1000
+routing,person-device.rerouting.period,Cálculo de rotas,TIME,0,person-device.routing.period,The period with which the person shall be rerouted
+routing,person-device.rerouting.mode,Cálculo de rotas,STR,0,,Set routing flags (8 ignores temporary blockages)
+routing,person-device.rerouting.scope,Cálculo de rotas,STR,stage,,"Which part of the person plan is to be replaced (stage, sequence, or trip)"
+report,verbose,"Registros, avisos e erros",BOOL,false,v,Switches to verbose output
+report,print-options,"Registros, avisos e erros",BOOL,false,,Prints option values before processing
+report,help,"Registros, avisos e erros",BOOL,false,?,Prints this screen or selected topics
+report,version,"Registros, avisos e erros",BOOL,false,V,Prints the current version
+report,xml-validation,"Registros, avisos e erros",STR,local,X,"Set schema validation scheme of XML inputs (&quot;never&quot;, &quot;local&quot;, &quot;auto&quot; or &quot;always&quot;)"
+report,xml-validation.net,"Registros, avisos e erros",STR,never,,"Set schema validation scheme of SUMO network inputs (&quot;never&quot;, &quot;local&quot;, &quot;auto&quot; or &quot;always&quot;)"
+report,xml-validation.routes,"Registros, avisos e erros",STR,local,,"Set schema validation scheme of SUMO route inputs (&quot;never&quot;, &quot;local&quot;, &quot;auto&quot; or &quot;always&quot;)"
+report,no-warnings,"Registros, avisos e erros",BOOL,false,W suppress-warnings,Disables output of warnings
+report,aggregate-warnings,"Registros, avisos e erros",INT,-1,,Aggregate warnings of the same type whenever more than INT occur
+report,log,"Registros, avisos e erros",FILE,,l log-file,Writes all messages to FILE (implies verbose)
+report,message-log,"Registros, avisos e erros",FILE,,,Writes all non-error messages to FILE (implies verbose)
+report,error-log,"Registros, avisos e erros",FILE,,,Writes all warnings and errors to FILE
+report,log.timestamps,"Registros, avisos e erros",BOOL,false,,Writes timestamps in front of all messages
+report,log.processid,"Registros, avisos e erros",BOOL,false,,Writes process ID in front of all messages
+report,language,"Registros, avisos e erros",STR,C,,Language to use in messages
+report,duration-log.disable,"Registros, avisos e erros",BOOL,false,no-duration-log,Disable performance reports for individual simulation steps
+report,duration-log.statistics,"Registros, avisos e erros",BOOL,false,t,Enable statistics on vehicle trips
+report,no-step-log,"Registros, avisos e erros",BOOL,false,,Disable console output of current simulation step
+report,step-log.period,"Registros, avisos e erros",INT,100,,Number of simulation steps between step-log outputs
+emissions,emissions.volumetric-fuel,Modelos de emissões,BOOL,false,,Return fuel consumption values in (legacy) unit l instead of mg
+emissions,phemlight-path,Modelos de emissões,FILE,./PHEMlight/,,Determines where to load PHEMlight definitions from
+emissions,phemlight-year,Modelos de emissões,INT,0,,Enable fleet age modelling with the given reference year in PHEMlight5
+emissions,phemlight-temperature,Modelos de emissões,FLOAT,1.79769e+308,,Set ambient temperature to correct NOx emissions in PHEMlight5
+emissions,device.emissions.probability,Modelos de emissões,FLOAT,-1,,The probability for a vehicle to have a &apos;emissions&apos; device
+emissions,device.emissions.explicit,Modelos de emissões,STR[],,device.emissions.knownveh,Assign a &apos;emissions&apos; device to named vehicles
+emissions,device.emissions.deterministic,Modelos de emissões,BOOL,false,,The &apos;emissions&apos; devices are set deterministic using a fraction of 1000
+emissions,device.emissions.begin,Modelos de emissões,STR,-1,,Recording begin time for emission-data
+emissions,device.emissions.period,Modelos de emissões,STR,0,,Recording period for emission-output
+communication,device.btreceiver.probability,Comunicação entre veículos,FLOAT,-1,,The probability for a vehicle to have a &apos;btreceiver&apos; device
+communication,device.btreceiver.explicit,Comunicação entre veículos,STR[],,device.btreceiver.knownveh,Assign a &apos;btreceiver&apos; device to named vehicles
+communication,device.btreceiver.deterministic,Comunicação entre veículos,BOOL,false,,The &apos;btreceiver&apos; devices are set deterministic using a fraction of 1000
+communication,device.btreceiver.range,Comunicação entre veículos,FLOAT,300,,The range of the bt receiver
+communication,device.btreceiver.all-recognitions,Comunicação entre veículos,BOOL,false,,Whether all recognition point shall be written
+communication,device.btreceiver.offtime,Comunicação entre veículos,FLOAT,0.64,,The offtime used for calculating detection probability (in seconds)
+communication,device.btsender.probability,Comunicação entre veículos,FLOAT,-1,,The probability for a vehicle to have a &apos;btsender&apos; device
+communication,device.btsender.explicit,Comunicação entre veículos,STR[],,device.btsender.knownveh,Assign a &apos;btsender&apos; device to named vehicles
+communication,device.btsender.deterministic,Comunicação entre veículos,BOOL,false,,The &apos;btsender&apos; devices are set deterministic using a fraction of 1000
+communication,person-device.btsender.probability,Comunicação entre veículos,FLOAT,-1,,The probability for a person to have a &apos;btsender&apos; device
+communication,person-device.btsender.explicit,Comunicação entre veículos,STR[],,person-device.btsender.knownveh,Assign a &apos;btsender&apos; device to named persons
+communication,person-device.btsender.deterministic,Comunicação entre veículos,BOOL,false,,The &apos;btsender&apos; devices are set deterministic using a fraction of 1000
+communication,person-device.btreceiver.probability,Comunicação entre veículos,FLOAT,-1,,The probability for a person to have a &apos;btreceiver&apos; device
+communication,person-device.btreceiver.explicit,Comunicação entre veículos,STR[],,person-device.btreceiver.knownveh,Assign a &apos;btreceiver&apos; device to named persons
+communication,person-device.btreceiver.deterministic,Comunicação entre veículos,BOOL,false,,The &apos;btreceiver&apos; devices are set deterministic using a fraction of 1000
+battery,device.stationfinder.probability,Baterias e energia,FLOAT,-1,,The probability for a vehicle to have a &apos;stationfinder&apos; device
+battery,device.stationfinder.explicit,Baterias e energia,STR[],,device.stationfinder.knownveh,Assign a &apos;stationfinder&apos; device to named vehicles
+battery,device.stationfinder.deterministic,Baterias e energia,BOOL,false,,The &apos;stationfinder&apos; devices are set deterministic using a fraction of 1000
+battery,device.stationfinder.rescueTime,Baterias e energia,TIME,1800,,Time to wait for a rescue vehicle on the road side when the battery is empty
+battery,device.stationfinder.rescueAction,Baterias e energia,STR,remove,,"How to deal with a vehicle which has to stop due to low battery: [none, remove, tow]"
+battery,device.stationfinder.reserveFactor,Baterias e energia,FLOAT,1.1,,Scale battery need with this factor to account for unexpected traffic situations
+battery,device.stationfinder.emptyThreshold,Baterias e energia,FLOAT,0.05,,Battery percentage to go into rescue mode
+battery,device.stationfinder.radius,Baterias e energia,TIME,180,,Search radius in travel time seconds
+battery,device.stationfinder.maxEuclideanDistance,Baterias e energia,FLOAT,-1,,Euclidean search distance in meters (a negative value disables the restriction)
+battery,device.stationfinder.repeat,Baterias e energia,TIME,60,,When to trigger a new search if no station has been found
+battery,device.stationfinder.maxChargePower,Baterias e energia,FLOAT,100000,,The maximum charging speed of the vehicle battery
+battery,device.stationfinder.chargeType,Baterias e energia,STR,charging,,Type of energy transfer
+battery,device.stationfinder.waitForCharge,Baterias e energia,TIME,600,,After this waiting time vehicle searches for a new station when the initial one is blocked
+battery,device.stationfinder.minOpportunityDuration,Baterias e energia,TIME,3600,,Only stops with a predicted duration of at least the given threshold are considered for opportunistic charging.
+battery,device.stationfinder.saturatedChargeLevel,Baterias e energia,FLOAT,0.8,,Target state of charge after which the vehicle stops charging
+battery,device.stationfinder.needToChargeLevel,Baterias e energia,FLOAT,0.4,,State of charge the vehicle begins searching for charging stations
+battery,device.stationfinder.opportunisticChargeLevel,Baterias e energia,FLOAT,0,,State of charge below which the vehicle may look for charging opportunities along its planned stops
+battery,device.stationfinder.replacePlannedStop,Baterias e energia,FLOAT,0,,Share of stopping time of the next independently planned stop to use for charging instead
+battery,device.stationfinder.maxDistanceToReplacedStop,Baterias e energia,FLOAT,300,,Maximum distance in meters from the original stop to be replaced by the charging stop
+battery,device.stationfinder.chargingStrategy,Baterias e energia,STR,none,,"Set a charging strategy to alter time and charging load from the set: [none, balanced, latest]"
+battery,device.stationfinder.checkEnergyForRoute,Baterias e energia,BOOL,true,,Only search for charging stations if the battery charge is not estimated sufficient to complete the current route
+battery,device.battery.probability,Baterias e energia,FLOAT,-1,,The probability for a vehicle to have a &apos;battery&apos; device
+battery,device.battery.explicit,Baterias e energia,STR[],,device.battery.knownveh,Assign a &apos;battery&apos; device to named vehicles
+battery,device.battery.deterministic,Baterias e energia,BOOL,false,,The &apos;battery&apos; devices are set deterministic using a fraction of 1000
+battery,device.battery.track-fuel,Baterias e energia,BOOL,false,,Track fuel consumption for non-electric vehicles
+example_device,device.example.probability,Dispositivo de exemplo,FLOAT,-1,,The probability for a vehicle to have a &apos;example&apos; device
+example_device,device.example.explicit,Dispositivo de exemplo,STR[],,device.example.knownveh,Assign a &apos;example&apos; device to named vehicles
+example_device,device.example.deterministic,Dispositivo de exemplo,BOOL,false,,The &apos;example&apos; devices are set deterministic using a fraction of 1000
+example_device,device.example.parameter,Dispositivo de exemplo,FLOAT,0,,An exemplary parameter which can be used by all instances of the example device
+ssm_device,device.ssm.probability,Indicadores de conflito e segurança,FLOAT,-1,,The probability for a vehicle to have a &apos;ssm&apos; device
+ssm_device,device.ssm.explicit,Indicadores de conflito e segurança,STR[],,device.ssm.knownveh,Assign a &apos;ssm&apos; device to named vehicles
+ssm_device,device.ssm.deterministic,Indicadores de conflito e segurança,BOOL,false,,The &apos;ssm&apos; devices are set deterministic using a fraction of 1000
+ssm_device,device.ssm.measures,Indicadores de conflito e segurança,STR,,,"Specifies which measures will be logged (as a space or comma-separated sequence of IDs in (&apos;TTC&apos;, &apos;DRAC&apos;, &apos;PET&apos;, &apos;PPET&apos;, &apos;MDRAC&apos;))"
+ssm_device,device.ssm.thresholds,Indicadores de conflito e segurança,STR,,,Specifies space or comma-separated thresholds corresponding to the specified measures (see documentation and watch the order!). Only events exceeding the thresholds will be logged.
+ssm_device,device.ssm.trajectories,Indicadores de conflito e segurança,BOOL,false,,"Specifies whether trajectories will be logged (if false, only the extremal values and times are reported)."
+ssm_device,device.ssm.range,Indicadores de conflito e segurança,FLOAT,50,,"Specifies the detection range in meters. For vehicles below this distance from the equipped vehicle, SSM values are traced."
+ssm_device,device.ssm.extratime,Indicadores de conflito e segurança,FLOAT,5,,Specifies the time in seconds to be logged after a conflict is over. Required &gt;0 if PET is to be calculated for crossing conflicts.
+ssm_device,device.ssm.mdrac.prt,Indicadores de conflito e segurança,FLOAT,1,,Specifies the perception reaction time for MDRAC computation.
+ssm_device,device.ssm.file,Indicadores de conflito e segurança,STR,,,Give a global default filename for the SSM output
+ssm_device,device.ssm.geo,Indicadores de conflito e segurança,BOOL,false,,Whether to use coordinates of the original reference system in output
+ssm_device,device.ssm.write-positions,Indicadores de conflito e segurança,BOOL,false,,Whether to write positions (coordinates) for each timestep
+ssm_device,device.ssm.write-lane-positions,Indicadores de conflito e segurança,BOOL,false,,Whether to write lanes and their positions for each timestep
+ssm_device,device.ssm.write-na,Indicadores de conflito e segurança,BOOL,true,,Whether to write conflict outputs with no data as NA values or skip it
+ssm_device,device.ssm.exclude-conflict-types,Indicadores de conflito e segurança,STR,,,"Which conflicts will be excluded from the log according to the conflict type they have been classified (combination of values in &apos;ego&apos;, &apos;foe&apos; , &apos;&apos;, any numerical valid conflict type code). An empty value will log all and &apos;ego&apos;/&apos;foe&apos; refer to a certain conflict type subset."
+toc_device,device.toc.probability,Transição do controle do veículo,FLOAT,-1,,The probability for a vehicle to have a &apos;toc&apos; device
+toc_device,device.toc.explicit,Transição do controle do veículo,STR[],,device.toc.knownveh,Assign a &apos;toc&apos; device to named vehicles
+toc_device,device.toc.deterministic,Transição do controle do veículo,BOOL,false,,The &apos;toc&apos; devices are set deterministic using a fraction of 1000
+toc_device,device.toc.manualType,Transição do controle do veículo,STR,,,Vehicle type for manual driving regime.
+toc_device,device.toc.automatedType,Transição do controle do veículo,STR,,,Vehicle type for automated driving regime.
+toc_device,device.toc.responseTime,Transição do controle do veículo,FLOAT,-1,,Average response time needed by a driver to take back control.
+toc_device,device.toc.recoveryRate,Transição do controle do veículo,FLOAT,0.1,,Recovery rate for the driver&apos;s awareness after a ToC.
+toc_device,device.toc.lcAbstinence,Transição do controle do veículo,FLOAT,0,,"Attention level below which a driver restrains from performing lane changes (value in [0,1])."
+toc_device,device.toc.initialAwareness,Transição do controle do veículo,FLOAT,0.5,,"Average awareness a driver has initially after a ToC (value in [0,1])."
+toc_device,device.toc.mrmDecel,Transição do controle do veículo,FLOAT,1.5,,Deceleration rate applied during a &apos;minimum risk maneuver&apos;.
+toc_device,device.toc.dynamicToCThreshold,Transição do controle do veículo,FLOAT,0,,"Time, which the vehicle requires to have ahead to continue in automated mode. The default value of 0 indicates no dynamic triggering of ToCs."
+toc_device,device.toc.dynamicMRMProbability,Transição do controle do veículo,FLOAT,0.05,,Probability that a dynamically triggered TOR is not answered in time.
+toc_device,device.toc.mrmKeepRight,Transição do controle do veículo,BOOL,false,,"If true, the vehicle tries to change to the right during an MRM."
+toc_device,device.toc.mrmSafeSpot,Transição do controle do veículo,STR,,,"If set, the vehicle tries to reach the given named stopping place during an MRM."
+toc_device,device.toc.mrmSafeSpotDuration,Transição do controle do veículo,FLOAT,60,,Duration the vehicle stays at the safe spot after an MRM.
+toc_device,device.toc.maxPreparationAccel,Transição do controle do veículo,FLOAT,0,,Maximal acceleration that may be applied during the ToC preparation phase.
+toc_device,device.toc.ogNewTimeHeadway,Transição do controle do veículo,FLOAT,-1,,Timegap for ToC preparation phase.
+toc_device,device.toc.ogNewSpaceHeadway,Transição do controle do veículo,FLOAT,-1,,Additional spacing for ToC preparation phase.
+toc_device,device.toc.ogMaxDecel,Transição do controle do veículo,FLOAT,-1,,Maximal deceleration applied for establishing increased gap in ToC preparation phase.
+toc_device,device.toc.ogChangeRate,Transição do controle do veículo,FLOAT,-1,,Rate of adaptation towards the increased headway during ToC preparation.
+toc_device,device.toc.useColorScheme,Transição do controle do veículo,BOOL,true,,Whether a coloring scheme shall by applied to indicate the different ToC stages.
+toc_device,device.toc.file,Transição do controle do veículo,STR,,,Switches on output by specifying an output filename.
+driver_state_device,device.driverstate.probability,Estado do motorista,FLOAT,-1,,The probability for a vehicle to have a &apos;driverstate&apos; device
+driver_state_device,device.driverstate.explicit,Estado do motorista,STR[],,device.driverstate.knownveh,Assign a &apos;driverstate&apos; device to named vehicles
+driver_state_device,device.driverstate.deterministic,Estado do motorista,BOOL,false,,The &apos;driverstate&apos; devices are set deterministic using a fraction of 1000
+driver_state_device,device.driverstate.initialAwareness,Estado do motorista,FLOAT,1,,Initial value assigned to the driver&apos;s awareness.
+driver_state_device,device.driverstate.errorTimeScaleCoefficient,Estado do motorista,FLOAT,100,,Time scale for the error process.
+driver_state_device,device.driverstate.errorNoiseIntensityCoefficient,Estado do motorista,FLOAT,0.2,,Noise intensity driving the error process.
+driver_state_device,device.driverstate.speedDifferenceErrorCoefficient,Estado do motorista,FLOAT,0.15,,General scaling coefficient for applying the error to the perceived speed difference (error also scales with distance).
+driver_state_device,device.driverstate.headwayErrorCoefficient,Estado do motorista,FLOAT,0.75,,General scaling coefficient for applying the error to the perceived distance (error also scales with distance).
+driver_state_device,device.driverstate.freeSpeedErrorCoefficient,Estado do motorista,FLOAT,0,,General scaling coefficient for applying the error to the vehicle&apos;s own speed when driving without a leader (error also scales with own speed).
+driver_state_device,device.driverstate.speedDifferenceChangePerceptionThreshold,Estado do motorista,FLOAT,0.1,,Base threshold for recognizing changes in the speed difference (threshold also scales with distance).
+driver_state_device,device.driverstate.headwayChangePerceptionThreshold,Estado do motorista,FLOAT,0.1,,Base threshold for recognizing changes in the headway (threshold also scales with distance).
+driver_state_device,device.driverstate.minAwareness,Estado do motorista,FLOAT,0.1,,Minimal admissible value for the driver&apos;s awareness.
+driver_state_device,device.driverstate.maximalReactionTime,Estado do motorista,FLOAT,-1,,Maximal reaction time (~action step length) induced by decreased awareness level (reached for awareness=minAwareness).
+bluelight_device,device.bluelight.probability,Veículos de emergência,FLOAT,-1,,The probability for a vehicle to have a &apos;bluelight&apos; device
+bluelight_device,device.bluelight.explicit,Veículos de emergência,STR[],,device.bluelight.knownveh,Assign a &apos;bluelight&apos; device to named vehicles
+bluelight_device,device.bluelight.deterministic,Veículos de emergência,BOOL,false,,The &apos;bluelight&apos; devices are set deterministic using a fraction of 1000
+bluelight_device,device.bluelight.reactiondist,Veículos de emergência,FLOAT,25,,Set the distance at which other drivers react to the blue light and siren sound
+bluelight_device,device.bluelight.mingapfactor,Veículos de emergência,FLOAT,1,,Reduce the minGap for reacting vehicles by the given factor
+fcd_device,device.fcd.probability,Dados de posição e movimento,FLOAT,-1,,The probability for a vehicle to have a &apos;fcd&apos; device
+fcd_device,device.fcd.explicit,Dados de posição e movimento,STR[],,device.fcd.knownveh,Assign a &apos;fcd&apos; device to named vehicles
+fcd_device,device.fcd.deterministic,Dados de posição e movimento,BOOL,false,,The &apos;fcd&apos; devices are set deterministic using a fraction of 1000
+fcd_device,device.fcd.begin,Dados de posição e movimento,STR,-1,,Recording begin time for FCD-data
+fcd_device,device.fcd.period,Dados de posição e movimento,STR,0,,Recording period for FCD-data
+fcd_device,device.fcd.radius,Dados de posição e movimento,FLOAT,0,,Record objects in a radius around equipped vehicles
+fcd_device,person-device.fcd.probability,Dados de posição e movimento,FLOAT,-1,,The probability for a person to have a &apos;fcd&apos; device
+fcd_device,person-device.fcd.explicit,Dados de posição e movimento,STR[],,person-device.fcd.knownveh,Assign a &apos;fcd&apos; device to named persons
+fcd_device,person-device.fcd.deterministic,Dados de posição e movimento,BOOL,false,,The &apos;fcd&apos; devices are set deterministic using a fraction of 1000
+fcd_device,person-device.fcd.period,Dados de posição e movimento,STR,0,,Recording period for FCD-data
+elechybrid_device,device.elechybrid.probability,Veículos elétricos híbridos,FLOAT,-1,,The probability for a vehicle to have a &apos;elechybrid&apos; device
+elechybrid_device,device.elechybrid.explicit,Veículos elétricos híbridos,STR[],,device.elechybrid.knownveh,Assign a &apos;elechybrid&apos; device to named vehicles
+elechybrid_device,device.elechybrid.deterministic,Veículos elétricos híbridos,BOOL,false,,The &apos;elechybrid&apos; devices are set deterministic using a fraction of 1000
+taxi_device,device.taxi.probability,Operação de táxis,FLOAT,-1,,The probability for a vehicle to have a &apos;taxi&apos; device
+taxi_device,device.taxi.explicit,Operação de táxis,STR[],,device.taxi.knownveh,Assign a &apos;taxi&apos; device to named vehicles
+taxi_device,device.taxi.deterministic,Operação de táxis,BOOL,false,,The &apos;taxi&apos; devices are set deterministic using a fraction of 1000
+taxi_device,device.taxi.dispatch-algorithm,Operação de táxis,STR,greedy,,The dispatch algorithm [greedy|greedyClosest|greedyShared|routeExtension|traci]
+taxi_device,device.taxi.dispatch-algorithm.output,Operação de táxis,FILE,,,Write information from the dispatch algorithm to FILE
+taxi_device,device.taxi.dispatch-algorithm.params,Operação de táxis,STR,,,"Load dispatch algorithm parameters in format KEY1:VALUE1[,KEY2:VALUE]"
+taxi_device,device.taxi.dispatch-period,Operação de táxis,TIME,60,,The period between successive calls to the dispatcher
+taxi_device,device.taxi.dispatch-keep-unreachable,Operação de táxis,TIME,3600,,The time before aborting unreachable reservations
+taxi_device,device.taxi.idle-algorithm,Operação de táxis,STR,stop,,The behavior of idle taxis [stop|randomCircling|taxistand]
+taxi_device,device.taxi.idle-algorithm.output,Operação de táxis,FILE,,,Write information from the idling algorithm to FILE
+taxi_device,device.taxi.vclasses,Operação de táxis,STR[],taxi,taxi.vclasses,Network permissions that can be accessed by taxis
+glosa_device,device.glosa.probability,Recomendação de velocidade para semáforos,FLOAT,-1,,The probability for a vehicle to have a &apos;glosa&apos; device
+glosa_device,device.glosa.explicit,Recomendação de velocidade para semáforos,STR[],,device.glosa.knownveh,Assign a &apos;glosa&apos; device to named vehicles
+glosa_device,device.glosa.deterministic,Recomendação de velocidade para semáforos,BOOL,false,,The &apos;glosa&apos; devices are set deterministic using a fraction of 1000
+glosa_device,device.glosa.range,Recomendação de velocidade para semáforos,FLOAT,100,,The communication range to the traffic light
+glosa_device,device.glosa.max-speedfactor,Recomendação de velocidade para semáforos,FLOAT,1.1,,The maximum speed factor when approaching a green light
+glosa_device,device.glosa.min-speed,Recomendação de velocidade para semáforos,FLOAT,5,,Minimum speed when coasting towards a red light
+glosa_device,device.glosa.add-switchtime,Recomendação de velocidade para semáforos,FLOAT,0,,Additional time the vehicle shall need to reach the intersection after the signal turns green
+glosa_device,device.glosa.use-queue,Recomendação de velocidade para semáforos,BOOL,false,,Use queue in front of the tls for GLOSA calculation
+glosa_device,device.glosa.override-safety,Recomendação de velocidade para semáforos,BOOL,false,,"Override safety features - ignore the current light state, always follow GLOSA&apos;s predicted state"
+glosa_device,device.glosa.ignore-cfmodel,Recomendação de velocidade para semáforos,BOOL,false,,Vehicles follow a perfect speed calculation - ignore speed calculations from the CF model if not safety critical
+tripinfo_device,device.tripinfo.probability,Informações das viagens,FLOAT,-1,,The probability for a vehicle to have a &apos;tripinfo&apos; device
+tripinfo_device,device.tripinfo.explicit,Informações das viagens,STR[],,device.tripinfo.knownveh,Assign a &apos;tripinfo&apos; device to named vehicles
+tripinfo_device,device.tripinfo.deterministic,Informações das viagens,BOOL,false,,The &apos;tripinfo&apos; devices are set deterministic using a fraction of 1000
+vehroutes_device,device.vehroute.probability,Registro das rotas percorridas,FLOAT,-1,,The probability for a vehicle to have a &apos;vehroute&apos; device
+vehroutes_device,device.vehroute.explicit,Registro das rotas percorridas,STR[],,device.vehroute.knownveh,Assign a &apos;vehroute&apos; device to named vehicles
+vehroutes_device,device.vehroute.deterministic,Registro das rotas percorridas,BOOL,false,,The &apos;vehroute&apos; devices are set deterministic using a fraction of 1000
+friction_device,device.friction.probability,Atrito da pista,FLOAT,-1,,The probability for a vehicle to have a &apos;friction&apos; device
+friction_device,device.friction.explicit,Atrito da pista,STR[],,device.friction.knownveh,Assign a &apos;friction&apos; device to named vehicles
+friction_device,device.friction.deterministic,Atrito da pista,BOOL,false,,The &apos;friction&apos; devices are set deterministic using a fraction of 1000
+friction_device,device.friction.stdDev,Atrito da pista,FLOAT,0.1,,The measurement noise parameter which can be applied to the friction device
+friction_device,device.friction.offset,Atrito da pista,FLOAT,0,,The measurement offset parameter which can be applied to the friction device -&gt; e.g. to force false measurements
+fcd_replay_device,device.fcd-replay.probability,Reprodução de trajetórias,FLOAT,-1,,The probability for a vehicle to have a &apos;fcd-replay&apos; device
+fcd_replay_device,device.fcd-replay.explicit,Reprodução de trajetórias,STR[],,device.fcd-replay.knownveh,Assign a &apos;fcd-replay&apos; device to named vehicles
+fcd_replay_device,device.fcd-replay.deterministic,Reprodução de trajetórias,BOOL,false,,The &apos;fcd-replay&apos; devices are set deterministic using a fraction of 1000
+fcd_replay_device,device.fcd-replay.file,Reprodução de trajetórias,FILE,,,FCD file to read
+traci_server,remote-port,Servidor TraCI,INT,0,,Enables TraCI Server if set
+traci_server,num-clients,Servidor TraCI,INT,1,,Expected number of connecting clients
+mesoscopic,mesosim,Simulação mesoscópica,BOOL,false,,Enables mesoscopic simulation
+mesoscopic,meso-edgelength,Simulação mesoscópica,FLOAT,98,,Length of an edge segment in mesoscopic simulation
+mesoscopic,meso-tauff,Simulação mesoscópica,TIME,1.13,,Factor for calculating the net free-free headway time
+mesoscopic,meso-taufj,Simulação mesoscópica,TIME,1.13,,Factor for calculating the net free-jam headway time
+mesoscopic,meso-taujf,Simulação mesoscópica,TIME,1.73,,Factor for calculating the jam-free headway time
+mesoscopic,meso-taujj,Simulação mesoscópica,TIME,1.4,,Factor for calculating the jam-jam headway time
+mesoscopic,meso-jam-threshold,Simulação mesoscópica,FLOAT,-1,,Minimum percentage of occupied space to consider a segment jammed. A negative argument causes thresholds to be computed based on edge speed and tauff (default)
+mesoscopic,meso-multi-queue,Simulação mesoscópica,BOOL,true,,Enable multiple queues at edge ends
+mesoscopic,meso-lane-queue,Simulação mesoscópica,BOOL,false,,Enable separate queues for every lane
+mesoscopic,meso-ignore-lanes-by-vclass,Simulação mesoscópica,STR[],"pedestrian,bicycle",meso.ignore-lanes.by-vclass,Do not build queues (or reduce capacity) for lanes allowing only the given vclasses
+mesoscopic,meso-junction-control,Simulação mesoscópica,BOOL,false,,Enable mesoscopic traffic light and priority junction handling
+mesoscopic,meso-junction-control.limited,Simulação mesoscópica,BOOL,false,,Enable mesoscopic traffic light and priority junction handling for saturated links. This prevents faulty traffic lights from hindering flow in low-traffic situations
+mesoscopic,meso-tls-penalty,Simulação mesoscópica,FLOAT,0,,Apply scaled travel time penalties when driving across tls controlled junctions based on green split instead of checking actual phases
+mesoscopic,meso-tls-flow-penalty,Simulação mesoscópica,FLOAT,0,,Apply scaled headway penalties when driving across tls controlled junctions based on green split instead of checking actual phases
+mesoscopic,meso-minor-penalty,Simulação mesoscópica,TIME,0,,"Apply fixed time penalty when driving across a minor link. When using --meso-junction-control.limited, the penalty is not applied whenever limited control is active."
+mesoscopic,meso-overtaking,Simulação mesoscópica,BOOL,false,,Enable mesoscopic overtaking
+mesoscopic,meso-recheck,Simulação mesoscópica,TIME,0,,Time interval for rechecking insertion into the next segment after failure
+mesoscopic,meso-interpolate-pos,Simulação mesoscópica,BOOL,false,,Enable mesoscopic position interpolation
+random_number,random,Geração aleatória,BOOL,false,abs-rand,Initialises the random number generator with the current system time
+random_number,seed,Geração aleatória,INT,23423,srand,Initialises the random number generator with the given value
+random_number,thread-rngs,Geração aleatória,INT,64,,Number of pre-allocated random number generators to ensure repeatable multi-threaded simulations (should be at least the number of threads for repeatable simulations).
+gui_only,gui-settings-file,Interface gráfica SUMO,FILE,,g,Load visualisation settings from FILE
+gui_only,quit-on-end,Interface gráfica SUMO,BOOL,false,Q,Quits the GUI when the simulation stops
+gui_only,game,Interface gráfica SUMO,BOOL,false,G,Start the GUI in gaming mode
+gui_only,game.mode,Interface gráfica SUMO,STR,tls,,"Select the game type (&apos;tls&apos;, &apos;drt&apos;)"
+gui_only,start,Interface gráfica SUMO,BOOL,false,S,Start the simulation after loading
+gui_only,delay,Interface gráfica SUMO,FLOAT,0,d,Use FLOAT in ms as delay between simulation steps
+gui_only,breakpoints,Interface gráfica SUMO,STR[],,B,Use TIME[] as times when the simulation should halt
+gui_only,edgedata-files,Interface gráfica SUMO,FILE,,data-files m,Load edge/lane weights for visualization from FILE
+gui_only,alternative-net-file,Interface gráfica SUMO,FILE,,N,Load a secondary road network for abstract visualization from FILE
+gui_only,selection-file,Interface gráfica SUMO,FILE,,,Load pre-selected elements from FILE
+gui_only,demo,Interface gráfica SUMO,BOOL,false,D,Restart the simulation after ending (demo mode)
+gui_only,disable-textures,Interface gráfica SUMO,BOOL,false,T,Do not load background pictures
+gui_only,registry-viewport,Interface gráfica SUMO,BOOL,false,,Load current viewport from registry
+gui_only,window-size,Interface gráfica SUMO,STR[],,,"Create initial window with the given x,y size"
+gui_only,window-pos,Interface gráfica SUMO,STR[],,,"Create initial window at the given x,y position"
+gui_only,tracker-interval,Interface gráfica SUMO,TIME,1,,The aggregation period for value tracker windows
+gui_only,gui-testing,Interface gráfica SUMO,BOOL,false,,Enable overlay for screen recognition
+gui_only,gui-testing-debug,Interface gráfica SUMO,BOOL,false,,Enable output messages during GUI-Testing
+gui_only,gui-testing.setting-output,Interface gráfica SUMO,FILE,,,Save gui settings in the given settings output file

@@ -6,9 +6,9 @@ import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from semaforos.configuracao import read_config
-from semaforos.demanda import create_demand
-from semaforos.simulacao import load_scenario
+from semaforos.cenario.configuracao import read_config
+from semaforos.cenario.demanda import create_demand
+from semaforos.simulacao.execucao import load_scenario
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -74,6 +74,20 @@ class EdgeVolumeTest(unittest.TestCase):
             self.assertTrue(all(trip.attrib["to"] in exits[:2] for trip in trips))
             self.assertTrue(all(trip.attrib["type"] == "cars" for trip in trips))
             self.assertEqual(root.find("vType").attrib["vClass"], "passenger")
+
+    def test_non_finite_shares_and_flow_rates_are_rejected(self):
+        config = dict(self.config)
+        config["demand"] = {"mode": "edge_volumes",
+                            "vehicle_types": [{"id": "car", "vClass": "passenger", "share": float("nan")}],
+                            "edge_volumes": [{"from_edge": "1156272393#6", "vehicles_per_hour": 360}]}
+        with tempfile.TemporaryDirectory() as folder:
+            with self.assertRaisesRegex(ValueError, "proporções"):
+                create_demand(config, self.network, Path(folder), 11)
+        config["demand"] = {"mode": "flows", "flows": [{"from_edge": "1156272393#6",
+                            "to_edge": "1156717168", "vehicles_per_hour": float("inf")}]}
+        with tempfile.TemporaryDirectory() as folder:
+            with self.assertRaisesRegex(ValueError, "taxa inválida"):
+                create_demand(config, self.network, Path(folder), 11)
 
 
 if __name__ == "__main__":

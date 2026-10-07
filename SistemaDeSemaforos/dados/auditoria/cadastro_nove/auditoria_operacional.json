@@ -1,0 +1,2268 @@
+{
+  "plan_id": 4,
+  "validated_count": 0,
+  "total": 9,
+  "intersections": [
+    {
+      "name": "Av. Rondon Pacheco x Av. Benjamim Magalhães",
+      "tls_id": "FAM_RONDON_BENJAMIM",
+      "tls_ids": [
+        "FAM_RONDON_BENJAMIM"
+      ],
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 1.0,
+          "network_green_indices": [],
+          "controlled_links": [
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 9,
+              "from_lane": "1156717163#3_0",
+              "to_lane": "1156272395#1_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 10,
+              "from_lane": "1156717163#3_0",
+              "to_lane": "1156272391#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 11,
+              "from_lane": "1156717163#3_1",
+              "to_lane": "1156272391#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 12,
+              "from_lane": "1156717163#3_2",
+              "to_lane": "1156272391#0_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 13,
+              "from_lane": "1156717163#3_3",
+              "to_lane": "1156272391#0_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 14,
+              "from_lane": "1156717163#3_3",
+              "to_lane": "1156272393#0_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 0,
+              "from_lane": "152937136#3_0",
+              "to_lane": "1156272393#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 1,
+              "from_lane": "152937136#3_1",
+              "to_lane": "1156272393#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 2,
+              "from_lane": "152937136#3_2",
+              "to_lane": "1156272393#0_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 3,
+              "from_lane": "152937136#3_3",
+              "to_lane": "1156272393#0_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 4,
+              "from_lane": "152937136#3_3",
+              "to_lane": "1156272395#1_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 5,
+              "from_lane": "152937136#3_3",
+              "to_lane": "1156272391#0_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 6,
+              "from_lane": "666324302#5_0",
+              "to_lane": "1156272391#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 7,
+              "from_lane": "666324302#5_0",
+              "to_lane": "1156272393#0_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 8,
+              "from_lane": "666324302#5_0",
+              "to_lane": "1156272395#1_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 15,
+              "from_lane": "853751181#0_0",
+              "to_lane": "1156272393#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 16,
+              "from_lane": "853751181#0_0",
+              "to_lane": "1156272395#1_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BENJAMIM",
+              "index": 17,
+              "from_lane": "853751181#0_0",
+              "to_lane": "1156272391#0_3"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        }
+      ],
+      "validated": false,
+      "issues": [
+        "FAM_RONDON_BENJAMIM: estágios sem correspondência biunívoca com verdes válidos",
+        "FAM_RONDON_BENJAMIM: ciclos divergentes sem reconciliação documentada",
+        "FAM_RONDON_BENJAMIM: faixas e links não validados",
+        "FAM_RONDON_BENJAMIM: movimentos não validados",
+        "FAM_RONDON_BENJAMIM: pedestres não validados",
+        "FAM_RONDON_BENJAMIM: intervalos de segurança não validados",
+        "FAM_RONDON_BENJAMIM: fonte da conferência não registrada",
+        "estágios da planilha sem correspondência completa"
+      ],
+      "candidate_controllers": [
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Quatro faixas contínuas, doze pares de vias e 18 links veiculares num único miolo; velocidades de origem conservadas. Inventário municipal, DOM 4110/2013 e imagem 2023."
+        }
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "plan_cycle_seconds": 110,
+      "network_cycle_seconds": null,
+      "plan_stages": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "network_green_indices": [],
+      "stage_comparison": [],
+      "stage_to_phase": {},
+      "controlled_links": [
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 9,
+          "from_lane": "1156717163#3_0",
+          "to_lane": "1156272395#1_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 10,
+          "from_lane": "1156717163#3_0",
+          "to_lane": "1156272391#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 11,
+          "from_lane": "1156717163#3_1",
+          "to_lane": "1156272391#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 12,
+          "from_lane": "1156717163#3_2",
+          "to_lane": "1156272391#0_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 13,
+          "from_lane": "1156717163#3_3",
+          "to_lane": "1156272391#0_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 14,
+          "from_lane": "1156717163#3_3",
+          "to_lane": "1156272393#0_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 0,
+          "from_lane": "152937136#3_0",
+          "to_lane": "1156272393#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 1,
+          "from_lane": "152937136#3_1",
+          "to_lane": "1156272393#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 2,
+          "from_lane": "152937136#3_2",
+          "to_lane": "1156272393#0_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 3,
+          "from_lane": "152937136#3_3",
+          "to_lane": "1156272393#0_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 4,
+          "from_lane": "152937136#3_3",
+          "to_lane": "1156272395#1_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 5,
+          "from_lane": "152937136#3_3",
+          "to_lane": "1156272391#0_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 6,
+          "from_lane": "666324302#5_0",
+          "to_lane": "1156272391#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 7,
+          "from_lane": "666324302#5_0",
+          "to_lane": "1156272393#0_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 8,
+          "from_lane": "666324302#5_0",
+          "to_lane": "1156272395#1_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 15,
+          "from_lane": "853751181#0_0",
+          "to_lane": "1156272393#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 16,
+          "from_lane": "853751181#0_0",
+          "to_lane": "1156272395#1_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BENJAMIM",
+          "index": 17,
+          "from_lane": "853751181#0_0",
+          "to_lane": "1156272391#0_3"
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Paraná",
+      "tls_id": "FAM_RONDON_PARANA",
+      "tls_ids": [
+        "FAM_RONDON_PARANA"
+      ],
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0,
+            3
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 0,
+              "from_lane": "1156272393#6_0",
+              "to_lane": "1156272393#7_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 1,
+              "from_lane": "1156272393#6_1",
+              "to_lane": "1156272393#7_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 2,
+              "from_lane": "1156272393#6_2",
+              "to_lane": "1156272393#7_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 3,
+              "from_lane": "1156272393#6_3",
+              "to_lane": "1156272393#7_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 5,
+              "from_lane": "1156717168_0",
+              "to_lane": "331577756#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 6,
+              "from_lane": "1156717168_1",
+              "to_lane": "331577756#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 7,
+              "from_lane": "1156717173#4_0",
+              "to_lane": "1156717173#5_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 8,
+              "from_lane": "1156717173#4_1",
+              "to_lane": "1156717173#5_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 9,
+              "from_lane": "1156717173#4_2",
+              "to_lane": "1156717173#5_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 10,
+              "from_lane": "1156717173#4_3",
+              "to_lane": "1156717173#5_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_PARANA",
+              "index": 4,
+              "from_lane": "901328279#0_0",
+              "to_lane": "901328279#1_0"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        }
+      ],
+      "validated": false,
+      "issues": [
+        "FAM_RONDON_PARANA: estágios sem correspondência biunívoca com verdes válidos",
+        "FAM_RONDON_PARANA: ciclos divergentes sem reconciliação documentada",
+        "FAM_RONDON_PARANA: faixas e links não validados",
+        "FAM_RONDON_PARANA: movimentos não validados",
+        "FAM_RONDON_PARANA: pedestres não validados",
+        "FAM_RONDON_PARANA: intervalos de segurança não validados",
+        "FAM_RONDON_PARANA: fonte da conferência não registrada",
+        "estágios da planilha sem correspondência completa"
+      ],
+      "candidate_controllers": [
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Miolo único elimina armazenamento artificial de 0,20 m; onze links veiculares. Movimentos e cores/durações veiculares legadas preservados mediante reindexação."
+        }
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "plan_cycle_seconds": 110,
+      "network_cycle_seconds": null,
+      "plan_stages": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "network_green_indices": [],
+      "stage_comparison": [],
+      "stage_to_phase": {},
+      "controlled_links": [
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 0,
+          "from_lane": "1156272393#6_0",
+          "to_lane": "1156272393#7_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 1,
+          "from_lane": "1156272393#6_1",
+          "to_lane": "1156272393#7_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 2,
+          "from_lane": "1156272393#6_2",
+          "to_lane": "1156272393#7_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 3,
+          "from_lane": "1156272393#6_3",
+          "to_lane": "1156272393#7_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 5,
+          "from_lane": "1156717168_0",
+          "to_lane": "331577756#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 6,
+          "from_lane": "1156717168_1",
+          "to_lane": "331577756#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 7,
+          "from_lane": "1156717173#4_0",
+          "to_lane": "1156717173#5_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 8,
+          "from_lane": "1156717173#4_1",
+          "to_lane": "1156717173#5_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 9,
+          "from_lane": "1156717173#4_2",
+          "to_lane": "1156717173#5_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 10,
+          "from_lane": "1156717173#4_3",
+          "to_lane": "1156717173#5_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_PARANA",
+          "index": 4,
+          "from_lane": "901328279#0_0",
+          "to_lane": "901328279#1_0"
+        }
+      ]
+    },
+    {
+      "name": "Av. Cesário Alvin x Rua Paraná",
+      "tls_id": "FAM_CESARIO_PARANA",
+      "tls_ids": [
+        "FAM_CESARIO_PARANA"
+      ],
+      "controllers": [
+        {
+          "tls_id": "FAM_CESARIO_PARANA",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 1.0,
+          "network_green_indices": [],
+          "controlled_links": [
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "index": 0,
+              "from_lane": "154252437#1_0",
+              "to_lane": "665897572_0"
+            },
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "index": 1,
+              "from_lane": "602306713#21_0",
+              "to_lane": "901328279#0_0"
+            },
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "index": 2,
+              "from_lane": "602306713#21_0",
+              "to_lane": "665897572_0"
+            },
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "index": 3,
+              "from_lane": "665897556#1_0",
+              "to_lane": "901328279#0_0"
+            },
+            {
+              "tls_id": "FAM_CESARIO_PARANA",
+              "index": 4,
+              "from_lane": "665897556#1_0",
+              "to_lane": "665897572_0"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        }
+      ],
+      "validated": false,
+      "issues": [
+        "FAM_CESARIO_PARANA: estágios sem correspondência biunívoca com verdes válidos",
+        "FAM_CESARIO_PARANA: ciclos divergentes sem reconciliação documentada",
+        "FAM_CESARIO_PARANA: faixas e links não validados",
+        "FAM_CESARIO_PARANA: movimentos não validados",
+        "FAM_CESARIO_PARANA: pedestres não validados",
+        "FAM_CESARIO_PARANA: intervalos de segurança não validados",
+        "FAM_CESARIO_PARANA: fonte da conferência não registrada",
+        "estágios da planilha sem correspondência completa"
+      ],
+      "candidate_controllers": [
+        {
+          "tls_id": "FAM_CESARIO_PARANA",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "DADOS_OPERACIONAIS_AUSENTES",
+          "note": "Cinco movimentos externos e retenções A/B/C; eliminação dos ramos artificiais de bifurcação e reconvergência. Imagem 2023 e SETTRAN. Sequência/permissões SETTRAN não inferidas."
+        }
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "plan_cycle_seconds": 110,
+      "network_cycle_seconds": null,
+      "plan_stages": [
+        "A",
+        "B",
+        "C"
+      ],
+      "network_green_indices": [],
+      "stage_comparison": [],
+      "stage_to_phase": {},
+      "controlled_links": [
+        {
+          "tls_id": "FAM_CESARIO_PARANA",
+          "index": 0,
+          "from_lane": "154252437#1_0",
+          "to_lane": "665897572_0"
+        },
+        {
+          "tls_id": "FAM_CESARIO_PARANA",
+          "index": 1,
+          "from_lane": "602306713#21_0",
+          "to_lane": "901328279#0_0"
+        },
+        {
+          "tls_id": "FAM_CESARIO_PARANA",
+          "index": 2,
+          "from_lane": "602306713#21_0",
+          "to_lane": "665897572_0"
+        },
+        {
+          "tls_id": "FAM_CESARIO_PARANA",
+          "index": 3,
+          "from_lane": "665897556#1_0",
+          "to_lane": "901328279#0_0"
+        },
+        {
+          "tls_id": "FAM_CESARIO_PARANA",
+          "index": 4,
+          "from_lane": "665897556#1_0",
+          "to_lane": "665897572_0"
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Porto Alegre",
+      "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+      "tls_ids": [
+        "FAM_RONDON_PORTO_ALEGRE",
+        "3386573305",
+        "3386573306",
+        "5494111603"
+      ],
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 1.0,
+          "network_green_indices": [],
+          "controlled_links": [
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "index": 0,
+              "from_lane": "299471494#2_0",
+              "to_lane": "1156717170#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "index": 1,
+              "from_lane": "299471494#2_1",
+              "to_lane": "1156717170#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "index": 2,
+              "from_lane": "299471494#2_1",
+              "to_lane": "1156717171_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "index": 3,
+              "from_lane": "30664532#2_0",
+              "to_lane": "1156717170#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "index": 4,
+              "from_lane": "30664532#2_0",
+              "to_lane": "1156717171_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "index": 5,
+              "from_lane": "331577748#4_0",
+              "to_lane": "1156717172#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "index": 6,
+              "from_lane": "331577748#4_0",
+              "to_lane": "331577750#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "index": 7,
+              "from_lane": "331577748#4_1",
+              "to_lane": "331577750#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "index": 8,
+              "from_lane": "331577748#4_2",
+              "to_lane": "331577750#0_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+              "index": 9,
+              "from_lane": "331577748#4_3",
+              "to_lane": "331577750#0_3"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        },
+        {
+          "tls_id": "3386573305",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "3386573305",
+              "index": 0,
+              "from_lane": "331577748#2_0",
+              "to_lane": "331577748#3_0"
+            },
+            {
+              "tls_id": "3386573305",
+              "index": 1,
+              "from_lane": "331577748#2_1",
+              "to_lane": "331577748#3_1"
+            },
+            {
+              "tls_id": "3386573305",
+              "index": 2,
+              "from_lane": "331577748#2_2",
+              "to_lane": "331577748#3_2"
+            },
+            {
+              "tls_id": "3386573305",
+              "index": 3,
+              "from_lane": "331577748#2_3",
+              "to_lane": "331577748#3_3"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        },
+        {
+          "tls_id": "3386573306",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "3386573306",
+              "index": 0,
+              "from_lane": "299471494#1_0",
+              "to_lane": "299471494#2_0"
+            },
+            {
+              "tls_id": "3386573306",
+              "index": 1,
+              "from_lane": "299471494#1_1",
+              "to_lane": "299471494#2_1"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        },
+        {
+          "tls_id": "5494111603",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "5494111603",
+              "index": 0,
+              "from_lane": "1156717170#0_0",
+              "to_lane": "1156717170#1_0"
+            },
+            {
+              "tls_id": "5494111603",
+              "index": 1,
+              "from_lane": "1156717170#0_1",
+              "to_lane": "1156717170#1_1"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        }
+      ],
+      "validated": false,
+      "issues": [
+        "FAM_RONDON_PORTO_ALEGRE: estágios sem correspondência biunívoca com verdes válidos",
+        "FAM_RONDON_PORTO_ALEGRE: ciclos divergentes sem reconciliação documentada",
+        "FAM_RONDON_PORTO_ALEGRE: faixas e links não validados",
+        "FAM_RONDON_PORTO_ALEGRE: movimentos não validados",
+        "FAM_RONDON_PORTO_ALEGRE: pedestres não validados",
+        "FAM_RONDON_PORTO_ALEGRE: intervalos de segurança não validados",
+        "FAM_RONDON_PORTO_ALEGRE: fonte da conferência não registrada",
+        "3386573305: estágios sem correspondência biunívoca com verdes válidos",
+        "3386573305: ciclos divergentes sem reconciliação documentada",
+        "3386573305: faixas e links não validados",
+        "3386573305: movimentos não validados",
+        "3386573305: pedestres não validados",
+        "3386573305: intervalos de segurança não validados",
+        "3386573305: fonte da conferência não registrada",
+        "3386573306: estágios sem correspondência biunívoca com verdes válidos",
+        "3386573306: ciclos divergentes sem reconciliação documentada",
+        "3386573306: faixas e links não validados",
+        "3386573306: movimentos não validados",
+        "3386573306: pedestres não validados",
+        "3386573306: intervalos de segurança não validados",
+        "3386573306: fonte da conferência não registrada",
+        "5494111603: estágios sem correspondência biunívoca com verdes válidos",
+        "5494111603: ciclos divergentes sem reconciliação documentada",
+        "5494111603: faixas e links não validados",
+        "5494111603: movimentos não validados",
+        "5494111603: pedestres não validados",
+        "5494111603: intervalos de segurança não validados",
+        "5494111603: fonte da conferência não registrada",
+        "estágios da planilha sem correspondência completa"
+      ],
+      "candidate_controllers": [
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Dez links veiculares; aproximação transversal agora contínua até a retenção real. Duplicado 5494111602 permanece removido; outros sinais correspondem a retenções/travessias distintas."
+        },
+        {
+          "tls_id": "3386573305",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Controle veicular antes da zebra conservado; duplicado 5494111602 removido; vínculo operacional SETTRAN pendente."
+        },
+        {
+          "tls_id": "3386573306",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Retenção de entrada distinta da travessia de saída 5494111603; programa preservado; coordenação pendente."
+        },
+        {
+          "tls_id": "5494111603",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Travessia depois do cruzamento, distinta de 3386573306; programa preservado; coordenação pendente."
+        }
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "plan_cycle_seconds": 110,
+      "network_cycle_seconds": null,
+      "plan_stages": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "network_green_indices": [],
+      "stage_comparison": [],
+      "stage_to_phase": {},
+      "controlled_links": [
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "index": 0,
+          "from_lane": "299471494#2_0",
+          "to_lane": "1156717170#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "index": 1,
+          "from_lane": "299471494#2_1",
+          "to_lane": "1156717170#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "index": 2,
+          "from_lane": "299471494#2_1",
+          "to_lane": "1156717171_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "index": 3,
+          "from_lane": "30664532#2_0",
+          "to_lane": "1156717170#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "index": 4,
+          "from_lane": "30664532#2_0",
+          "to_lane": "1156717171_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "index": 5,
+          "from_lane": "331577748#4_0",
+          "to_lane": "1156717172#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "index": 6,
+          "from_lane": "331577748#4_0",
+          "to_lane": "331577750#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "index": 7,
+          "from_lane": "331577748#4_1",
+          "to_lane": "331577750#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "index": 8,
+          "from_lane": "331577748#4_2",
+          "to_lane": "331577750#0_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_PORTO_ALEGRE",
+          "index": 9,
+          "from_lane": "331577748#4_3",
+          "to_lane": "331577750#0_3"
+        },
+        {
+          "tls_id": "3386573305",
+          "index": 0,
+          "from_lane": "331577748#2_0",
+          "to_lane": "331577748#3_0"
+        },
+        {
+          "tls_id": "3386573305",
+          "index": 1,
+          "from_lane": "331577748#2_1",
+          "to_lane": "331577748#3_1"
+        },
+        {
+          "tls_id": "3386573305",
+          "index": 2,
+          "from_lane": "331577748#2_2",
+          "to_lane": "331577748#3_2"
+        },
+        {
+          "tls_id": "3386573305",
+          "index": 3,
+          "from_lane": "331577748#2_3",
+          "to_lane": "331577748#3_3"
+        },
+        {
+          "tls_id": "3386573306",
+          "index": 0,
+          "from_lane": "299471494#1_0",
+          "to_lane": "299471494#2_0"
+        },
+        {
+          "tls_id": "3386573306",
+          "index": 1,
+          "from_lane": "299471494#1_1",
+          "to_lane": "299471494#2_1"
+        },
+        {
+          "tls_id": "5494111603",
+          "index": 0,
+          "from_lane": "1156717170#0_0",
+          "to_lane": "1156717170#1_0"
+        },
+        {
+          "tls_id": "5494111603",
+          "index": 1,
+          "from_lane": "1156717170#0_1",
+          "to_lane": "1156717170#1_1"
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Belém",
+      "tls_id": "FAM_RONDON_BELEM",
+      "tls_ids": [
+        "FAM_RONDON_BELEM"
+      ],
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 1.0,
+          "network_green_indices": [],
+          "controlled_links": [
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "index": 0,
+              "from_lane": "331577750#1_0",
+              "to_lane": "965367672#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "index": 1,
+              "from_lane": "331577750#1_1",
+              "to_lane": "965367672#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "index": 2,
+              "from_lane": "331577750#1_2",
+              "to_lane": "965367672#0_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "index": 3,
+              "from_lane": "331577750#1_3",
+              "to_lane": "965367672#0_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "index": 4,
+              "from_lane": "576876311#3_0",
+              "to_lane": "274995593#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "index": 5,
+              "from_lane": "576876311#3_1",
+              "to_lane": "299471494#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "index": 6,
+              "from_lane": "576876311#3_2",
+              "to_lane": "299471494#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "index": 7,
+              "from_lane": "965367673#0_0",
+              "to_lane": "965367672#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "index": 8,
+              "from_lane": "965367673#0_0",
+              "to_lane": "965367672#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_BELEM",
+              "index": 9,
+              "from_lane": "965367673#0_0",
+              "to_lane": "965367671_0"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        }
+      ],
+      "validated": false,
+      "issues": [
+        "FAM_RONDON_BELEM: estágios sem correspondência biunívoca com verdes válidos",
+        "FAM_RONDON_BELEM: ciclos divergentes sem reconciliação documentada",
+        "FAM_RONDON_BELEM: faixas e links não validados",
+        "FAM_RONDON_BELEM: movimentos não validados",
+        "FAM_RONDON_BELEM: pedestres não validados",
+        "FAM_RONDON_BELEM: intervalos de segurança não validados",
+        "FAM_RONDON_BELEM: fonte da conferência não registrada",
+        "estágios da planilha sem correspondência completa"
+      ],
+      "candidate_controllers": [
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "DADOS_OPERACIONAIS_AUSENTES",
+          "note": "Dez links veiculares cobrem as descrições A/B/C/D; convergência real Belém/Argentina de 3,63 m preservada. Divergência de atendimento das zebras (Prefeitura 2020 versus OSM streetlevel 2026) depende de cadastro/fotos dos focos e retenções pedestres, sem novo erro veicular demonstrado. Sequência/permissões/transições e referência da defasagem SETTRAN ausentes."
+        }
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "plan_cycle_seconds": 110,
+      "network_cycle_seconds": null,
+      "plan_stages": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "network_green_indices": [],
+      "stage_comparison": [],
+      "stage_to_phase": {},
+      "controlled_links": [
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "index": 0,
+          "from_lane": "331577750#1_0",
+          "to_lane": "965367672#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "index": 1,
+          "from_lane": "331577750#1_1",
+          "to_lane": "965367672#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "index": 2,
+          "from_lane": "331577750#1_2",
+          "to_lane": "965367672#0_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "index": 3,
+          "from_lane": "331577750#1_3",
+          "to_lane": "965367672#0_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "index": 4,
+          "from_lane": "576876311#3_0",
+          "to_lane": "274995593#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "index": 5,
+          "from_lane": "576876311#3_1",
+          "to_lane": "299471494#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "index": 6,
+          "from_lane": "576876311#3_2",
+          "to_lane": "299471494#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "index": 7,
+          "from_lane": "965367673#0_0",
+          "to_lane": "965367672#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "index": 8,
+          "from_lane": "965367673#0_0",
+          "to_lane": "965367672#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_BELEM",
+          "index": 9,
+          "from_lane": "965367673#0_0",
+          "to_lane": "965367671_0"
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Antônio Crescêncio",
+      "tls_id": "FAM_RONDON_ROTARY_CLUB",
+      "tls_ids": [
+        "FAM_RONDON_ROTARY_CLUB"
+      ],
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0,
+            3
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "FAM_RONDON_ROTARY_CLUB",
+              "index": 0,
+              "from_lane": "463014795#0_0",
+              "to_lane": "463014795#1_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_ROTARY_CLUB",
+              "index": 1,
+              "from_lane": "930831033#0_0",
+              "to_lane": "930831033#1_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_ROTARY_CLUB",
+              "index": 2,
+              "from_lane": "930831033#0_1",
+              "to_lane": "930831033#1_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_ROTARY_CLUB",
+              "index": 3,
+              "from_lane": "930831033#0_2",
+              "to_lane": "930831033#1_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_ROTARY_CLUB",
+              "index": 4,
+              "from_lane": "930831033#0_3",
+              "to_lane": "930831033#1_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_ROTARY_CLUB",
+              "index": 5,
+              "from_lane": "965367672#2_0",
+              "to_lane": "965367672#3_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_ROTARY_CLUB",
+              "index": 6,
+              "from_lane": "965367672#2_1",
+              "to_lane": "965367672#3_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_ROTARY_CLUB",
+              "index": 7,
+              "from_lane": "965367672#2_2",
+              "to_lane": "965367672#3_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_ROTARY_CLUB",
+              "index": 8,
+              "from_lane": "965367672#2_3",
+              "to_lane": "965367672#3_3"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        }
+      ],
+      "validated": false,
+      "issues": [
+        "FAM_RONDON_ROTARY_CLUB: estágios sem correspondência biunívoca com verdes válidos",
+        "FAM_RONDON_ROTARY_CLUB: ciclos divergentes sem reconciliação documentada",
+        "FAM_RONDON_ROTARY_CLUB: faixas e links não validados",
+        "FAM_RONDON_ROTARY_CLUB: movimentos não validados",
+        "FAM_RONDON_ROTARY_CLUB: pedestres não validados",
+        "FAM_RONDON_ROTARY_CLUB: intervalos de segurança não validados",
+        "FAM_RONDON_ROTARY_CLUB: fonte da conferência não registrada",
+        "estágios da planilha sem correspondência completa"
+      ],
+      "candidate_controllers": [
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Nove links veiculares; Rotary é entrada e Antônio Crescêncio saída de sentido único. Não criada entrada contrária ao sentido real; identidade operacional de D pendente."
+        }
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "plan_cycle_seconds": 110,
+      "network_cycle_seconds": null,
+      "plan_stages": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "network_green_indices": [],
+      "stage_comparison": [],
+      "stage_to_phase": {},
+      "controlled_links": [
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "index": 0,
+          "from_lane": "463014795#0_0",
+          "to_lane": "463014795#1_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "index": 1,
+          "from_lane": "930831033#0_0",
+          "to_lane": "930831033#1_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "index": 2,
+          "from_lane": "930831033#0_1",
+          "to_lane": "930831033#1_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "index": 3,
+          "from_lane": "930831033#0_2",
+          "to_lane": "930831033#1_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "index": 4,
+          "from_lane": "930831033#0_3",
+          "to_lane": "930831033#1_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "index": 5,
+          "from_lane": "965367672#2_0",
+          "to_lane": "965367672#3_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "index": 6,
+          "from_lane": "965367672#2_1",
+          "to_lane": "965367672#3_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "index": 7,
+          "from_lane": "965367672#2_2",
+          "to_lane": "965367672#3_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_ROTARY_CLUB",
+          "index": 8,
+          "from_lane": "965367672#2_3",
+          "to_lane": "965367672#3_3"
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Rua Niterói",
+      "tls_id": "FAM_RONDON_NITEROI",
+      "tls_ids": [
+        "FAM_RONDON_NITEROI",
+        "5494111596",
+        "5494111597"
+      ],
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 1.0,
+          "network_green_indices": [],
+          "controlled_links": [
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 12,
+              "from_lane": "30622933#11_0",
+              "to_lane": "1156717175#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 13,
+              "from_lane": "30622933#11_0",
+              "to_lane": "1156717175#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 14,
+              "from_lane": "30622933#11_0",
+              "to_lane": "1156717177#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 15,
+              "from_lane": "30622933#11_0",
+              "to_lane": "1156717176_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 16,
+              "from_lane": "30622933#11_0",
+              "to_lane": "1156717176_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 7,
+              "from_lane": "930831032#1_0",
+              "to_lane": "1156717177#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 8,
+              "from_lane": "930831032#1_0",
+              "to_lane": "1156717176_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 9,
+              "from_lane": "930831032#1_1",
+              "to_lane": "1156717176_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 10,
+              "from_lane": "930831032#1_2",
+              "to_lane": "1156717176_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 11,
+              "from_lane": "930831032#1_3",
+              "to_lane": "1156717176_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 0,
+              "from_lane": "931572689_0",
+              "to_lane": "1156717175#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 1,
+              "from_lane": "931572689_1",
+              "to_lane": "1156717175#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 2,
+              "from_lane": "931572689_2",
+              "to_lane": "1156717175#0_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 3,
+              "from_lane": "931572689_3",
+              "to_lane": "1156717175#0_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 4,
+              "from_lane": "931572689_3",
+              "to_lane": "1156717177#0_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 5,
+              "from_lane": "931572689_3",
+              "to_lane": "1156717176_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_NITEROI",
+              "index": 6,
+              "from_lane": "931572689_3",
+              "to_lane": "1156717176_3"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        },
+        {
+          "tls_id": "5494111596",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "5494111596",
+              "index": 0,
+              "from_lane": "1156717175#0_0",
+              "to_lane": "1156717175#1_0"
+            },
+            {
+              "tls_id": "5494111596",
+              "index": 1,
+              "from_lane": "1156717175#0_1",
+              "to_lane": "1156717175#1_1"
+            },
+            {
+              "tls_id": "5494111596",
+              "index": 2,
+              "from_lane": "1156717175#0_2",
+              "to_lane": "1156717175#1_2"
+            },
+            {
+              "tls_id": "5494111596",
+              "index": 3,
+              "from_lane": "1156717175#0_3",
+              "to_lane": "1156717175#1_3"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        },
+        {
+          "tls_id": "5494111597",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "5494111597",
+              "index": 0,
+              "from_lane": "930831032#0_0",
+              "to_lane": "930831032#1_0"
+            },
+            {
+              "tls_id": "5494111597",
+              "index": 1,
+              "from_lane": "930831032#0_1",
+              "to_lane": "930831032#1_1"
+            },
+            {
+              "tls_id": "5494111597",
+              "index": 2,
+              "from_lane": "930831032#0_2",
+              "to_lane": "930831032#1_2"
+            },
+            {
+              "tls_id": "5494111597",
+              "index": 3,
+              "from_lane": "930831032#0_3",
+              "to_lane": "930831032#1_3"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        }
+      ],
+      "validated": false,
+      "issues": [
+        "FAM_RONDON_NITEROI: estágios sem correspondência biunívoca com verdes válidos",
+        "FAM_RONDON_NITEROI: ciclos divergentes sem reconciliação documentada",
+        "FAM_RONDON_NITEROI: faixas e links não validados",
+        "FAM_RONDON_NITEROI: movimentos não validados",
+        "FAM_RONDON_NITEROI: pedestres não validados",
+        "FAM_RONDON_NITEROI: intervalos de segurança não validados",
+        "FAM_RONDON_NITEROI: fonte da conferência não registrada",
+        "5494111596: estágios sem correspondência biunívoca com verdes válidos",
+        "5494111596: ciclos divergentes sem reconciliação documentada",
+        "5494111596: faixas e links não validados",
+        "5494111596: movimentos não validados",
+        "5494111596: pedestres não validados",
+        "5494111596: intervalos de segurança não validados",
+        "5494111596: fonte da conferência não registrada",
+        "5494111597: estágios sem correspondência biunívoca com verdes válidos",
+        "5494111597: ciclos divergentes sem reconciliação documentada",
+        "5494111597: faixas e links não validados",
+        "5494111597: movimentos não validados",
+        "5494111597: pedestres não validados",
+        "5494111597: intervalos de segurança não validados",
+        "5494111597: fonte da conferência não registrada",
+        "estágios da planilha sem correspondência completa"
+      ],
+      "candidate_controllers": [
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Miolo único, 17 links veiculares preservando os 17 pares de faixas anteriores; aproximação transversal contínua até retenção. Vermelhos discrepantes R115/R116/R117 preservados para esclarecimento SETTRAN."
+        },
+        {
+          "tls_id": "5494111596",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Controle existente depois da bifurcação; integração com esquerda e estágio pedestre pendente; programa preservado."
+        },
+        {
+          "tls_id": "5494111597",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Travessia da outra pista preservada; integração com controle local e estágio pedestre pendente."
+        }
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "plan_cycle_seconds": 110,
+      "network_cycle_seconds": null,
+      "plan_stages": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "network_green_indices": [],
+      "stage_comparison": [],
+      "stage_to_phase": {},
+      "controlled_links": [
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 12,
+          "from_lane": "30622933#11_0",
+          "to_lane": "1156717175#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 13,
+          "from_lane": "30622933#11_0",
+          "to_lane": "1156717175#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 14,
+          "from_lane": "30622933#11_0",
+          "to_lane": "1156717177#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 15,
+          "from_lane": "30622933#11_0",
+          "to_lane": "1156717176_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 16,
+          "from_lane": "30622933#11_0",
+          "to_lane": "1156717176_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 7,
+          "from_lane": "930831032#1_0",
+          "to_lane": "1156717177#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 8,
+          "from_lane": "930831032#1_0",
+          "to_lane": "1156717176_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 9,
+          "from_lane": "930831032#1_1",
+          "to_lane": "1156717176_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 10,
+          "from_lane": "930831032#1_2",
+          "to_lane": "1156717176_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 11,
+          "from_lane": "930831032#1_3",
+          "to_lane": "1156717176_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 0,
+          "from_lane": "931572689_0",
+          "to_lane": "1156717175#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 1,
+          "from_lane": "931572689_1",
+          "to_lane": "1156717175#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 2,
+          "from_lane": "931572689_2",
+          "to_lane": "1156717175#0_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 3,
+          "from_lane": "931572689_3",
+          "to_lane": "1156717175#0_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 4,
+          "from_lane": "931572689_3",
+          "to_lane": "1156717177#0_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 5,
+          "from_lane": "931572689_3",
+          "to_lane": "1156717176_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_NITEROI",
+          "index": 6,
+          "from_lane": "931572689_3",
+          "to_lane": "1156717176_3"
+        },
+        {
+          "tls_id": "5494111596",
+          "index": 0,
+          "from_lane": "1156717175#0_0",
+          "to_lane": "1156717175#1_0"
+        },
+        {
+          "tls_id": "5494111596",
+          "index": 1,
+          "from_lane": "1156717175#0_1",
+          "to_lane": "1156717175#1_1"
+        },
+        {
+          "tls_id": "5494111596",
+          "index": 2,
+          "from_lane": "1156717175#0_2",
+          "to_lane": "1156717175#1_2"
+        },
+        {
+          "tls_id": "5494111596",
+          "index": 3,
+          "from_lane": "1156717175#0_3",
+          "to_lane": "1156717175#1_3"
+        },
+        {
+          "tls_id": "5494111597",
+          "index": 0,
+          "from_lane": "930831032#0_0",
+          "to_lane": "930831032#1_0"
+        },
+        {
+          "tls_id": "5494111597",
+          "index": 1,
+          "from_lane": "930831032#0_1",
+          "to_lane": "930831032#1_1"
+        },
+        {
+          "tls_id": "5494111597",
+          "index": 2,
+          "from_lane": "930831032#0_2",
+          "to_lane": "930831032#1_2"
+        },
+        {
+          "tls_id": "5494111597",
+          "index": 3,
+          "from_lane": "930831032#0_3",
+          "to_lane": "930831032#1_3"
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Av. João Naves de Ávila",
+      "tls_id": "5494111589",
+      "tls_ids": [
+        "5494111589",
+        "5494111590",
+        "5494111594"
+      ],
+      "controllers": [
+        {
+          "tls_id": "5494111589",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "5494111589",
+              "index": 0,
+              "from_lane": "576014290#0_0",
+              "to_lane": "576014290#1_0"
+            },
+            {
+              "tls_id": "5494111589",
+              "index": 1,
+              "from_lane": "576014290#0_1",
+              "to_lane": "576014290#1_1"
+            },
+            {
+              "tls_id": "5494111589",
+              "index": 2,
+              "from_lane": "576014290#0_2",
+              "to_lane": "576014290#1_2"
+            },
+            {
+              "tls_id": "5494111589",
+              "index": 3,
+              "from_lane": "576014290#0_3",
+              "to_lane": "576014290#1_3"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        },
+        {
+          "tls_id": "5494111590",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "5494111590",
+              "index": 0,
+              "from_lane": "1156717175#5_0",
+              "to_lane": "576014295_0"
+            },
+            {
+              "tls_id": "5494111590",
+              "index": 1,
+              "from_lane": "1156717175#5_1",
+              "to_lane": "576014295_1"
+            },
+            {
+              "tls_id": "5494111590",
+              "index": 2,
+              "from_lane": "1156717175#5_2",
+              "to_lane": "576014295_2"
+            },
+            {
+              "tls_id": "5494111590",
+              "index": 3,
+              "from_lane": "1156717175#5_3",
+              "to_lane": "576014295_3"
+            },
+            {
+              "tls_id": "5494111590",
+              "index": 4,
+              "from_lane": "1156717175#5_3",
+              "to_lane": "462993309_0"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        },
+        {
+          "tls_id": "5494111594",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "5494111594",
+              "index": 0,
+              "from_lane": "576014301#0_0",
+              "to_lane": "576014301#1_0"
+            },
+            {
+              "tls_id": "5494111594",
+              "index": 1,
+              "from_lane": "576014301#0_1",
+              "to_lane": "576014301#1_1"
+            },
+            {
+              "tls_id": "5494111594",
+              "index": 2,
+              "from_lane": "576014301#0_2",
+              "to_lane": "576014301#1_2"
+            },
+            {
+              "tls_id": "5494111594",
+              "index": 3,
+              "from_lane": "576014301#0_3",
+              "to_lane": "576014301#1_3"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        }
+      ],
+      "validated": false,
+      "issues": [
+        "5494111589: estágios sem correspondência biunívoca com verdes válidos",
+        "5494111589: ciclos divergentes sem reconciliação documentada",
+        "5494111589: faixas e links não validados",
+        "5494111589: movimentos não validados",
+        "5494111589: pedestres não validados",
+        "5494111589: intervalos de segurança não validados",
+        "5494111589: fonte da conferência não registrada",
+        "5494111590: estágios sem correspondência biunívoca com verdes válidos",
+        "5494111590: ciclos divergentes sem reconciliação documentada",
+        "5494111590: faixas e links não validados",
+        "5494111590: movimentos não validados",
+        "5494111590: pedestres não validados",
+        "5494111590: intervalos de segurança não validados",
+        "5494111590: fonte da conferência não registrada",
+        "5494111594: estágios sem correspondência biunívoca com verdes válidos",
+        "5494111594: ciclos divergentes sem reconciliação documentada",
+        "5494111594: faixas e links não validados",
+        "5494111594: movimentos não validados",
+        "5494111594: pedestres não validados",
+        "5494111594: intervalos de segurança não validados",
+        "5494111594: fonte da conferência não registrada",
+        "estágios da planilha sem correspondência completa"
+      ],
+      "candidate_controllers": [
+        {
+          "tls_id": "5494111589",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Viaduto e travessia conferidos; fonte não individualiza qual conjunto recebe A/B; programa preservado."
+        },
+        {
+          "tls_id": "5494111590",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Link 4 acessa alça João Naves; não é retorno; vínculo dos grupos A/B e permissões não comprovados."
+        },
+        {
+          "tls_id": "5494111594",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Travessia distinta das do norte; fonte não individualiza qual conjunto recebe A/B; programa preservado."
+        }
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "plan_cycle_seconds": 110,
+      "network_cycle_seconds": null,
+      "plan_stages": [
+        "A",
+        "B"
+      ],
+      "network_green_indices": [],
+      "stage_comparison": [],
+      "stage_to_phase": {},
+      "controlled_links": [
+        {
+          "tls_id": "5494111589",
+          "index": 0,
+          "from_lane": "576014290#0_0",
+          "to_lane": "576014290#1_0"
+        },
+        {
+          "tls_id": "5494111589",
+          "index": 1,
+          "from_lane": "576014290#0_1",
+          "to_lane": "576014290#1_1"
+        },
+        {
+          "tls_id": "5494111589",
+          "index": 2,
+          "from_lane": "576014290#0_2",
+          "to_lane": "576014290#1_2"
+        },
+        {
+          "tls_id": "5494111589",
+          "index": 3,
+          "from_lane": "576014290#0_3",
+          "to_lane": "576014290#1_3"
+        },
+        {
+          "tls_id": "5494111590",
+          "index": 0,
+          "from_lane": "1156717175#5_0",
+          "to_lane": "576014295_0"
+        },
+        {
+          "tls_id": "5494111590",
+          "index": 1,
+          "from_lane": "1156717175#5_1",
+          "to_lane": "576014295_1"
+        },
+        {
+          "tls_id": "5494111590",
+          "index": 2,
+          "from_lane": "1156717175#5_2",
+          "to_lane": "576014295_2"
+        },
+        {
+          "tls_id": "5494111590",
+          "index": 3,
+          "from_lane": "1156717175#5_3",
+          "to_lane": "576014295_3"
+        },
+        {
+          "tls_id": "5494111590",
+          "index": 4,
+          "from_lane": "1156717175#5_3",
+          "to_lane": "462993309_0"
+        },
+        {
+          "tls_id": "5494111594",
+          "index": 0,
+          "from_lane": "576014301#0_0",
+          "to_lane": "576014301#1_0"
+        },
+        {
+          "tls_id": "5494111594",
+          "index": 1,
+          "from_lane": "576014301#0_1",
+          "to_lane": "576014301#1_1"
+        },
+        {
+          "tls_id": "5494111594",
+          "index": 2,
+          "from_lane": "576014301#0_2",
+          "to_lane": "576014301#1_2"
+        },
+        {
+          "tls_id": "5494111594",
+          "index": 3,
+          "from_lane": "576014301#0_3",
+          "to_lane": "576014301#1_3"
+        }
+      ]
+    },
+    {
+      "name": "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
+      "tls_id": "FAM_RONDON_ANSELMO",
+      "tls_ids": [
+        "FAM_RONDON_ANSELMO",
+        "338654991"
+      ],
+      "controllers": [
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 1.0,
+          "network_green_indices": [],
+          "controlled_links": [
+            {
+              "tls_id": "FAM_RONDON_ANSELMO",
+              "index": 0,
+              "from_lane": "462991286_0",
+              "to_lane": "46711471#0_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_ANSELMO",
+              "index": 1,
+              "from_lane": "462991286_1",
+              "to_lane": "46711471#0_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_ANSELMO",
+              "index": 2,
+              "from_lane": "462991286_2",
+              "to_lane": "46711471#0_3"
+            },
+            {
+              "tls_id": "FAM_RONDON_ANSELMO",
+              "index": 3,
+              "from_lane": "576014296#2_0",
+              "to_lane": "300965440_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_ANSELMO",
+              "index": 4,
+              "from_lane": "576014296#2_0",
+              "to_lane": "261432318_0"
+            },
+            {
+              "tls_id": "FAM_RONDON_ANSELMO",
+              "index": 5,
+              "from_lane": "576014296#2_1",
+              "to_lane": "261432318_1"
+            },
+            {
+              "tls_id": "FAM_RONDON_ANSELMO",
+              "index": 6,
+              "from_lane": "576014296#2_2",
+              "to_lane": "261432318_2"
+            },
+            {
+              "tls_id": "FAM_RONDON_ANSELMO",
+              "index": 7,
+              "from_lane": "576014296#2_3",
+              "to_lane": "261432318_3"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        },
+        {
+          "tls_id": "338654991",
+          "stage_to_phase": {},
+          "network_cycle_seconds": 90.0,
+          "network_green_indices": [
+            0
+          ],
+          "controlled_links": [
+            {
+              "tls_id": "338654991",
+              "index": 0,
+              "from_lane": "625668273#2_0",
+              "to_lane": "625668273#3_0"
+            },
+            {
+              "tls_id": "338654991",
+              "index": 1,
+              "from_lane": "625668273#2_1",
+              "to_lane": "625668273#3_1"
+            }
+          ],
+          "issues": [
+            "estágios sem correspondência biunívoca com verdes válidos",
+            "ciclos divergentes sem reconciliação documentada",
+            "faixas e links não validados",
+            "movimentos não validados",
+            "pedestres não validados",
+            "intervalos de segurança não validados",
+            "fonte da conferência não registrada"
+          ]
+        }
+      ],
+      "validated": false,
+      "issues": [
+        "FAM_RONDON_ANSELMO: estágios sem correspondência biunívoca com verdes válidos",
+        "FAM_RONDON_ANSELMO: ciclos divergentes sem reconciliação documentada",
+        "FAM_RONDON_ANSELMO: faixas e links não validados",
+        "FAM_RONDON_ANSELMO: movimentos não validados",
+        "FAM_RONDON_ANSELMO: pedestres não validados",
+        "FAM_RONDON_ANSELMO: intervalos de segurança não validados",
+        "FAM_RONDON_ANSELMO: fonte da conferência não registrada",
+        "338654991: estágios sem correspondência biunívoca com verdes válidos",
+        "338654991: ciclos divergentes sem reconciliação documentada",
+        "338654991: faixas e links não validados",
+        "338654991: movimentos não validados",
+        "338654991: pedestres não validados",
+        "338654991: intervalos de segurança não validados",
+        "338654991: fonte da conferência não registrada",
+        "estágios da planilha sem correspondência completa"
+      ],
+      "candidate_controllers": [
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Três retas e limite 60 km/h comprovados nos croquis 2025/2026. Bifurcação 597213583 sem TLS e ramo direito 292932042#0/3050761411 priority coerentes com fotos: focos veiculares atendem às retas; o foco baixo da ilhota é pedestre. As fotos não indicam controle veicular independente no ramo; duas faixas preservadas. Mapillary 25/05/2020 e 30/03/2026: https://www.mapillary.com/app/?pKey=135164638652571 e https://www.mapillary.com/app/?pKey=1291338299024504 . Atendimento pedestre e vínculo SETTRAN permanecem separados."
+        },
+        {
+          "tls_id": "338654991",
+          "present_in_network": true,
+          "physical_status": "OK",
+          "pedestrian_status": "DADOS_AUSENTES",
+          "settran_status": "MAPEAMENTO_INCOMPLETO",
+          "note": "Aproximação física de Anselmo preservada, dois links veiculares. Grupo C e divergência Nascimento/Santos dependem da SETTRAN; essa lacuna operacional não é defeito físico."
+        }
+      ],
+      "candidate_source": "dados/auditoria/current_tls_audit.csv (origin/Demanda-01-(Diego)@242f703)",
+      "plan_cycle_seconds": 110,
+      "network_cycle_seconds": null,
+      "plan_stages": [
+        "A",
+        "B",
+        "C"
+      ],
+      "network_green_indices": [],
+      "stage_comparison": [],
+      "stage_to_phase": {},
+      "controlled_links": [
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "index": 0,
+          "from_lane": "462991286_0",
+          "to_lane": "46711471#0_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "index": 1,
+          "from_lane": "462991286_1",
+          "to_lane": "46711471#0_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "index": 2,
+          "from_lane": "462991286_2",
+          "to_lane": "46711471#0_3"
+        },
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "index": 3,
+          "from_lane": "576014296#2_0",
+          "to_lane": "300965440_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "index": 4,
+          "from_lane": "576014296#2_0",
+          "to_lane": "261432318_0"
+        },
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "index": 5,
+          "from_lane": "576014296#2_1",
+          "to_lane": "261432318_1"
+        },
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "index": 6,
+          "from_lane": "576014296#2_2",
+          "to_lane": "261432318_2"
+        },
+        {
+          "tls_id": "FAM_RONDON_ANSELMO",
+          "index": 7,
+          "from_lane": "576014296#2_3",
+          "to_lane": "261432318_3"
+        },
+        {
+          "tls_id": "338654991",
+          "index": 0,
+          "from_lane": "625668273#2_0",
+          "to_lane": "625668273#3_0"
+        },
+        {
+          "tls_id": "338654991",
+          "index": 1,
+          "from_lane": "625668273#2_1",
+          "to_lane": "625668273#3_1"
+        }
+      ]
+    }
+  ]
+}

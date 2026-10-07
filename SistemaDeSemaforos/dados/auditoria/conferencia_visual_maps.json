@@ -1,0 +1,217 @@
+{
+  "review_date": "2026-10-06",
+  "source": "Google Maps / Google Street View, consulta visual manual",
+  "network": "dados/rede/uberlandia.rondon_norte_corrigida.net.xml",
+  "scope": "Conferência visual preliminar; não certifica todos os movimentos, focos, estágios ou tempos.",
+  "intersections": [
+    {
+      "mapping_name": "Av. Rondon Pacheco x Av. Benjamim Magalhães",
+      "maps_name": "Av. Rondon Pacheco & Av. Benjamin Magalhães",
+      "image_date": "2025-08",
+      "panorama_id": "F_zTpbQu8sJiN5CXk_Q3nA",
+      "panorama_lat_lon": [
+        -18.8961381,
+        -48.2552284
+      ],
+      "heading_degrees": 137.56,
+      "observations": [
+        "Cruzamento em nível com ilhas/canteiros e mais de uma pista da Rondon.",
+        "Focos veiculares suspensos visíveis em ambos os lados do enquadramento.",
+        "Travessia zebrada na aproximação oposta."
+      ],
+      "limitations": [
+        "Uma perspectiva não permite contar todas as faixas nem identificar todos os focos de pedestres.",
+        "Grafia Benjamin no Maps difere de Benjamim no projeto."
+      ],
+      "location_correspondence": "compatível preliminarmente",
+      "operationally_validated": false,
+      "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=F_zTpbQu8sJiN5CXk_Q3nA&heading=137.56"
+    },
+    {
+      "mapping_name": "Av. Rondon Pacheco x Rua Paraná",
+      "maps_name": "Av. Rondon Pacheco & R. Paraná",
+      "image_date": "2025-06",
+      "panorama_id": "dEHFs2HaX00qNKbjBCVf7g",
+      "panorama_lat_lon": [
+        -18.8995875,
+        -48.2586291
+      ],
+      "heading_degrees": 34.63,
+      "observations": [
+        "Travessia zebrada na Rondon e canteiro central visíveis.",
+        "Foco veicular suspenso e foco junto à calçada visíveis.",
+        "Mais de uma coluna de veículos na aproximação; veículos ocultam parte da demarcação."
+      ],
+      "limitations": [
+        "Não inferir quantidade exata de faixas pela posição dos veículos.",
+        "Não confirma atendimento de pedestres, sincronismo dos focos ou prioridade de emergência."
+      ],
+      "location_correspondence": "compatível preliminarmente",
+      "operationally_validated": false,
+      "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=dEHFs2HaX00qNKbjBCVf7g&heading=34.63"
+    },
+    {
+      "mapping_name": "Av. Cesário Alvin x Rua Paraná",
+      "maps_name": "Av. Cesário Alvim / R. Paraná",
+      "image_date": "2025-07",
+      "panorama_id": "ZtCTxB0BC5RXGpjjjn_dUA",
+      "panorama_lat_lon": [
+        -18.8989002,
+        -48.2597716
+      ],
+      "heading_degrees": 97.46,
+      "observations": [
+        "Nome Av. Cesário Alvim aparece na sobreposição da imagem; cabeçalho indica 148 R. Paraná.",
+        "Travessias zebradas e ilha/canteiro estreito no cruzamento.",
+        "Foco suspenso visível, com parte da sinalização ocultada por árvores e veículos."
+      ],
+      "limitations": [
+        "Busca nominal retornou estabelecimentos; localização conferida por coordenadas SUMO, ruas no mapa e panorama.",
+        "Grafia Alvin do projeto difere de Alvim no Maps.",
+        "Conversões permitidas e grupos de pedestres não confirmados."
+      ],
+      "location_correspondence": "compatível preliminarmente",
+      "operationally_validated": false,
+      "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=ZtCTxB0BC5RXGpjjjn_dUA&heading=97.46"
+    },
+    {
+      "mapping_name": "Av. Rondon Pacheco x Rua Porto Alegre",
+      "maps_name": "Av. Rondon Pacheco / R. Porto Alegre",
+      "image_date": "2019-09",
+      "panorama_id": "PPIfrg6fppt6gKtStnBxdg",
+      "panorama_lat_lon": [
+        -18.9032762,
+        -48.2608051
+      ],
+      "heading_degrees": 284.33,
+      "observations": [
+        "Mapa mostra encontro da Rondon com Rua Porto Alegre no ponto candidato.",
+        "Ilha/canteiro largo e acesso transversal visíveis; equipamento semafórico na lateral direita."
+      ],
+      "limitations": [
+        "Capturas listadas neste ponto: setembro/agosto de 2019, dezembro de 2015, agosto de 2013 e agosto de 2011.",
+        "Imagem antiga não comprova configuração vigente em 2026.",
+        "Quatro IDs candidatos não significam quatro controladores físicos confirmados."
+      ],
+      "location_correspondence": "compatível preliminarmente",
+      "operationally_validated": false,
+      "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=PPIfrg6fppt6gKtStnBxdg&heading=284.33"
+    },
+    {
+      "mapping_name": "Av. Rondon Pacheco x Rua Belém",
+      "maps_name": "Av. Rondon Pacheco / R. Belém",
+      "image_date": "2025-02",
+      "panorama_id": "hdX7avQU9JQLgUCi6HJaaA",
+      "panorama_lat_lon": [
+        -18.9041598,
+        -48.2609982
+      ],
+      "heading_degrees": 285.51,
+      "observations": [
+        "Rua Belém identificada no cabeçalho e na sobreposição da imagem.",
+        "Foco suspenso, ilha/canteiro central e acesso transversal visíveis.",
+        "Demarcações separadoras de faixas na Rondon visíveis."
+      ],
+      "limitations": [
+        "Travessia zebrada e foco específico de pedestres não identificados neste enquadramento; isso não comprova ausência.",
+        "Parte da aproximação está ocupada por veículos; contagem completa de faixas e permissões pendente."
+      ],
+      "location_correspondence": "compatível preliminarmente",
+      "operationally_validated": false,
+      "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=hdX7avQU9JQLgUCi6HJaaA&heading=285.51"
+    },
+    {
+      "mapping_name": "Av. Rondon Pacheco x Rua Antônio Crescêncio",
+      "maps_name": "Av. Rondon Pacheco / R. Antônio Crescêncio / R. Rotary Club",
+      "image_date": "2025-06",
+      "panorama_id": "ta4qAC9p7sXwpSLWG80Z_Q",
+      "panorama_lat_lon": [
+        -18.9069289,
+        -48.2613765
+      ],
+      "heading_degrees": 227.43,
+      "observations": [
+        "Mapa mostra Antônio Crescêncio a oeste e Rotary Club a leste da Rondon, na região dos nós do candidato FAM_RONDON_ROTARY_CLUB.",
+        "Focos suspensos e laterais visíveis; canteiro central, ilhas e marcas separadoras de faixas."
+      ],
+      "limitations": [
+        "Compatibilidade espacial não comprova que todos os focos pertencem ao mesmo controlador físico.",
+        "Veículo encobre parte do cruzamento; conversões e grupos de pedestres pendentes."
+      ],
+      "location_correspondence": "compatível preliminarmente",
+      "operationally_validated": false,
+      "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=ta4qAC9p7sXwpSLWG80Z_Q&heading=227.43"
+    },
+    {
+      "mapping_name": "Av. Rondon Pacheco x Rua Niterói",
+      "maps_name": "Av. Rondon Pacheco / R. Niterói",
+      "image_date": "2025-01",
+      "panorama_id": "wR00VHCIofOm7zsDqvSXGg",
+      "panorama_lat_lon": [
+        -18.9077698,
+        -48.2617132
+      ],
+      "heading_degrees": 93.72,
+      "observations": [
+        "Rua Niterói identificada na sobreposição do panorama.",
+        "Canteiro/ilhas separando pistas e aproximações visíveis.",
+        "Pedestres atravessando a aproximação oposta; equipamentos semafóricos visíveis nas laterais."
+      ],
+      "limitations": [
+        "Travessia observada não comprova liberação semafórica nem conformidade dos tempos de pedestres.",
+        "Três IDs candidatos precisam de correspondência individual com cada travessia/foco."
+      ],
+      "location_correspondence": "compatível preliminarmente",
+      "operationally_validated": false,
+      "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=wR00VHCIofOm7zsDqvSXGg&heading=93.72"
+    },
+    {
+      "mapping_name": "Av. Rondon Pacheco x Av. João Naves de Ávila",
+      "maps_name": "Viaduto João Naves Rondon e acessos laterais",
+      "image_date": "2025-11",
+      "panorama_id": "nSnHt5r83CQ1v5FJdpwTpw",
+      "panorama_lat_lon": [
+        -18.9113985,
+        -48.2621488
+      ],
+      "heading_degrees": 351.45,
+      "observations": [
+        "Panorama identificado como Viaduto João Naves Rondon; imagem obtida no nível superior.",
+        "Rondon passa abaixo, com pistas separadas e acessos laterais.",
+        "Focos e travessia zebrada visíveis no acesso lateral à esquerda do enquadramento."
+      ],
+      "limitations": [
+        "Panorama foi selecionado no viaduto, próximo ao candidato, e não no ponto exato da travessia.",
+        "Separar movimentos em níveis diferentes dos acessos semaforizados.",
+        "Não confirma correspondência dos três IDs candidatos aos focos físicos."
+      ],
+      "location_correspondence": "região compatível; cada acesso pendente",
+      "operationally_validated": false,
+      "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=nSnHt5r83CQ1v5FJdpwTpw&heading=351.45"
+    },
+    {
+      "mapping_name": "Av. Rondon Pacheco x Av. Anselmo Alves do Nascimento",
+      "maps_name": "Av. Rondon Pacheco / Av. Anselmo Alves dos Santos",
+      "image_date": "2026-05",
+      "panorama_id": "Cv_dPu0tazFDwAZyHtdejg",
+      "panorama_lat_lon": [
+        -18.9139208,
+        -48.2619268
+      ],
+      "heading_degrees": 199.36,
+      "observations": [
+        "Cabeçalho identifica 1 Av. Anselmo Alves dos Santos; mapa mostra essa avenida ligada ao local candidato.",
+        "Foco suspenso e lateral, ilhas/canteiro e área zebrada de canalização visíveis.",
+        "Três faixas de circulação entre a área zebrada e o canteiro no enquadramento da Rondon."
+      ],
+      "limitations": [
+        "Nome dos Santos no Maps diverge de do Nascimento no mapeamento/planilha; manter chave legada até reconciliar a fonte.",
+        "Conferir se as quatro faixas da aresta SUMO correspondente incluem faixa auxiliar fora deste trecho; não reduzir automaticamente.",
+        "Focos de pedestres e permissões de conversão ainda pendentes."
+      ],
+      "location_correspondence": "compatível preliminarmente; nome divergente",
+      "operationally_validated": false,
+      "panorama_url": "https://www.google.com/maps/@?api=1&map_action=pano&pano=Cv_dPu0tazFDwAZyHtdejg&heading=199.36"
+    }
+  ]
+}

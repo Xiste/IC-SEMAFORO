@@ -1,6 +1,6 @@
 # Treinamento dos semáforos com SUMO
 
-Este guia descreve o treinamento implementado em `semaforos/treinamento.py` e os comandos para executá-lo. O SUMO roda sem abrir a interface gráfica. O cenário editável fica em `config/cenario.json`.
+Este guia descreve a busca de tempos fixos implementada em semaforos/algoritmos/busca_surrogate.py e os comandos para executá-la. Para aprendizado por reforço, consulte [a arquitetura atual](arquitetura.md). O cenário editável fica em config/cenario.json.
 
 ## 1. Preparar o ambiente
 

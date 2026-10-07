@@ -32,7 +32,7 @@ As opções se dividem em três níveis:
 2. **Opções do executável `sumo`:** há **462 opções principais em 27 categorias** nesta instalação, incluindo entradas, saídas, roteamento, comportamento da simulação, emissões, dispositivos e comunicação. O pipeline define dez delas diretamente; TraCI, a interface usada pelo Python para controlar o SUMO, acrescenta uma porta de comunicação. Veja a [lista completa com tipo, valor no template e aliases](catalogo_completo_sumo.md).
 3. **Dados internos dos arquivos SUMO:** características de vias, veículos, rotas e programas semafóricos ficam nos arquivos XML. Elas não são campos do `config/cenario.json` nem parte da lista de opções do executável.
 
-As demais opções do executável seguem o comportamento padrão da instalação. Nem todas fazem sentido para o cenário atual; algumas exigem arquivos adicionais ou a interface gráfica. A [ajuda integral do SUMO](opcoes_sumo_1.27.1.txt) também está salva em texto.
+As demais opções do executável seguem o comportamento padrão da instalação. Nem todas fazem sentido para o cenário atual; algumas exigem arquivos adicionais ou a interface gráfica. O [catálogo CSV integral](catalogos/sumo_options.csv) é regenerado com scripts/exportar_catalogos.py; a ajuda atual pode ser consultada com pipeline.py options.
 
 ## Como conferir antes de rodar
 

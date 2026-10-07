@@ -1,0 +1,13 @@
+{
+  "sumo_version": "Eclipse SUMO sumo 1.27.1",
+  "sumo_cli_options": 462,
+  "scope": "Todas as opções CLI do SUMO instalado e consultas get públicas dos domínios TraCI. Atributos internos de redes, vType, modelos e ferramentas como netconvert não são opções CLI SUMO. Valores do template não substituem os valores efetivos registrados em run_config.json.",
+  "training_workload": {
+    "épocas por coleta": 10,
+    "coletas completas previstas": 16,
+    "passos efetivos previstos": 2048,
+    "minibatches por época": 2,
+    "atualizações de gradiente previstas": 320,
+    "episódios completos previstos": 17
+  }
+}

@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from semaforos.medicoes import measurement_report
+from semaforos.cenario.medicoes import measurement_report
 
 
 class MeasurementsTest(unittest.TestCase):

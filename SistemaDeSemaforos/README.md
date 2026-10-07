@@ -16,7 +16,7 @@ Na pasta SistemaDeSemaforos, em PowerShell:
 
 Interface: http://localhost:8501. Os comandos ppo-train e ppo-eval continuam disponíveis. train executa a busca com modelo substituto, separada do aprendizado por reforço. run executa a referência da rede ou um candidato de tempos fixos.
 
-Para instalação nova: instale SUMO, exponha sumo no PATH ou defina SUMO_HOME, crie o ambiente Python e instale requirements.txt. Os resultados são gravados em diretórios novos; não são sobrescritos.
+Para instalação nova no Windows x64 com Python 3.13: instale SUMO, exponha sumo no PATH ou defina SUMO_HOME e execute `powershell -ExecutionPolicy Bypass -File .\iniciar_interface.ps1`. O script cria um ambiente sem pacotes do Anaconda e instala `requirements-lock.txt`. Os resultados são gravados em diretórios novos; não são sobrescritos. A interface oferece **Executar simulação sem treinamento**, para testar a infraestrutura antes de escolher um algoritmo. O comando equivalente é `pipeline.py run-reference`.
 
 ## Estrutura
 
@@ -43,7 +43,9 @@ SistemaDeSemaforos/
 
 ## Estado do experimento
 
-O cenário padrão mantém o piloto com um controlador. Pela interface, **Nove cruzamentos: cenário experimental** prepara uma cópia da rede com os 17 controladores associados e atendimento de todos os movimentos e travessias. Permite salvar/reutilizar o cenário, testar no SUMO, treinar e selecionar o modelo para avaliação. Programas sintéticos seriais geram ciclos longos e não reproduzem planos reais. Veja o [passo a passo e as limitações](docs/controle_nove_interface.md).
+Consulte a [atualização funcional de 07/10/2026](docs/estado_funcional_2026-10-07.md) para correções verificadas e limites restantes.
+
+O cenário padrão mantém o piloto com um controlador. Pela interface, **Nove cruzamentos: cenário experimental** prepara uma cópia da rede com os 17 controladores associados, grupos compatíveis pela matriz de conflitos e atendimento de todos os movimentos e travessias. Corrige também quatro programas externos sem verde. Permite salvar/reutilizar o cenário, testar no SUMO, simular sem treino e selecionar um modelo para avaliação. Os programas são sintéticos. Cenários seriais antigos continuam disponíveis; prepare um cenário novo para obter os grupos. Veja o [passo a passo e as limitações](docs/controle_nove_interface.md).
 
 O único adaptador publicado é PPO. Outro algoritmo precisa de implementação, registro e teste de compatibilidade com as observações e ações do ambiente. Não há garantia de convergência ou ótimo global.
 

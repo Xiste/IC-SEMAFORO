@@ -1,12 +1,8 @@
-"""Cenário sintético conservador: um índice de sinal aberto por controlador."""
+"""Preparação e auditoria de programas semafóricos sintéticos."""
 
 import copy
 import hashlib
 import json
-import math
-import shutil
-import subprocess
-import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -22,13 +18,35 @@ def validate_experimental(config):
     from semaforos.cenario.configuracao import control_parameters
     if control_parameters(config).get("action_mode") != "phase_durations":
         raise ValueError("O cenário conjunto experimental requer controle de duração das fases")
-    if metadata.get("method") != "serial_links_v1" or digest(config["network"]) != metadata.get("network_sha256"):
+    if metadata.get("method") not in ("serial_links_v1", "compatible_groups_v2") or digest(config["network"]) != metadata.get("network_sha256"):
         raise ValueError("Rede experimental ausente ou modificada; prepare novamente pela interface")
     root = ET.parse(config["network"]).getroot()
     targets = config["targets"]
     ids = [item["tls_id"] for item in targets]
     if len(ids) != 17 or len(set(ids)) != 17 or len({item["name"] for item in targets}) != 9:
         raise ValueError("O cenário experimental deve controlar os 17 controladores dos nove cruzamentos")
+    if metadata["method"] == "compatible_groups_v2":
+        from .grupos import audit_program
+        rows = []
+        owners = {}
+        edge_nodes = {e.get("id"): e.get("to") for e in root.findall("edge") if e.get("to")}
+        for tls in ids + metadata.get("external_repaired", []):
+            for connection in root.findall("connection"):
+                if connection.get("tl") != tls:
+                    continue
+                node = edge_nodes.get(connection.get("from"))
+                if node:
+                    if node in owners and owners[node] != tls:
+                        raise ValueError(f"Controladores independentes compartilham o nó {node}")
+                    owners[node] = tls
+            row = audit_program(root, tls)
+            if tls in ids:
+                target = next(t for t in targets if t["tls_id"] == tls)
+                if target["phase_indices"] != list(range(0, row["fases"], 3)):
+                    raise ValueError(f"Índices verdes incompletos em {tls}")
+                row.update(cruzamento=target["name"], controlado=True)
+                rows.append(row)
+        return rows
     edge_nodes = {edge.get("id"): edge.get("to") for edge in root.findall("edge") if edge.get("to")}
     owners = {}
     rows = []
@@ -75,122 +93,20 @@ def validate_experimental(config):
 
 
 def prepare_experimental(config, output):
-    """Cria arquivos novos; não altera a rede original nem o cadastro real."""
-    output = Path(output)
-    output.mkdir(parents=True, exist_ok=False)
-    source = PROJECT_ROOT / "dados/rede/uberlandia.rondon_norte_corrigida.net.xml"
-    mapping_path = PROJECT_ROOT / "config/mapeamento_associado.json"
-    mapping = json.loads(mapping_path.read_text(encoding="utf-8"))
-    binary = shutil.which("netconvert")
-    if not binary:
-        raise ValueError("netconvert não encontrado no PATH")
-    network = output / "nove_experimental.net.xml"
-    command = [binary, "-s", str(source), "-o", str(network), "--tls.rebuild",
-               "--tls.ungroup-signals", "--tls.yellow.time", "3", "--tls.allred.time", "3"]
-    result = subprocess.run(command, capture_output=True, text=True, timeout=120,
-                            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0)
-    (output / "netconvert.log").write_text(result.stdout + result.stderr, encoding="utf-8")
-    if result.returncode:
-        raise ValueError("Falha ao reconstruir os sinais; consulte netconvert.log")
-    root = ET.parse(network).getroot()
-    original = ET.parse(source).getroot()
-    selected_ids = {controller["tls_id"] for entry in mapping["intersections"] for controller in entry["controllers"]}
-    def connection_key(c):
-        return tuple(c.get(key) for key in ("tl", "from", "to", "fromLane", "toLane"))
-    original_links = {connection_key(c): int(c.get("linkIndex")) for c in original.findall("connection") if c.get("tl")}
-    # Transportar estados pela conexão preserva o atendimento dos demais sinais
-    # mesmo quando netconvert renumera os seus índices.
-    for logic in list(root.findall("tlLogic")):
-        tls = logic.get("id")
-        if tls in selected_ids:
-            continue
-        root.remove(logic)
-        connections = [c for c in root.findall("connection") if c.get("tl") == tls]
-        for old_logic in original.findall("tlLogic"):
-            if old_logic.get("id") != tls:
-                continue
-            restored = copy.deepcopy(old_logic)
-            for phase in restored.findall("phase"):
-                states = [None] * (max(int(c.get("linkIndex")) for c in connections) + 1)
-                for c in connections:
-                    old_index = original_links.get(connection_key(c))
-                    if old_index is None:
-                        raise ValueError(f"Conexão externa ao controle mudou em {tls}; preparação interrompida")
-                    new_index = int(c.get("linkIndex"))
-                    color = phase.get("state")[old_index]
-                    if states[new_index] not in (None, color):
-                        raise ValueError(f"Renumerar {tls} alteraria estados existentes")
-                    states[new_index] = color
-                phase.set("state", "".join(color or "r" for color in states))
-            root.append(restored)
-    targets = []
-    lanes = {lane.get("id"): lane for edge in root.findall("edge") for lane in edge.findall("lane")}
-    edges = {edge.get("id"): edge for edge in root.findall("edge")}
-    minimums = {}
-    green_floors = {}
-    for entry in mapping["intersections"]:
-        for controller in entry["controllers"]:
-            tls = controller["tls_id"]
-            connections = [c for c in root.findall("connection") if c.get("tl") == tls]
-            indices = sorted({int(c.get("linkIndex")) for c in connections})
-            if not indices:
-                raise ValueError(f"Controlador sem conexões: {tls}")
-            logics = [logic for logic in root.findall("tlLogic") if logic.get("id") == tls]
-            for logic in logics:
-                root.remove(logic)
-            logic = ET.SubElement(root, "tlLogic", id=tls, type="static", programID="experimental", offset="0")
-            for index in indices:
-                local = [c for c in connections if int(c.get("linkIndex")) == index]
-                pedestrian = [c for c in local if edges[c.get("from")].get("function") in ("crossing", "walkingarea")]
-                # Tempo geométrico conservador de travessia (0,8 m/s), não tempo real medido.
-                crossing_seconds = max([math.ceil(float(lanes[f"{c.get('from')}_{c.get('fromLane')}"] .get("length")) / 0.8) + 2 for c in pedestrian] or [8])
-                clearance = max([math.ceil(float(lanes[c.get("via")].get("length")) / max(1.0, float(lanes[c.get("via")].get("speed")))) + 2 for c in local if c.get("via") in lanes] or [3])
-                if pedestrian:
-                    clearance = max(clearance, crossing_seconds)
-                green = max(30, crossing_seconds) if pedestrian else 30
-                green_floors[f"{tls}:{3 * index}"] = max(8, crossing_seconds) if pedestrian else 8
-                for position, (color, duration) in enumerate((("G", green), ("y", 3), ("r", max(3, clearance)))):
-                    state = "r" * (max(indices) + 1)
-                    if color != "r":
-                        state = state[:index] + color + state[index + 1:]
-                    ET.SubElement(logic, "phase", duration=str(duration), state=state)
-                    minimums[f"{tls}:{3 * index + position}"] = duration
-            targets.append({"name": entry["name"], "tls_id": tls,
-                            "phase_indices": list(range(0, 3 * len(indices), 3))})
-    # SUMO espera programas antes de junction/connection.
-    for logic in list(root.findall("tlLogic")):
-        root.remove(logic)
-        root.insert(0, logic)
-    ET.ElementTree(root).write(network, encoding="utf-8", xml_declaration=True)
-    prepared = copy.deepcopy(config)
-    prepared.update(network=network.resolve(), targets=targets, targets_from_mapping=False,
-                    experimental={"method": "serial_links_v1", "network_sha256": digest(network),
-                                  "source_sha256": digest(source), "mapping_sha256": digest(mapping_path),
-                                  "synthetic": True, "minimum_durations": minimums,
-                                  "green_floors": green_floors})
-    # O piso verde evita encurtar a travessia calculada na geração.
-    parameters = copy.deepcopy(prepared.get("control", prepared.get("ppo", {})))
-    parameters["action_mode"] = "phase_durations"
-    parameters["phase_types"] = ["green", "yellow", "all_red"]
-    parameters["phase_duration_bounds"] = {key: {"minimum_seconds": value} for key, value in green_floors.items()}
-    parameters["duration_limits"] = {"yellow": {"maximum_seconds": 6},
-                                       "all_red": {"maximum_seconds": max(minimums.values())}}
-    prepared["ppo"] = {**prepared["ppo"], **parameters}
-    prepared["control"] = parameters
-    rows = validate_experimental(prepared)
-    prepared["duration_seconds"] = max(prepared["duration_seconds"], int(max(row["ciclo_inicial_s"] for row in rows) * 2))
-    (output / "verificacao.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
-    (output / "cenario.json").write_text(json.dumps(prepared, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
-    return prepared, rows
+    from .preparacao import prepare_grouped
+    return prepare_grouped(config, output)
 
 
 def preview_experimental(config, output):
     """Confere carregamento e passos reais; não substitui avaliação completa."""
     from semaforos.simulacao.ambiente import SemaforosEnv
     preview = copy.deepcopy(config)
-    preview["duration_seconds"] = 30
+    horizon = min(30, float(config["duration_seconds"]))
+    preview["duration_seconds"] = horizon
     control = preview.get("control", preview.get("ppo", {}))
-    env = SemaforosEnv(preview, output, gui=bool(control.get("gui", False)))
+    # Gerar a demanda completa preserva taxas e janelas sem tráfego no início.
+    # Somente a execução é interrompida aos 30 s; não redistribuir viagens.
+    env = SemaforosEnv(preview, output, gui=bool(control.get("gui", False)), demand_config=config)
     try:
         env.reset(seed=preview["seeds"][0])
         done = False

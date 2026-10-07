@@ -19,6 +19,9 @@ import matplotlib.pyplot as plt
 
 from semaforos.cenario.configuracao import read_config
 from semaforos.cenario.rede import inventory
+from semaforos.cenario.rede import network_programs, phase_action_spec
+from semaforos.cenario.calibracao import calibration_report
+from semaforos.arquivos import read_json
 from semaforos.cenario.mapeamento import mapping_report
 from semaforos.cenario.experimental import prepare_experimental, validate_experimental, preview_experimental
 from semaforos.relatorios.catalogos import sumo_options, traci_getters, parameter_rows, metric_rows, training_workload
@@ -30,6 +33,7 @@ ROOT = PROJECT_ROOT
 DEFAULT = ROOT / "config" / "cenario.json"
 CORRECTED_NETWORK = ROOT / "dados" / "rede" / "uberlandia.rondon_norte_corrigida.net.xml"
 RESULTS = ROOT / "resultados"
+VEHICLE_CLASSES = {"Automóvel": "passenger", "Ônibus": "bus", "Caminhão": "truck", "Entrega": "delivery", "Motocicleta": "motorcycle", "Bicicleta": "bicycle"}
 
 
 @st.cache_data(show_spinner=False)
@@ -52,7 +56,7 @@ def config_help(name):
 def render_result_metrics(path, key):
     try:
         table = pd.read_csv(path)
-    except (pd.errors.EmptyDataError, FileNotFoundError):
+    except (pd.errors.EmptyDataError, pd.errors.ParserError, OSError):
         st.caption("A tabela está sendo gravada; aguarde a próxima atualização.")
         return
     st.dataframe(table, hide_index=True, width="stretch", column_config={
@@ -159,7 +163,7 @@ base = read_config(DEFAULT)
 scope = st.radio("Cruzamentos controlados", ["Piloto: um cruzamento", "Nove cruzamentos: cenário experimental"], horizontal=True)
 joint = scope.startswith("Nove")
 if joint:
-    st.info("Preparação automática de 17 controladores: um movimento por vez em cada controlador, com travessias, amarelo e limpeza. É uma referência conservadora; ciclos longos podem aumentar filas. Não é validação dos planos reais.")
+    st.info("Preparação de 17 controladores com movimentos compatíveis agrupados e conferidos na matriz de conflitos, incluindo travessias e intervalos de limpeza. Controladores externos com movimentos sem verde são corrigidos na cópia experimental.")
     saved_scenarios = sorted(RESULTS.glob("cenario_nove_*/cenario.json"), key=lambda p: p.stat().st_mtime, reverse=True) if RESULTS.exists() else []
     saved_scenario = st.selectbox("Cenário conjunto salvo", [""] + [str(p) for p in saved_scenarios], format_func=lambda p: Path(p).parent.name if p else "Preparar um novo cenário")
     if saved_scenario and st.button("Usar cenário salvo"):
@@ -182,7 +186,11 @@ if joint:
     if "experimental_config" in st.session_state:
         base = st.session_state.experimental_config
         st.dataframe(pd.DataFrame(st.session_state.experimental_rows), hide_index=True)
-        st.caption("17 controladores selecionados. A verificação confere atendimento e exclusão simultânea de movimentos; não certifica segurança em campo.")
+        st.caption("17 controladores selecionados. Os grupos são conferidos contra a matriz de conflitos e todos os movimentos recebem atendimento. A verificação é da simulação, sem certificação em campo.")
+        if base["experimental"]["method"] == "serial_links_v1":
+            st.warning("Este cenário salvo usa atendimento serial antigo. Prepare um cenário novo para utilizar movimentos agrupados e correções externas.")
+        elif base["experimental"].get("external_repaired"):
+            st.write("Controladores externos corrigidos:", ", ".join(base["experimental"]["external_repaired"]))
         st.warning("Para atender ao menos um ciclo completo de todos os sinais, use duração maior que o maior ciclo inicial mostrado na tabela. Compare com a referência experimental; ela é conservadora.")
     else:
         st.warning("Clique em Preparar e verificar antes de iniciar o treinamento.")
@@ -253,13 +261,27 @@ with left:
     rate = st.number_input("Volume total (veículos/h)", min_value=1,
                            value=int(base["demand"].get("vehicles_per_hour", 360)),
                            disabled=demand_mode != "Taxa pela rede", help=config_help("vehicles_per_hour"))
-    flows_text = st.text_area("Fluxos JSON: from_edge, to_edge, vehicles_per_hour",
-                              value=json.dumps(base["demand"].get("flows", []), ensure_ascii=False, indent=2),
-                              disabled=demand_mode != "Pares origem–destino", help=config_help("flows"))
+    flows_table = None
+    od_ids = {}
+    if demand_mode == "Pares origem–destino":
+        edge_ids, _, _ = road_options(network, tuple(t["tls_id"] for t in base["targets"]))
+        od_labels = road_labels(network, tuple((t["tls_id"], t["name"]) for t in base["targets"]))
+        od_ids = {od_labels[edge]: edge for edge in edge_ids}
+        od_rows = [{**row, "from_edge": od_labels.get(row["from_edge"], row["from_edge"]),
+                    "to_edge": od_labels.get(row["to_edge"], row["to_edge"])} for row in base["demand"].get("flows", [])]
+        flows_table = st.data_editor(pd.DataFrame(od_rows,
+                                                columns=["from_edge", "to_edge", "vehicles_per_hour"]),
+            num_rows="dynamic", hide_index=True, key=f"od_flows_{network}", column_config={
+                "from_edge": st.column_config.SelectboxColumn("Trecho de origem", options=list(od_ids), required=True),
+                "to_edge": st.column_config.SelectboxColumn("Trecho de destino", options=list(od_ids), required=True),
+                "vehicles_per_hour": st.column_config.NumberColumn("Veículos/h", min_value=0, required=True)})
+        st.caption("Cada linha gera viagens entre os dois trechos. Consulte os nomes e sentidos no mapa da demanda por via.")
     road_table = None
-    destination_text = "{}"
-    profile_text = "[]"
-    vehicle_types_text = "[]"
+    observed_mode = False
+    destination_table = None
+    profile_table = None
+    types_table = None
+    calibration_tolerance = 20
     if demand_mode == "Volume por via":
         try:
             if joint and "experimental_config" not in st.session_state:
@@ -268,6 +290,13 @@ with left:
             initial = base["demand"].get("edge_volumes") or [
                 {"from_edge": edge, "vehicles_per_hour": 0.0, "to_edge": ""}
                 for edge in incoming_ids]
+            semantics = st.radio("O que estes volumes representam?", ["Novos veículos gerados no trecho", "Contagens observadas: calibrar entradas da rede"],
+                                 index=1 if base["demand"].get("mode") == "observed_counts" else 0,
+                                 help="Contagens medem passagem, não novos veículos. A calibração cria viagens nas bordas e permite que o mesmo veículo explique contagens em trechos consecutivos.")
+            observed_mode = semantics.startswith("Contagens")
+            if observed_mode:
+                st.info("Informe as passagens medidas. A calibração usa rotas de borda com destinos sintéticos e ajusta seus volumes sem gerar veículos novamente em cada rua interna. Valores positivos são incluídos; marque ‘Zero medido’ para incluir uma contagem real igual a zero.")
+                calibration_tolerance = st.number_input("Erro máximo aceito na calibração (%)", min_value=0, max_value=100, value=20, help="O cenário é rejeitado se as rotas não reproduzirem alguma contagem dentro desta tolerância. Zero medido tem referência de 1 veículo/h para calcular o erro.")
             names_file = ROOT / "dados/auditoria/nomes_vias_osm.json"
             labels = road_labels(network, tuple((t["tls_id"], t["name"]) for t in base["targets"]), names_file.stat().st_mtime_ns if names_file.exists() else 0)
             edge_by_label = {label: edge for edge, label in labels.items()}
@@ -277,22 +306,24 @@ with left:
                 st.warning("Modo piloto ativo: esta tabela lista apenas as entradas de Rondon Pacheco × Paraná. Para listar os nove locais, selecione ‘Nove cruzamentos: cenário experimental’ no topo e prepare ou carregue o cenário.")
             st.write(f"**Escopo atual:** {len({t['name'] for t in base['targets']})} cruzamento(s), {len(base['targets'])} controlador(es), {len(incoming_ids)} trechos de entrada para automóveis.")
             st.write("Cada linha representa um trecho de entrada, em um sentido da via. Uma rua pode aparecer em mais de uma linha. Preencha o volume de cada trecho separadamente.")
-            st.info("Exemplo: 600 veículos por hora = cerca de 10 veículos por minuto nesse trecho. O valor 0 não gera veículos a partir dessa entrada; ela ainda pode receber veículos vindos de outros trechos.")
+            st.info("Exemplo: 600 veículos por hora = cerca de 10 veículos por minuto. No modo de geração, são veículos novos. No modo de contagens, é o fluxo que a calibração tenta reproduzir.")
             st.caption("Cada entrada mostra rua, sentido aproximado de deslocamento e código do trecho. Uma avenida pode aparecer em vários sentidos e cruzamentos. Nomes recuperados de © contribuidores do OpenStreetMap; o sentido segue a geometria da rede.")
             display_rows = [{"from_edge": labels.get(row["from_edge"], row["from_edge"]),
                              "vehicles_per_hour": row.get("vehicles_per_hour", 0),
+                             "zero_measured": base["demand"].get("mode") == "observed_counts" and row.get("vehicles_per_hour") == 0,
                              "to_edge": labels.get(row.get("to_edge"), automatic_destination)} for row in initial]
             edited_roads = st.data_editor(pd.DataFrame(display_rows), num_rows="dynamic", hide_index=True, width="stretch",
                 column_config={
                     "from_edge": st.column_config.SelectboxColumn("Trecho por onde os veículos entram", options=[labels[e] for e in edge_ids], required=True, width="large", help="Cada código de trecho identifica uma entrada. Várias entradas podem atender o mesmo cruzamento. Nome da via e cruzamento são informações distintas."),
                     "vehicles_per_hour": st.column_config.NumberColumn("Veículos por hora", min_value=0.0, step=10.0, required=True, help="Volume gerado nesta entrada. Exemplo: 600 = aproximadamente 10 veículos por minuto. Zero = sem geração nesta entrada."),
+                    "zero_measured": st.column_config.CheckboxColumn("Zero medido", help="No modo de contagens, marque para exigir fluxo zero nesta via; zero sem marcação significa contagem não informada.", disabled=not observed_mode),
                     "to_edge": st.column_config.SelectboxColumn("Para onde vão?", options=[automatic_destination] + [labels[e] for e in exit_ids], default=automatic_destination, width="large", help="Automático sorteia uma saída que o veículo consegue alcançar. Escolha uma saída específica quando souber o destino."),
-                }, key=f"road_volumes_named_{network}_{tuple(incoming_ids)}")
+                }, disabled=["to_edge"] if observed_mode else [], key=f"road_volumes_named_{network}_{tuple(incoming_ids)}_{observed_mode}")
             road_table = edited_roads.copy()
             road_table["from_edge"] = road_table["from_edge"].map(edge_by_label)
             road_table["to_edge"] = road_table["to_edge"].map(edge_by_label).fillna("")
             st.caption(f"{len(incoming_ids)} trechos de entrada dos {len(base['targets'])} controladores selecionados estão pré-listados. Use a linha vazia no fim para adicionar outro trecho.")
-            st.write("**Destino automático:** o simulador escolhe uma saída alcançável para cada veículo. Isso cria destinos sintéticos. Você pode manter essa opção até ter dados reais de origem e destino.")
+            st.write("**Destinos sintéticos:** a geração sorteia saídas alcançáveis; a calibração escolhe rotas de borda que explicam as contagens. As rotas ajustadas não são uma medição real de origem e destino.")
             with st.expander("Conferir uma entrada no mapa"):
                 checked_edge = st.selectbox("Entrada a localizar", incoming_ids, format_func=lambda edge: labels[edge])
                 if checked_edge:
@@ -306,14 +337,33 @@ with left:
                                    value=float(base["step_seconds"]), step=0.1, help=config_help("step_seconds"))
     if demand_mode == "Volume por via":
         with st.expander("Perfil, destinos e tipos"):
-            destination_text = st.text_area("Destinos por origem (JSON: ID para lista de {to_edge, share})", value="{}", help=config_help("destinations"))
-            profile_text = st.text_area("Perfil temporal (JSON: begin, end, multiplier)", value="[]", help=config_help("time_profile"))
-            vehicle_types_text = st.text_area("Tipos de veículo (JSON: id, vClass, share)", value="[]", help=config_help("vehicle_types"))
+            if road_table is not None and not observed_mode:
+                st.write("Destinos por proporção (opcional). As proporções de cada origem devem somar 100%; mantenha a saída automática na tabela principal ao usar esta tabela.")
+                destination_rows = [{"origin": labels.get(row["from_edge"], row["from_edge"]), "destination": labels.get(d["to_edge"], d["to_edge"]), "percent": d["share"] * 100}
+                                    for row in base["demand"].get("edge_volumes", []) for d in row.get("destinations", [])]
+                destination_table = st.data_editor(pd.DataFrame(destination_rows, columns=["origin", "destination", "percent"]), num_rows="dynamic", hide_index=True,
+                    column_config={"origin": st.column_config.SelectboxColumn("Origem", options=[labels[e] for e in edge_ids]),
+                                   "destination": st.column_config.SelectboxColumn("Destino", options=[labels[e] for e in edge_ids]),
+                                   "percent": st.column_config.NumberColumn("Proporção (%)", min_value=0.0, max_value=100.0)}, key=f"destinations_{network}")
+            if st.checkbox("Usar variação do tráfego ao longo do episódio", value=bool(base["demand"].get("time_profile"))):
+                profile_table = st.data_editor(pd.DataFrame(base["demand"].get("time_profile") or [{"begin": 0, "end": duration, "multiplier": 1.0}]), num_rows="dynamic", hide_index=True,
+                    column_config={"begin": st.column_config.NumberColumn("Início (s)", min_value=0.0), "end": st.column_config.NumberColumn("Fim (s)", min_value=0.0),
+                                   "multiplier": st.column_config.NumberColumn("Intensidade relativa", min_value=0.0)}, key=f"profile_{network}")
+                st.caption("Cubra de 0 até a duração do episódio, sem lacunas. Exemplo: intensidade 2 concentra o dobro do volume por segundo nessa faixa; o total planejado é preservado.")
+            class_names = {v: k for k, v in VEHICLE_CLASSES.items()}
+            type_rows = [{"id": t["id"], "vClass": class_names[t["vClass"]], "percent": t["share"] * 100} for t in base["demand"].get("vehicle_types", [{"id": "car", "vClass": "passenger", "share": 1.0}])]
+            types_table = st.data_editor(pd.DataFrame(type_rows), num_rows="dynamic", hide_index=True,
+                column_config={"id": st.column_config.TextColumn("Nome do tipo", required=True),
+                               "vClass": st.column_config.SelectboxColumn("Classe", options=list(VEHICLE_CLASSES)),
+                               "percent": st.column_config.NumberColumn("Proporção (%)", min_value=0.0, max_value=100.0)}, key=f"types_{network}")
     if road_table is not None:
         rates = pd.to_numeric(road_table["vehicles_per_hour"], errors="coerce").fillna(0)
         planned = sum(int(value * duration / 3600 + 0.5) for value in rates)
-        st.metric("Veículos planejados pelas vias", planned)
-        st.caption(f"Para um episódio de {duration} segundos, os volumes preenchidos geram aproximadamente {planned} veículos no total.")
+        if not observed_mode:
+            st.metric("Veículos planejados pelas vias", planned)
+            st.caption(f"Para um episódio de {duration} segundos, os volumes preenchidos geram aproximadamente {planned} veículos no total.")
+        else:
+            st.caption("Contagens de trechos consecutivos não são somadas como veículos distintos. O total gerado aparece no relatório de calibração.")
         if rates.sum() == 0:
             st.warning("Todos os volumes estão em zero. Preencha pelo menos uma entrada para gerar tráfego neste cenário.")
     seed = st.number_input("Semente", min_value=0, value=int(base["seeds"][0]), help=config_help("seeds"))
@@ -341,14 +391,27 @@ with right:
                                   value=int(base["ppo"]["total_timesteps"]), step=128, help=config_help("total_timesteps"))
     all_phase_control = st.checkbox("PPO ajusta verde, amarelo e vermelho de limpeza",
                                     value=base["ppo"].get("action_mode") == "phase_durations", help=config_help("action_mode"), key=f"all_phase_{joint}", disabled=joint)
-    with st.expander("Limites das durações PPO"):
+    with st.expander("Limites das durações semafóricas"):
         limits = base["ppo"].get("duration_limits", {})
-        max_yellow = st.number_input("Máximo do amarelo (s)", min_value=3.0,
-            value=float(limits.get("yellow", {}).get("maximum_seconds", 6)), step=1.0, help=config_help("ppo.duration_limits.yellow.maximum_seconds"))
-        max_clearance = st.number_input("Máximo do vermelho de limpeza (s)", min_value=1.0,
-            value=float(limits.get("all_red", {}).get("maximum_seconds", 3)), step=1.0, help=config_help("ppo.duration_limits.all_red.maximum_seconds"))
-        phase_bounds_text = st.text_area("Limites por fase (JSON: ID:índice para minimum_seconds/maximum_seconds)",
-            value=json.dumps(base["ppo"].get("phase_duration_bounds", {}), indent=2), help=config_help("phase_duration_bounds"))
+        programs = network_programs(network)
+        selected_specs = phase_action_spec(base, programs)[1] if all_phase_control else []
+        largest_yellow = max([s["durations_seconds"][1] for s in selected_specs if s["kind"] == "yellow"] or [3])
+        largest_red = max([s["durations_seconds"][1] for s in selected_specs if s["kind"] == "all_red"] or [1])
+        max_yellow = st.number_input("Máximo do amarelo (s)", min_value=float(largest_yellow),
+            value=max(float(largest_yellow), float(limits.get("yellow", {}).get("maximum_seconds", 6))), step=1.0, help=config_help("ppo.duration_limits.yellow.maximum_seconds"))
+        default_red = max([s["durations_seconds"][2] for s in selected_specs if s["kind"] == "all_red"] or [3])
+        max_clearance = st.number_input("Máximo do vermelho de limpeza (s)", min_value=float(largest_red),
+            value=max(float(largest_red), float(limits.get("all_red", {}).get("maximum_seconds", default_red))), step=1.0, help=config_help("ppo.duration_limits.all_red.maximum_seconds"))
+        phase_rows = [{"key": f"{s['tls_id']}:{s['phase_index']}", "type": {"green": "Verde", "yellow": "Amarelo", "all_red": "Limpeza"}[s["kind"]],
+                       "reference": s["durations_seconds"][1], "minimum_seconds": s["durations_seconds"][0], "maximum_seconds": s["durations_seconds"][2]} for s in selected_specs]
+        phase_table = st.data_editor(pd.DataFrame(phase_rows, columns=["key", "type", "reference", "minimum_seconds", "maximum_seconds"]), hide_index=True,
+                                    disabled=["key", "type", "reference"], key=f"phase_limits_{network}_{all_phase_control}",
+                                    column_config={"key": "Controlador:fase", "type": "Tipo", "reference": "Referência (s)",
+                                                   "minimum_seconds": st.column_config.NumberColumn("Mínimo (s)", min_value=0.1),
+                                                   "maximum_seconds": st.column_config.NumberColumn("Máximo (s)", min_value=0.1)})
+        maximum_cycle = st.number_input("Máximo de ciclo permitido (s)", min_value=1.0,
+                                       value=float(base.get("control", base["ppo"]).get("maximum_cycle_seconds", 3600)),
+                                       help="A soma dos maiores tempos permitidos de cada controlador deve respeitar este teto. Não reduz automaticamente os pisos de segurança.")
         st.caption("O amarelo e a limpeza não podem ser reduzidos abaixo dos tempos originais. Estes limites são parâmetros experimentais; precisam de validação operacional.")
     gui = st.checkbox("Mostrar SUMO-GUI (mais lento)", value=False, help=config_help("gui"))
     with st.expander("Métricas opcionais"):
@@ -373,11 +436,15 @@ def configured():
     elif demand_mode == "Volume por via":
         if road_table is None:
             raise ValueError("Selecione uma rede válida para preencher as vias")
-        destinations = json.loads(destination_text)
-        profile = json.loads(profile_text)
-        vehicle_types = json.loads(vehicle_types_text)
-        if not isinstance(destinations, dict) or not isinstance(profile, list) or not isinstance(vehicle_types, list):
-            raise ValueError("Destinos devem ser objeto JSON; perfil e tipos devem ser listas JSON")
+        destinations = {}
+        if destination_table is not None:
+            for row in destination_table.dropna(how="all").to_dict("records"):
+                if row.get("origin") not in edge_by_label or row.get("destination") not in edge_by_label:
+                    raise ValueError("Selecione origem e destino em cada proporção")
+                destinations.setdefault(edge_by_label[row["origin"]], []).append({"to_edge": edge_by_label[row["destination"]], "share": float(row["percent"]) / 100})
+        profile = profile_table.dropna(how="all").to_dict("records") if profile_table is not None else []
+        vehicle_types = [{"id": row["id"], "vClass": VEHICLE_CLASSES[row["vClass"]], "share": float(row["percent"]) / 100}
+                         for row in types_table.dropna(how="all").to_dict("records")] if types_table is not None else []
         entries = []
         for row in road_table.to_dict("records"):
             if not row.get("from_edge") or pd.isna(row["from_edge"]):
@@ -385,21 +452,28 @@ def configured():
             entry = {"from_edge": row["from_edge"],
                             "vehicles_per_hour": float(row.get("vehicles_per_hour") or 0),
                             "to_edge": row.get("to_edge") or ""}
+            if observed_mode:
+                if entry["vehicles_per_hour"] == 0 and not row.get("zero_measured"):
+                    continue
+                entry.pop("to_edge")
             if row["from_edge"] in destinations:
                 entry["destinations"] = destinations[row["from_edge"]]
             entries.append(entry)
         unknown = set(destinations) - {entry["from_edge"] for entry in entries}
         if unknown:
             raise ValueError(f"Destinos informados para origem fora da tabela: {', '.join(sorted(unknown))}")
-        config["demand"] = {"mode": "edge_volumes", "edge_volumes": entries}
+        config["demand"] = {"mode": "observed_counts" if observed_mode else "edge_volumes", "edge_volumes": entries}
+        if observed_mode:
+            config["demand"]["calibration_tolerance"] = float(calibration_tolerance) / 100
         if profile:
             config["demand"]["time_profile"] = profile
         if vehicle_types:
             config["demand"]["vehicle_types"] = vehicle_types
     else:
-        flows = json.loads(flows_text)
-        if not isinstance(flows, list):
-            raise ValueError("Fluxos devem ser uma lista JSON")
+        flows = flows_table.dropna(how="all").to_dict("records")
+        if not flows or any(pd.isna(row[key]) for row in flows for key in ("from_edge", "to_edge", "vehicles_per_hour")):
+            raise ValueError("Preencha origem, destino e veículos/h em pelo menos uma linha")
+        flows = [{**row, "from_edge": od_ids[row["from_edge"]], "to_edge": od_ids[row["to_edge"]]} for row in flows]
         config["demand"] = {"mode": "flows", "flows": flows}
     if w_wait + w_queue + w_travel <= 0:
         raise ValueError("Escolha ao menos uma prioridade positiva")
@@ -423,10 +497,12 @@ def configured():
                      "phase_types": ["green", "yellow", "all_red"],
                      "duration_limits": {"yellow": {"maximum_seconds": float(max_yellow)},
                                          "all_red": {"maximum_seconds": float(max_clearance)}},
-                     "phase_duration_bounds": json.loads(phase_bounds_text)}
+                     "phase_duration_bounds": {row["key"]: {"minimum_seconds": float(row["minimum_seconds"]),
+                                                             "maximum_seconds": min(float(row["maximum_seconds"]), float(max_yellow) if row["type"] == "Amarelo" else float(max_clearance) if row["type"] == "Limpeza" else float(row["maximum_seconds"]))}
+                                               for row in phase_table.to_dict("records")}, "maximum_cycle_seconds": float(maximum_cycle)}
     config["algorithm"] = selected_algorithm
     config["control"] = {key: config["ppo"][key] for key in (
-        "decision_seconds", "gui", "action_mode", "phase_types", "duration_limits", "phase_duration_bounds")}
+        "decision_seconds", "gui", "action_mode", "phase_types", "duration_limits", "phase_duration_bounds", "maximum_cycle_seconds")}
     if joint:
         # Os pisos geométricos não são removidos por ajustes avançados na interface.
         floors = base["experimental"]["minimum_durations"]
@@ -444,6 +520,11 @@ def configured():
         config[key] = {**base.get(key, {}), **parameters, "total_timesteps": int(total_steps)}
     if joint:
         validate_experimental(config)
+    phase_action_spec(config, programs)
+    if demand_mode == "Volume por via":
+        from semaforos.cenario.demanda import validate_time_profile, validate_vehicle_types
+        validate_time_profile(config)
+        validate_vehicle_types(config)
     return config
 
 
@@ -452,7 +533,7 @@ tab_options, tab_parameters, tab_metrics = st.tabs([
     "2 · Todas as opções SUMO", "3 · Parâmetros e 10 épocas", "4 · Métricas e relatórios"])
 try:
     current_config = configured()
-except (ValueError, TypeError) as error:
+except (ValueError, TypeError, KeyError) as error:
     current_config = None
     st.error(f"Corrija a configuração: {error}")
 
@@ -506,6 +587,25 @@ with tab_metrics:
                            "traci_queries.csv", "text/csv")
 
 active = "job" in st.session_state and st.session_state.job["process"].poll() is None
+if st.button("Executar simulação sem treinamento", disabled=active or current_config is None, type="primary"):
+    try:
+        start_job("run-reference", configured())
+        st.rerun()
+    except Exception as error:
+        st.error(str(error))
+if observed_mode and current_config is not None and st.button("Calibrar demanda e conferir contagens", disabled=active):
+    try:
+        with st.spinner("Ajustando rotas de borda às contagens…"):
+            report = calibration_report(current_config)
+        table = pd.DataFrame(report["measurements"])
+        table["via"] = table["from_edge"].map(labels)
+        st.dataframe(table, hide_index=True)
+        st.metric("Novos veículos gerados nas bordas por hora", round(report["total_generated_vehicles_per_hour"]))
+        if any(row["relative_error"] > current_config["demand"]["calibration_tolerance"] for row in report["measurements"]):
+            st.error("As contagens não foram reproduzidas na tolerância escolhida. Revise-as antes de executar.")
+        st.download_button("Baixar relatório de calibração (.csv)", table.to_csv(index=False).encode("utf-8-sig"), file_name="calibracao.csv")
+    except Exception as error:
+        st.error(str(error))
 if joint and st.button("Testar cenário no SUMO por 30 segundos", disabled=active or current_config is None):
     try:
         with st.spinner("Executando teste curto no SUMO…"):
@@ -544,16 +644,20 @@ def progress_panel():
     st.subheader("Execução")
     st.write("Pasta:", str(job["folder"]))
     st.write("Estado:", "em andamento" if code is None else ("concluída" if code == 0 else f"falhou ({code})"))
-    if code is None and job["command"] in ("ppo-train", "rl-train") and st.button("Interromper treinamento"):
+    if code is None and job["command"] in ("ppo-train", "rl-train", "run-reference") and st.button("Interromper execução"):
         job["output"].mkdir(exist_ok=True)
         (job["output"] / "cancel.flag").touch()
-        st.info("Cancelamento solicitado; o modelo parcial será salvo ao encerrar o passo atual.")
+        st.info("Cancelamento solicitado; a execução será encerrada ao concluir o passo atual.")
     progress = job["output"] / "progress.json"
     if progress.is_file():
-        st.json(json.loads(progress.read_text(encoding="utf-8")))
+        value = read_json(progress)
+        if value is not None:
+            st.json(value)
     summary = job["output"] / "summary.json"
     if summary.is_file():
-        st.json(json.loads(summary.read_text(encoding="utf-8")))
+        value = read_json(summary)
+        if value is not None:
+            st.json(value)
     csv = job["output"] / "runs.csv"
     if csv.is_file():
         render_result_metrics(csv, "result_runs")
@@ -561,11 +665,11 @@ def progress_panel():
     aggregate = job["output"] / "aggregate.csv"
     if aggregate.is_file():
         render_result_metrics(aggregate, "result_aggregate")
-    for name in ("training_episodes.csv", "signals.csv", "aggregate.csv", "report.md", "summary.json",
+    for name in ("training_episodes.csv", "signals.csv", "flow_counts.csv", "aggregate.csv", "report.md", "summary.json",
                  "manifest.json", "sumo_options.csv", "effective_parameters.csv", "metrics_catalog.csv", "traci_queries.csv"):
         file = job["output"] / name
         if file.is_file():
-            if name in ("training_episodes.csv", "signals.csv"):
+            if name in ("training_episodes.csv", "signals.csv", "flow_counts.csv"):
                 render_result_metrics(file, f"result_{file.stem}")
             st.download_button(f"Baixar {name}", file.read_bytes(), file_name=name, key=f"result_{name}")
     plot = job["output"] / "comparison.png"
@@ -583,11 +687,11 @@ with st.expander("Abrir relatórios de execuções anteriores"):
         chosen = st.selectbox("Resultado salvo", [str(path.parent.relative_to(RESULTS)) for path in summaries])
         folder = RESULTS / chosen
         st.json(json.loads((folder / "summary.json").read_text(encoding="utf-8")))
-        for name in ("runs.csv", "signals.csv", "aggregate.csv", "training_episodes.csv", "report.md", "summary.json",
+        for name in ("runs.csv", "signals.csv", "flow_counts.csv", "aggregate.csv", "training_episodes.csv", "report.md", "summary.json",
                      "manifest.json", "sumo_options.csv", "effective_parameters.csv", "metrics_catalog.csv", "traci_queries.csv"):
             path = folder / name
             if path.is_file():
-                if name in ("runs.csv", "aggregate.csv", "training_episodes.csv", "signals.csv"):
+                if name in ("runs.csv", "aggregate.csv", "training_episodes.csv", "signals.csv", "flow_counts.csv"):
                     render_result_metrics(path, f"saved_{path.stem}")
                 st.download_button(f"Exportar resultado salvo: {name}", path.read_bytes(), file_name=name, key=f"saved_{name}")
         if (folder / "comparison.png").is_file():

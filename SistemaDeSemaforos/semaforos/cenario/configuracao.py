@@ -36,8 +36,8 @@ def read_config(path):
         data["targets"] = targets
     if data["duration_seconds"] <= 0 or data["step_seconds"] <= 0:
         raise ValueError("Duração e passo devem ser positivos")
-    if data["demand"]["mode"] not in ("random", "flows", "edge_volumes"):
-        raise ValueError("demand.mode deve ser random, flows ou edge_volumes")
+    if data["demand"]["mode"] not in ("random", "flows", "edge_volumes", "observed_counts"):
+        raise ValueError("demand.mode deve ser random, flows, edge_volumes ou observed_counts")
     if not data["seeds"] or any(not isinstance(seed, int) for seed in data["seeds"]):
         raise ValueError("seeds deve conter ao menos um inteiro")
     training = data["training"]

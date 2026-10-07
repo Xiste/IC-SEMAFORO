@@ -20,7 +20,7 @@ ROOT = PROJECT_ROOT
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("inspect", "mapping", "mapping-review", "mapping-scaffold", "measurements", "options", "algorithms", "run", "train", "rl-train", "rl-eval", "ppo-train", "ppo-eval"))
+    parser.add_argument("command", choices=("inspect", "mapping", "mapping-review", "mapping-scaffold", "measurements", "options", "algorithms", "run", "run-reference", "train", "rl-train", "rl-eval", "ppo-train", "ppo-eval"))
     parser.add_argument("--config", default=str(ROOT / "config" / "cenario.json"))
     parser.add_argument("--candidate", help="JSON com durações das fases por ID:índice")
     parser.add_argument("--output", help="Pasta de saída da execução")
@@ -63,6 +63,9 @@ def main():
         print(json.dumps(export_mapping_scaffold(config, output), ensure_ascii=False, indent=2))
     elif args.command == "run":
         run(config, output, args.candidate)
+    elif args.command == "run-reference":
+        from semaforos.experimentos.referencia import run_reference
+        run_reference(config, output)
     elif args.command == "train":
         train(config, output)
     elif args.command in ("ppo-train", "rl-train"):

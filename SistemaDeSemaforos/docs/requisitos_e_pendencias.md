@@ -2,7 +2,7 @@
 
 ## Atualização: controle conjunto experimental pela interface
 
-A interface agora prepara e verifica os 17 controladores dos nove cruzamentos em uma cópia da rede, com programas sintéticos de atendimento serial. Permite teste curto no SUMO, treino, escolha do modelo, avaliação e exportação sem edição obrigatória de arquivos. Os demais controladores mantêm estados e tempos dos programas da rede corrigida, transportados para os índices reconstruídos. A validação dos planos reais continua separada e pendente; o usuário optou por não reproduzi-los nesta etapa. As descrições históricas de controle restrito ao piloto abaixo se referem ao cenário padrão. Veja [operação e limitações](controle_nove_interface.md). Treino longo, demanda representativa e evidência de melhoria continuam pendentes.
+A interface prepara os 17 controladores dos nove cruzamentos com grupos sintéticos compatíveis pela matriz de conflitos; quatro controladores externos sem verde também são corrigidos. Permite preview, simulação sem treinamento, treino, avaliação e exportação. Contagens internas podem calibrar rotas de entrada sem somar automaticamente cada contagem como veículos novos. Perfil horário, tipos, destinos, OD e limites por fase usam tabelas. A instalação isolada usa dependências fixadas. Estas mudanças substituem a descrição de atendimento serial dos cenários novos; relatos abaixo são históricos. A opção por planos sintéticos continua. Treino longo, contagens representativas, destinos reais e evidência de melhoria permanecem fora da validação funcional. Veja [operação e limitações](controle_nove_interface.md).
 
 ## Confirmação do usuário em 06/10/2026
 

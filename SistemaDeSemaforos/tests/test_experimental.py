@@ -15,11 +15,14 @@ class ExperimentalTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=PROJECT_ROOT / "resultados", prefix="test_nove_") as temporary:
             folder = Path(temporary)
             config, rows = prepare_experimental(read_config(PROJECT_ROOT / "config/cenario.json"), folder / "scenario")
-            self.assertEqual(len(rows), 17)
-            self.assertEqual(len({row["cruzamento"] for row in rows}), 9)
+            controlled = [row for row in rows if row["controlado"]]
+            self.assertEqual(len(controlled), 17)
+            self.assertEqual(len({row["cruzamento"] for row in controlled}), 9)
             source = ET.parse(PROJECT_ROOT / "dados/rede/uberlandia.rondon_norte_corrigida.net.xml").getroot()
             generated = ET.parse(config["network"]).getroot()
             targets = {item["tls_id"] for item in config["targets"]}
+            targets.update(config["experimental"]["external_repaired"])
+            self.assertEqual(len(config["experimental"]["external_repaired"]), 4)
             original_times = {(logic.get("id"), logic.get("programID")): [p.get("duration") for p in logic.findall("phase")]
                               for logic in source.findall("tlLogic") if logic.get("id") not in targets}
             generated_times = {(logic.get("id"), logic.get("programID")): [p.get("duration") for p in logic.findall("phase")]

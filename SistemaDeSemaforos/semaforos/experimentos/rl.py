@@ -15,6 +15,7 @@ from semaforos.relatorios.metricas import trip_summary
 from semaforos.relatorios.catalogos import export_catalogs
 from semaforos.relatorios.exportacao import write_evaluation_report
 from semaforos.cenario.rede import network_programs, phase_action_spec
+from semaforos.arquivos import write_json, write_text
 
 
 class ProgressCallback(BaseCallback):
@@ -35,14 +36,14 @@ class ProgressCallback(BaseCallback):
                 self.episode_rows.append({"episode": self.episodes, "timesteps": self.num_timesteps,
                                           "reward": item.get("episode", {}).get("r"),
                                           **trips,
-                                          **{key: value for key, value in item.items() if key not in ("signals", "terminal_observation", "episode")}})
+                                          **{key: value for key, value in item.items() if key not in ("signals", "flow_counts", "terminal_observation", "episode")}})
                 import pandas as pd
-                pd.DataFrame(self.episode_rows).to_csv(self.output / "training_episodes.csv", index=False)
+                write_text(self.output / "training_episodes.csv", pd.DataFrame(self.episode_rows).to_csv(index=False))
         if self.num_timesteps % 10 == 0 or (self.output / "cancel.flag").exists():
             progress = {"timesteps": self.num_timesteps, "episodes_completed": self.episodes,
                         "simulated_seconds_current_episode": infos[0].get("simulated_seconds") if infos else None,
                         "real_seconds": round(time.perf_counter() - self.started, 2)}
-            (self.output / "progress.json").write_text(json.dumps(progress, indent=2), encoding="utf-8")
+            write_json(self.output / "progress.json", progress)
         if (self.output / "cancel.flag").exists():
             self.cancelled = True
             return False
@@ -103,7 +104,7 @@ def train_rl(config, output):
                    "episodes_completed": callback.episodes, "cancelled": callback.cancelled,
                    "real_seconds": round(time.perf_counter() - started, 2),
                    "model": str(output / f"{model_name}.zip")}
-        (output / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        write_json(output / "summary.json", summary)
         return summary
     finally:
         env.close()
@@ -140,6 +141,7 @@ def evaluate_rl(config, output, model_path, seeds=None):
     export_catalogs(output, config)
     rows = []
     signal_rows = []
+    flow_rows = []
     started = time.perf_counter()
     control = config.get("control", config.get("ppo", {}))
     env = SemaforosEnv(config, output / "episodes", gui=bool(control.get("gui", False)))
@@ -161,6 +163,7 @@ def evaluate_rl(config, output, model_path, seeds=None):
                         env.close()
                         trips = trip_summary(env.current_output / "tripinfo.xml")
                         signals = info.pop("signals")
+                        flow_rows.extend({"controller": controller, "seed": seed, **row} for row in info.pop("flow_counts", []))
                         rows.append({"controller": controller, "seed": seed,
                                      "reward": episode_reward, **info, **trips})
                         for tls_id, values in signals.items():
@@ -170,6 +173,9 @@ def evaluate_rl(config, output, model_path, seeds=None):
                                                 **{f"phase_{index}_seconds": seconds for index, seconds
                                                    in values["phase_seconds"].items()}})
                         break
+        if flow_rows:
+            import pandas as pd
+            pd.DataFrame(flow_rows).to_csv(output / "flow_counts.csv", index=False)
         summary = write_evaluation_report(output, rows, signal_rows, {
             "real_seconds": round(time.perf_counter() - started, 2),
             "versions": versions(), "model_path": str(model_path),

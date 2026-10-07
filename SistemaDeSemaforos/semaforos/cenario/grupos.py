@@ -19,9 +19,17 @@ def conflict_graph(root, tls):
             for index, lane in enumerate(node.get("intLanes", "").split()):
                 junction_lanes[lane] = (node.get("id"), index)
     edges = {e.get("id"): e for e in root.findall("edge")}
+    continuation = {f"{c.get('from')}_{c.get('fromLane')}": c.get("via")
+                    for c in root.findall("connection") if c.get("from", "").startswith(":") and c.get("via")}
     links = {}
     for c in connections:
         candidates = [c.get("via")]
+        via = c.get("via")
+        visited = set()
+        while via in continuation and via not in visited:
+            visited.add(via)
+            via = continuation[via]
+            candidates.append(via)
         for side, lane_key in (("from", "fromLane"), ("to", "toLane")):
             if edges[c.get(side)].get("function") == "crossing":
                 candidates.append(f"{c.get(side)}_{c.get(lane_key)}")
@@ -58,12 +66,21 @@ def compatible_groups(graph):
     return [sorted(group) for group in groups]
 
 
+def geometric_minima(root, connections):
+    edges = {edge.get("id"): edge for edge in root.findall("edge")}
+    lanes = {lane.get("id"): lane for edge in edges.values() for lane in edge.findall("lane")}
+    crossings = [lanes[f"{c.get(side)}_{c.get(side + 'Lane')}"]
+                 for c in connections for side in ("from", "to") if edges[c.get(side)].get("function") == "crossing"]
+    green = max([8] + [math.ceil(float(l.get("length")) / 0.8) + 2 for l in crossings])
+    clearance = max([3] + [math.ceil(float(lanes[c.get("via")].get("length")) / 3.0) + 2
+                           for c in connections if c.get("via") in lanes])
+    return green, max(clearance, green) if crossings else clearance
+
+
 def build_program(root, tls):
     graph = conflict_graph(root, tls)
     groups = compatible_groups(graph)
     connections = signal_links(root, tls)
-    edges = {edge.get("id"): edge for edge in root.findall("edge")}
-    lanes = {lane.get("id"): lane for edge in edges.values() for lane in edge.findall("lane")}
     for old in list(root.findall("tlLogic")):
         if old.get("id") == tls:
             root.remove(old)
@@ -72,13 +89,7 @@ def build_program(root, tls):
     width = max(graph) + 1
     for number, group in enumerate(groups):
         local = [c for c in connections if int(c.get("linkIndex")) in group]
-        crossing_lanes = [lanes[f"{c.get(side)}_{c.get(side + 'Lane')}"]
-                          for c in local for side in ("from", "to") if edges[c.get(side)].get("function") == "crossing"]
-        crossing_time = max([math.ceil(float(l.get("length")) / 0.8) + 2 for l in crossing_lanes] or [8])
-        clearance = max([math.ceil(float(lanes[c.get("via")].get("length")) / 3.0) + 2
-                         for c in local if c.get("via") in lanes] or [3])
-        if crossing_lanes:
-            clearance = max(clearance, crossing_time)
+        crossing_time, clearance = geometric_minima(root, local)
         green = max(24, crossing_time)
         floors[f"{tls}:{3 * number}"] = crossing_time
         for position, color, duration in ((0, "G", green), (1, "y", 3), (2, "r", max(3, clearance))):
@@ -93,7 +104,10 @@ def build_program(root, tls):
 
 def audit_program(root, tls):
     graph = conflict_graph(root, tls)
-    logic = next(l for l in root.findall("tlLogic") if l.get("id") == tls)
+    logics = [l for l in root.findall("tlLogic") if l.get("id") == tls]
+    if len(logics) != 1 or set(graph) != set(range(max(graph) + 1)):
+        raise ValueError(f"Programa ou índices incompletos em {tls}")
+    logic = logics[0]
     phases = logic.findall("phase")
     covered = set()
     if len(phases) % 3:
@@ -101,6 +115,8 @@ def audit_program(root, tls):
     for start in range(0, len(phases), 3):
         green, yellow, red = phases[start:start + 3]
         state = green.get("state")
+        if any(len(p.get("state", "")) != len(graph) for p in (green, yellow, red)):
+            raise ValueError(f"Estado com tamanho incorreto em {tls}")
         opened = {i for i, color in enumerate(state) if color == "G"}
         if not opened or set(state) - {"G", "r"}:
             raise ValueError(f"Estado verde inválido em {tls}")
@@ -108,7 +124,9 @@ def audit_program(root, tls):
             raise ValueError(f"Movimentos conflitantes simultâneos em {tls}:{start}")
         if yellow.get("state") != state.replace("G", "y") or set(red.get("state")) != {"r"}:
             raise ValueError(f"Transição sem limpeza em {tls}:{start}")
-        if min(float(green.get("duration")), float(yellow.get("duration")), float(red.get("duration"))) <= 0:
+        green_min, red_min = geometric_minima(root, [c for c in signal_links(root, tls) if int(c.get("linkIndex")) in opened])
+        durations = [float(p.get("duration")) for p in (green, yellow, red)]
+        if not all(math.isfinite(v) for v in durations) or durations[0] < green_min or durations[1] < 3 or durations[2] < red_min:
             raise ValueError(f"Tempos inválidos em {tls}")
         covered.update(opened)
     if covered != set(graph):

@@ -18,14 +18,16 @@ from semaforos.relatorios.metricas import planned_vehicle_count
 from semaforos.cenario.mapeamento import mapping_report, require_validated_targets
 from semaforos.cenario.rede import phase_bounds, phase_kind, phase_action_spec
 from semaforos.simulacao.execucao import load_scenario
+from semaforos.simulacao.contagens import FlowCounts
 
 
 class SemaforosEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, config, output, gui=False):
+    def __init__(self, config, output, gui=False, demand_config=None):
         super().__init__()
         self.config = config
+        self.demand_config = demand_config if demand_config is not None else config
         self.output = Path(output)
         self.output.mkdir(parents=True, exist_ok=True)
         _, self.network, self.programs = load_scenario(config)
@@ -76,6 +78,7 @@ class SemaforosEnv(gym.Env):
         self.action_log = []
         self.duration_applied = set()
         self.desired_durations = {}
+        self.flow_counts = None
 
     def _resources(self):
         process = psutil.Process()
@@ -121,7 +124,7 @@ class SemaforosEnv(gym.Env):
         folder.mkdir()
         self.current_output = folder
         self.real_started = time.perf_counter()
-        routes = create_demand(self.config, self.network, folder, self.seed_value)
+        routes = create_demand(self.demand_config, self.network, folder, self.seed_value)
         self.planned = planned_vehicle_count(routes)
         binary = sumo_executable()
         if self.gui:
@@ -132,6 +135,11 @@ class SemaforosEnv(gym.Env):
                    "--step-length", str(self.step_length), "--seed", str(self.seed_value),
                    "--tripinfo-output", str(folder / "tripinfo.xml"),
                    "--tripinfo-output.write-unfinished", "true", "--no-step-log", "true"]
+        self.flow_counts = FlowCounts(self.config, self.network, folder)
+        if self.flow_counts.file:
+            command.extend(["--additional-files", str(self.flow_counts.file)])
+        if self.gui:
+            command.extend(["--start", "--quit-on-end"])
         (folder / "run_config.json").write_text(json.dumps({
             "sumo_command": command, "seed": self.seed_value,
             "effective_config": self.config,
@@ -238,6 +246,7 @@ class SemaforosEnv(gym.Env):
         end = min(float(self.config["duration_seconds"]), now + self.interval)
         while traci.simulation.getTime() < end:
             traci.simulationStep()
+            self.flow_counts.step()
             current = traci.simulation.getTime()
             self.departed += traci.simulation.getDepartedNumber()
             self.arrived += traci.simulation.getArrivedNumber()
@@ -311,6 +320,7 @@ class SemaforosEnv(gym.Env):
             pending = max(0, traci.simulation.getMinExpectedNumber() - unfinished)
             info.update(unfinished=unfinished, pending_departure=pending, seed=self.seed_value)
             info["episode_output"] = str(self.current_output)
+            info["flow_counts"] = self.flow_counts.rows()
             info.update(self.planned)
             info["real_seconds"] = round(time.perf_counter() - self.real_started, 3)
             info["signals"] = {tls_id: {

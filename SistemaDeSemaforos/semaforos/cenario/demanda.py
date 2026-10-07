@@ -10,6 +10,30 @@ import xml.etree.ElementTree as ET
 from semaforos.cenario.configuracao import sumo_executable
 
 
+def validate_time_profile(config):
+    duration = float(config["duration_seconds"])
+    profile = config["demand"].get("time_profile") or [{"begin": 0, "end": duration, "multiplier": 1.0}]
+    previous = 0.0
+    total = 0.0
+    for window in profile:
+        begin, end, multiplier = (float(window[key]) for key in ("begin", "end", "multiplier"))
+        if not all(math.isfinite(v) for v in (begin, end, multiplier)) or abs(begin - previous) > 1e-6 or end <= begin or end > duration or multiplier < 0:
+            raise ValueError("Perfil temporal deve cobrir o horizonte sem lacunas e ter multiplicadores não negativos")
+        previous = end
+        total += (end - begin) * multiplier
+    if abs(previous - duration) > 1e-6 or total <= 0:
+        raise ValueError("Perfil deve terminar na duração do episódio e ter volume positivo")
+    return profile
+
+
+def validate_vehicle_types(config):
+    types = config["demand"].get("vehicle_types") or [{"id": "car", "vClass": "passenger", "share": 1.0}]
+    allowed = {"passenger", "bus", "truck", "delivery", "motorcycle", "bicycle"}
+    if any(not isinstance(t.get("id"), str) or not t["id"].strip() for t in types) or len({t["id"] for t in types}) != len(types) or any(t.get("vClass") not in allowed or not math.isfinite(float(t.get("share", 0))) or float(t.get("share", 0)) <= 0 for t in types) or abs(sum(float(t["share"]) for t in types) - 1) > 1e-6:
+        raise ValueError("Tipos de veículo exigem IDs únicos, classes válidas e proporções somando 1")
+    return types
+
+
 def create_edge_volume_demand(config, network, output, seed):
     """Converte contagens por via em viagens com saídas conectadas.
 
@@ -25,32 +49,10 @@ def create_edge_volume_demand(config, network, output, seed):
         raise ValueError("A rede não contém vias de saída para gerar destinos automáticos")
     rng = random.Random(seed)
     duration = float(config["duration_seconds"])
-    profile = config["demand"].get("time_profile") or [
-        {"begin": 0, "end": duration, "multiplier": 1.0}]
-    previous_end = 0.0
-    for window in profile:
-        begin, end, multiplier = (float(window[key]) for key in ("begin", "end", "multiplier"))
-        if (not all(math.isfinite(value) for value in (begin, end, multiplier))
-                or abs(begin - previous_end) > 1e-6 or end <= begin or end > duration
-                or multiplier < 0):
-            raise ValueError("Perfil temporal deve cobrir o horizonte sem lacunas e ter multiplicadores não negativos")
-        previous_end = end
-    if abs(previous_end - duration) > 1e-6:
-        raise ValueError("Perfil temporal deve terminar em duration_seconds")
+    profile = validate_time_profile(config)
     weights_time = [(float(item["end"]) - float(item["begin"])) * float(item["multiplier"])
                     for item in profile]
-    if sum(weights_time) <= 0:
-        raise ValueError("Perfil temporal tem volume total zero")
-    vehicle_types = config["demand"].get("vehicle_types") or [
-        {"id": "car", "vClass": "passenger", "share": 1.0}]
-    allowed_classes = {"passenger", "bus", "truck", "delivery", "motorcycle", "bicycle"}
-    if (len({item["id"] for item in vehicle_types}) != len(vehicle_types)
-            or any(item.get("vClass") not in allowed_classes
-                   or not math.isfinite(float(item.get("share", 0)))
-                   or float(item.get("share", 0)) <= 0
-                   for item in vehicle_types)
-            or abs(sum(float(item["share"]) for item in vehicle_types) - 1) > 1e-6):
-        raise ValueError("Tipos de veículo exigem IDs únicos, classes válidas e proporções somando 1")
+    vehicle_types = validate_vehicle_types(config)
     seen = set()
     trips = []
     manifest = []
@@ -150,6 +152,9 @@ def create_edge_volume_demand(config, network, output, seed):
 def create_demand(config, network, output, seed):
     demand = config["demand"]
     routes = output / "routes.rou.xml"
+    if demand["mode"] == "observed_counts":
+        from .calibracao import create_calibrated_demand
+        return create_calibrated_demand(config, output, seed)
     if demand["mode"] == "edge_volumes":
         return create_edge_volume_demand(config, network, output, seed)
     if demand["mode"] == "random":

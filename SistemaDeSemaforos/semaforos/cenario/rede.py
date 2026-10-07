@@ -94,6 +94,15 @@ def phase_action_spec(config, programs):
         raise ValueError("Nenhuma fase selecionada para o PPO")
     if set(overrides) - {f"{item['tls_id']}:{item['phase_index']}" for item in specs}:
         raise ValueError("phase_duration_bounds contém fases fora do controle PPO")
+    cap = params.get("maximum_cycle_seconds")
+    if cap is not None:
+        if not math.isfinite(float(cap)) or float(cap) <= 0:
+            raise ValueError("Máximo de ciclo deve ser finito e positivo")
+        for target in config["targets"]:
+            maxima = {item["phase_index"]: max(item["durations_seconds"]) for item in specs if item["tls_id"] == target["tls_id"]}
+            longest = sum(maxima.get(index, phase["duration"]) for index, phase in enumerate(programs[target["tls_id"]]))
+            if longest > float(cap):
+                raise ValueError(f"Limites de {target['tls_id']} excedem o máximo de ciclo {cap} s")
     return mode, specs
 
 

@@ -5,6 +5,12 @@ import re
 
 # Nome legível, significado, unidade.
 METRICS = {
+    "intersection": ("Cruzamento", "Nome do cruzamento associado ao controlador SUMO; métricas continuam discriminadas por controlador.", "nome"),
+    "edge_id": ("Trecho medido", "ID SUMO do trecho onde o detector virtual conta passagens.", "ID"),
+    "measured_vehicles_per_hour": ("Fluxo informado", "Contagem por hora fornecida pelo usuário para calibração.", "veículos/h"),
+    "fitted_vehicles_per_hour": ("Fluxo ajustado nas rotas", "Passagens previstas pela combinação de rotas sintéticas antes da simulação.", "veículos/h"),
+    "passed_vehicles": ("Veículos que passaram", "Veículos distintos detectados durante o episódio, somando as faixas do trecho.", "veículos"),
+    "realized_vehicles_per_hour": ("Fluxo realizado", "Passagens detectadas divididas pelo horizonte, convertidas para uma hora; pode diferir devido a congestionamento e início da simulação.", "veículos/h"),
     "planned_vehicles": ("Veículos planejados", "Viagens previstas na demanda; fluxos podem ter contagem estimada.", "veículos"),
     "planned_vehicles_estimated": ("Contagem planejada estimada", "Indica se a quantidade planejada foi estimada a partir de fluxos.", "sim/não"),
     "departed": ("Veículos inseridos", "Veículos que efetivamente entraram na simulação.", "veículos"),
@@ -131,10 +137,12 @@ PARAMETERS = {
     "phase_indices": ("Índices dos verdes controlados", "Posições das fases verdes selecionadas no programa SUMO, começando em zero."),
     "tls_id": ("ID do controlador", "Identificador do semáforo/controlador na rede SUMO."),
     "name": ("Nome do cruzamento", "Nome usado para associar o alvo aos arquivos do projeto."),
-    "mode": ("Modelo de demanda", "random = taxa total sintética; flows = pares origem–destino; edge_volumes = volumes por entrada."),
+    "mode": ("Modelo de demanda", "random = taxa total sintética; flows = pares origem–destino; edge_volumes = novas viagens por trecho; observed_counts = ajuste de rotas a contagens internas."),
     "vehicles_per_hour": ("Volume de tráfego", "Taxa em veículos/h. O total planejado depende da duração do episódio."),
     "flows": ("Fluxos origem–destino", "Lista de entradas, saídas e taxas por par de vias."),
-    "edge_volumes": ("Volumes por via", "Contagens de entrada por aresta SUMO, com destino fixo, proporções ou saída sintética."),
+    "edge_volumes": ("Volumes por via", "Taxas por trecho SUMO: geração de novas viagens ou contagens internas conforme o modelo de demanda escolhido."),
+    "calibration_tolerance": ("Tolerância do ajuste", "Erro relativo máximo entre contagem informada e fluxo das rotas ajustadas; não garante o mesmo fluxo realizado sob congestionamento."),
+    "maximum_cycle_seconds": ("Máximo de ciclo permitido", "Limita a soma dos maiores tempos permitidos de todas as fases de cada controlador."),
     "from_edge": ("Via de entrada", "ID da aresta SUMO onde as viagens são inseridas."),
     "to_edge": ("Via de destino", "ID da aresta de saída; se vazio no modo por via, uma saída alcançável é sorteada."),
     "destinations": ("Proporções dos destinos", "Destinos por origem; shares devem somar 1."),

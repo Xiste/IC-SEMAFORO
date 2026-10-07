@@ -45,6 +45,8 @@ SistemaDeSemaforos/
 
 Consulte a [atualização funcional de 07/10/2026](docs/estado_funcional_2026-10-07.md) para correções verificadas e limites restantes.
 
+A interface permite importar contagens/OD em CSV ou XLSX, configurar pedestres nas travessias cadastradas, acompanhar quatro gráficos ao vivo, recuperar o acompanhamento após atualizar a página e exportar métricas de episódios completos ou parciais. `intersections.csv` mede cada faixa uma vez por cruzamento; `pedestrian_crossings.csv` registra atendimento das travessias. O SUMO-GUI oferece atraso visual configurável. Pedestres não alteram a fórmula da recompensa: métricas adicionais ficam disponíveis para definir futuros experimentos.
+
 O cenário padrão mantém o piloto com um controlador. Pela interface, **Nove cruzamentos: cenário experimental** prepara uma cópia da rede com os 17 controladores associados, grupos compatíveis pela matriz de conflitos e atendimento de todos os movimentos e travessias. Corrige também quatro programas externos sem verde. Permite salvar/reutilizar o cenário, testar no SUMO, simular sem treino e selecionar um modelo para avaliação. Os programas são sintéticos. Cenários seriais antigos continuam disponíveis; prepare um cenário novo para obter os grupos. Veja o [passo a passo e as limitações](docs/controle_nove_interface.md).
 
 O único adaptador publicado é PPO. Outro algoritmo precisa de implementação, registro e teste de compatibilidade com as observações e ações do ambiente. Não há garantia de convergência ou ótimo global.

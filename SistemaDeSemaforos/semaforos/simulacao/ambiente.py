@@ -4,6 +4,7 @@ import json
 import csv
 import time
 import uuid
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import gymnasium as gym
@@ -19,6 +20,11 @@ from semaforos.cenario.mapeamento import mapping_report, require_validated_targe
 from semaforos.cenario.rede import phase_bounds, phase_kind, phase_action_spec
 from semaforos.simulacao.execucao import load_scenario
 from semaforos.simulacao.contagens import FlowCounts
+from semaforos.cenario.pedestres import create_pedestrian_demand
+from semaforos.simulacao.pedestres import PedestrianMetrics
+from semaforos.simulacao.observacao import IntersectionMetrics, LiveMetrics
+from semaforos.arquivos import write_json
+from semaforos.relatorios.metricas import trip_summary
 
 
 class SemaforosEnv(gym.Env):
@@ -79,6 +85,8 @@ class SemaforosEnv(gym.Env):
         self.duration_applied = set()
         self.desired_durations = {}
         self.flow_counts = None
+        self.last_info = None
+        self.reward_total = 0.0
 
     def _resources(self):
         process = psutil.Process()
@@ -125,13 +133,15 @@ class SemaforosEnv(gym.Env):
         self.current_output = folder
         self.real_started = time.perf_counter()
         routes = create_demand(self.demand_config, self.network, folder, self.seed_value)
+        pedestrian_routes, planned_people = create_pedestrian_demand(self.demand_config, folder)
         self.planned = planned_vehicle_count(routes)
         binary = sumo_executable()
         if self.gui:
             binary = binary.with_name("sumo-gui.exe")
             if not binary.is_file():
                 raise RuntimeError("sumo-gui não encontrado")
-        command = [str(binary), "-n", str(self.config["network"]), "-r", str(routes),
+        route_files = str(routes) + ("," + str(pedestrian_routes) if pedestrian_routes else "")
+        command = [str(binary), "-n", str(self.config["network"]), "-r", route_files,
                    "--step-length", str(self.step_length), "--seed", str(self.seed_value),
                    "--tripinfo-output", str(folder / "tripinfo.xml"),
                    "--tripinfo-output.write-unfinished", "true", "--no-step-log", "true"]
@@ -139,7 +149,10 @@ class SemaforosEnv(gym.Env):
         if self.flow_counts.file:
             command.extend(["--additional-files", str(self.flow_counts.file)])
         if self.gui:
-            command.extend(["--start", "--quit-on-end"])
+            delay = float(control_parameters(self.config).get('gui_delay_milliseconds', 0))
+            if not 0 <= delay <= 2000:
+                raise ValueError('Atraso do SUMO-GUI deve ficar entre 0 e 2000 ms')
+            command.extend(["--start", "--quit-on-end", '--delay', str(delay)])
         (folder / "run_config.json").write_text(json.dumps({
             "sumo_command": command, "seed": self.seed_value,
             "effective_config": self.config,
@@ -149,6 +162,7 @@ class SemaforosEnv(gym.Env):
             "action_mode": self.action_mode, "action_spec": self.action_spec,
         }, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
         try:
+            self.last_info = None
             traci.start(command)
             self.connected = True
             self.lanes = {target["tls_id"]: sorted(set(traci.trafficlight.getControlledLanes(target["tls_id"])))
@@ -157,6 +171,22 @@ class SemaforosEnv(gym.Env):
                           for target in self.targets}
             self.phase_since = {target["tls_id"]: traci.simulation.getTime() for target in self.targets}
             self.shortened = {target["tls_id"]: False for target in self.targets}
+            self.intersection_metrics = IntersectionMetrics(self.targets, self.lanes, self.step_length)
+            root = ET.parse(self.config['network']).getroot()
+            names = {t['tls_id']: t['name'] for t in self.targets}
+            crossings = {e.get('id') for e in root.findall('edge') if e.get('function') == 'crossing'}
+            crossing_owners = {}
+            for c in root.findall('connection'):
+                if c.get('tl') in names:
+                    for side in ('from', 'to'):
+                        if c.get(side) in crossings:
+                            crossing_owners[c.get(side)] = names[c.get('tl')]
+            waiting_areas = {edge: {c.get('from') for c in root.findall('connection') if c.get('to') == edge}
+                             for edge in crossing_owners}
+            self.pedestrian_metrics = PedestrianMetrics(planned_people, self.step_length, crossing_owners,
+                                                       self.demand_config.get('pedestrians', {}).get('flows', []), waiting_areas)
+            self.live_metrics = LiveMetrics(folder, self.episode, self.seed_value, self.output.parent)
+            self.reward_total = 0.0
             self.departed = self.arrived = 0
             self.wait_seconds = self.queue_seconds = self.vehicle_seconds = 0.0
             self.previous_wait = {}
@@ -247,6 +277,8 @@ class SemaforosEnv(gym.Env):
         while traci.simulation.getTime() < end:
             traci.simulationStep()
             self.flow_counts.step()
+            self.pedestrian_metrics.sample()
+            self.intersection_metrics.sample(metric_options.get('collect_lane_details', True))
             current = traci.simulation.getTime()
             self.departed += traci.simulation.getDepartedNumber()
             self.arrived += traci.simulation.getArrivedNumber()
@@ -316,44 +348,73 @@ class SemaforosEnv(gym.Env):
                 "global_peak_halted_vehicles": self.global_peak_halted,
                 "active_vehicle_seconds": self.vehicle_seconds}
         if done:
-            unfinished = max(0, self.departed - self.arrived)
-            pending = max(0, traci.simulation.getMinExpectedNumber() - unfinished)
-            info.update(unfinished=unfinished, pending_departure=pending, seed=self.seed_value)
-            info["episode_output"] = str(self.current_output)
-            info["flow_counts"] = self.flow_counts.rows()
-            info.update(self.planned)
-            info["real_seconds"] = round(time.perf_counter() - self.real_started, 3)
-            info["signals"] = {tls_id: {
-                "queue_vehicle_seconds": values["queue_vehicle_seconds"],
-                "peak_halted_vehicles": values["peak_halted_vehicles"],
-                "mean_lane_speed_meters_per_second": (
-                    values["speed_meters_per_second_sum"] / values["lane_samples"]
-                    if values["lane_samples"] else None),
-                "mean_lane_occupancy_percent": (
-                    values["occupancy_percent_sum"] / values["lane_samples"]
-                    if values["lane_samples"] else None),
-                "phase_seconds": values["phase_seconds"],
-            } for tls_id, values in self.signal_metrics.items()}
-            if metric_options.get("collect_emissions", False):
-                info.update(co2_grams=self.co2_mg / 1000, fuel_grams=self.fuel_mg / 1000)
-                info.update(self.extra_emissions)
-            if metric_options.get("collect_events", True):
-                info.update(teleports_started=self.teleports, collision_vehicles=self.collisions)
-            if metric_options.get("collect_resources", True):
-                self._resources()
-                info.update(peak_rss_mb=round(self.peak_rss_mb, 2),
-                            cpu_seconds=round(self.cpu_seconds, 3))
+            info = self.snapshot(complete=True)
+            reward -= (info['unfinished'] + info['pending_departure']) * self.config['training']['unfinished_penalty_seconds'] / 600
+        elif metric_options.get('collect_resources', True):
+            self._resources()
+        self.reward_total += float(reward)
+        self.last_info = info
+        self.live_metrics.record(info, float(reward), self.intersection_metrics, self.pedestrian_metrics.summary())
+        return self._observation(), float(reward), bool(done), False, info
+
+    def snapshot(self, complete=False):
+        """Captura também episódios parciais antes de fechar a conexão TraCI."""
+        unfinished = max(0, self.departed - self.arrived)
+        people = self.pedestrian_metrics.summary()
+        pending = max(0, traci.simulation.getMinExpectedNumber() - unfinished
+                      - people['pedestrians_unfinished'] - people['pedestrians_pending'])
+        info = {'episode_complete': bool(complete), 'episode_output': str(self.current_output),
+                'episode_number': self.episode, 'simulated_seconds': traci.simulation.getTime(),
+                'seed': self.seed_value, 'departed': self.departed, 'arrived': self.arrived,
+                'unfinished': unfinished, 'pending_departure': pending,
+                'wait_vehicle_seconds': self.wait_seconds, 'queue_vehicle_seconds': self.queue_seconds,
+                'global_halted_vehicle_seconds': self.global_halted_seconds,
+                'global_peak_halted_vehicles': self.global_peak_halted,
+                'active_vehicle_seconds': self.vehicle_seconds, **self.planned, **people,
+                'flow_counts': self.flow_counts.rows(traci.simulation.getTime()),
+                'intersections': self.intersection_metrics.rows(),
+                'pedestrian_crossings': self.pedestrian_metrics.rows(),
+                'real_seconds': round(time.perf_counter() - self.real_started, 3)}
+        metric_options = self.config.get('metrics', {})
+        info["signals"] = {tls_id: {
+            "queue_vehicle_seconds": values["queue_vehicle_seconds"],
+            "peak_halted_vehicles": values["peak_halted_vehicles"],
+            "mean_lane_speed_meters_per_second": (
+                values["speed_meters_per_second_sum"] / values["lane_samples"]
+                if values["lane_samples"] else None),
+            "mean_lane_occupancy_percent": (
+                values["occupancy_percent_sum"] / values["lane_samples"]
+                if values["lane_samples"] else None),
+            "phase_seconds": values["phase_seconds"],
+        } for tls_id, values in self.signal_metrics.items()}
+        if metric_options.get("collect_emissions", False):
+            info.update(co2_grams=self.co2_mg / 1000, fuel_grams=self.fuel_mg / 1000)
+            info.update(self.extra_emissions)
+        if metric_options.get("collect_events", True):
+            info.update(teleports_started=self.teleports, collision_vehicles=self.collisions)
+        if metric_options.get("collect_resources", True):
+            self._resources()
+            info.update(peak_rss_mb=round(self.peak_rss_mb, 2),
+                        cpu_seconds=round(self.cpu_seconds, 3))
+        return info
+
+    def close(self):
+        if not self.connected:
+            return
+        info = None
+        try:
+            if self.last_info is not None:
+                info = self.snapshot(complete=traci.simulation.getTime() >= self.config['duration_seconds'])
+            traci.close()
+        finally:
+            self.connected = False
+        if info is not None:
+            info['reward'] = self.reward_total
+            info.update(trip_summary(self.current_output / 'tripinfo.xml'))
+            self.last_info = info
+            write_json(self.current_output / 'episode_metrics.json', info)
             if self.action_log:
-                with (self.current_output / "actions.csv").open("w", newline="", encoding="utf-8") as file:
+                with (self.current_output / 'actions.csv').open('w', newline='', encoding='utf-8') as file:
                     writer = csv.DictWriter(file, fieldnames=self.action_log[0])
                     writer.writeheader()
                     writer.writerows(self.action_log)
-            reward -= (unfinished + pending) * self.config["training"]["unfinished_penalty_seconds"] / 600
-        elif metric_options.get("collect_resources", True):
-            self._resources()
-        return self._observation(), float(reward), bool(done), False, info
-
-    def close(self):
-        if self.connected:
-            traci.close()
-            self.connected = False

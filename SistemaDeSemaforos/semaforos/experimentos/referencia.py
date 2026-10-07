@@ -2,16 +2,17 @@
 import time
 from pathlib import Path
 
-import pandas as pd
 import numpy as np
 
 from semaforos.cenario.configuracao import control_parameters
 from semaforos.simulacao.ambiente import SemaforosEnv
 from semaforos.relatorios.catalogos import export_catalogs
-from semaforos.relatorios.metricas import trip_summary
 from semaforos.relatorios.exportacao import write_evaluation_report
 from semaforos.arquivos import write_json
 from .proveniencia import versions
+from semaforos.relatorios.episodios import append_episode, export_details
+from semaforos.arquivos import read_json
+from .tarefas import cancellation_requested
 
 
 def run_reference(config, output):
@@ -20,6 +21,8 @@ def run_reference(config, output):
     export_catalogs(output, config)
     env = SemaforosEnv(config, output / "episodes", gui=bool(control_parameters(config).get("gui", False)))
     rows, signals, flows = [], [], []
+    intersections, crossings = [], []
+    cancelled = False
     started = time.perf_counter()
     try:
         for seed in config["seeds"]:
@@ -31,21 +34,16 @@ def run_reference(config, output):
                 reward += value
                 write_json(output / "progress.json", {"seed": seed, "simulated_seconds_current_episode": info["simulated_seconds"],
                                                         "real_seconds": round(time.perf_counter() - started, 2)})
-                if (output / "cancel.flag").exists():
-                    write_json(output / "summary.json", {"cancelled": True, "simulated_seconds": info["simulated_seconds"]})
-                    return
+                if cancellation_requested(output):
+                    cancelled = True
+                    break
             env.close()
-            for row in info.pop("flow_counts", []):
-                flows.append({"controller": "network_reference", "seed": seed, **row})
-            for tls, row in info.pop("signals").items():
-                signals.append({"controller": "network_reference", "seed": seed, "tls_id": tls,
-                                **{k: v for k, v in row.items() if k != "phase_seconds"},
-                                **{f"phase_{i}_seconds": t for i, t in row["phase_seconds"].items()}})
-            rows.append({"controller": "network_reference", "seed": seed, "reward": reward,
-                         **info, **trip_summary(env.current_output / "tripinfo.xml")})
-        if flows:
-            pd.DataFrame(flows).to_csv(output / "flow_counts.csv", index=False)
+            info = read_json(env.current_output / 'episode_metrics.json')
+            append_episode(rows, signals, intersections, crossings, flows, info, 'network_reference', seed, reward)
+            if cancelled:
+                break
+        export_details(output, intersections, crossings, flows)
         return write_evaluation_report(output, rows, signals, {"algorithm": "Referência", "config": config,
-                                                               "versions": versions(), "real_seconds": round(time.perf_counter() - started, 2)})
+                                                               "cancelled": cancelled, "versions": versions(), "real_seconds": round(time.perf_counter() - started, 2)})
     finally:
         env.close()

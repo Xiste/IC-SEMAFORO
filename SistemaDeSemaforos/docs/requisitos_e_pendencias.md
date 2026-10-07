@@ -2,6 +2,8 @@
 
 ## Atualização: controle conjunto experimental pela interface
 
+Complemento de 07/10: concluídos união de faixas para relatórios dos nove cruzamentos, preservação de episódios parciais, histórico/gráficos ao vivo, processos recuperáveis após refresh, importação CSV/XLSX de contagens/OD e geração/medição de pedestres nas travessias cadastradas. A execução gráfica real e a captura SUMO-GUI foram verificadas. Rondon × Belém não possui travessia cadastrada, informação mostrada pela interface. Dados reais e validade física das travessias continuam entradas do cenário. Consulte o [estado funcional vigente](estado_funcional_2026-10-07.md).
+
 A interface prepara os 17 controladores dos nove cruzamentos com grupos sintéticos compatíveis pela matriz de conflitos; quatro controladores externos sem verde também são corrigidos. Permite preview, simulação sem treinamento, treino, avaliação e exportação. Contagens internas podem calibrar rotas de entrada sem somar automaticamente cada contagem como veículos novos. Perfil horário, tipos, destinos, OD e limites por fase usam tabelas. A instalação isolada usa dependências fixadas. Estas mudanças substituem a descrição de atendimento serial dos cenários novos; relatos abaixo são históricos. A opção por planos sintéticos continua. Treino longo, contagens representativas, destinos reais e evidência de melhoria permanecem fora da validação funcional. Veja [operação e limitações](controle_nove_interface.md).
 
 ## Confirmação do usuário em 06/10/2026

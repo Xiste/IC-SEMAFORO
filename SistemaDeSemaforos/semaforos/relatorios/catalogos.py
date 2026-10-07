@@ -146,6 +146,18 @@ def metric_rows(config):
     add("wait_vehicle_seconds active_vehicle_seconds global_halted_vehicle_seconds",
         "veículo·s", "rede inteira", "integração por passo TraCI")
     add("queue_vehicle_seconds", "veículo·s", "entradas dos alvos", "TraCI lane")
+    add('controller_count unique_lane_count', 'contagem', 'por cruzamento físico', 'união de faixas dos controladores')
+    add('episode_complete', 'sim/não', 'episódio completo ou parcial', 'horizonte efetivamente atingido')
+    add('planned_pedestrians pedestrians_departed pedestrians_arrived pedestrians_unfinished pedestrians_pending pedestrians_waiting_now',
+        'pessoas', 'pedestres; demanda opcional', 'demanda / TraCI person e simulation')
+    add('pedestrian_wait_person_seconds', 'pessoa·s', 'global e área de espera por travessia indicada na demanda', 'TraCI person')
+    add('maximum_pedestrian_wait_seconds mean_pedestrian_travel_time_seconds', 's', 'pedestres; chegadas completas na média', 'TraCI person / simulation')
+    add('crossing_passages', 'passagens', 'pessoa/travessia distintos', 'TraCI person road ID')
+    add('measured_vehicles_per_hour fitted_vehicles_per_hour realized_vehicles_per_hour', 'veículos/h', 'trechos com contagens informadas', 'calibração / detectores E1')
+    add('passed_vehicles', 'veículos', 'distintos por trecho medido', 'TraCI inductionloop')
+    add('observed_seconds', 's', 'tempo efetivo de contagem', 'TraCI simulation')
+    add('queue_vehicles_now', 'veículos', 'entradas por cruzamento; histórico ao vivo', 'TraCI lane')
+    add('reward_step', 'valor', 'por decisão; histórico ao vivo', 'ambiente')
     add("peak_halted_vehicles", "veículos", "por alvo", "TraCI lane")
     add("global_peak_halted_vehicles", "veículos", "rede inteira", "TraCI vehicle")
     add("mean_lane_speed_meters_per_second", "m/s", "por alvo; média simples das amostras",

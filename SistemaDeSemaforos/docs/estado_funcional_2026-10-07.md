@@ -2,6 +2,18 @@
 
 Esta atualização substitui as pendências de infraestrutura descritas na revisão de 06/10. Trabalho realizado na main; branch do Diego preservada.
 
+## Complemento: fechamento do fluxo de pesquisa
+
+Foram acrescentados gráficos ao vivo de fila, espera, chegadas e recompensa, curva de episódios completos e recuperação de acompanhamento em uma nova sessão da interface. Processos registram estado, PID e instante de criação para não confundir reutilização de PID. Cancelamento também funciona durante a inicialização e na avaliação. Recuperar o acompanhamento não reinicia um treinamento já encerrado.
+
+`intersections.csv` mede diretamente a união das faixas por cruzamento, sem somar tabelas de controladores. `pedestrian_crossings.csv` apresenta passagens e espera nas áreas de espera das travessias indicadas na demanda. Episódios encerrados antes do horizonte são salvos com `episode_complete=false`, incluindo viagens incompletas, ações, detalhes de cruzamentos e pedestres. Em avaliações, episódios parciais ficam fora dos agregados e gráficos comparativos.
+
+A interface importa contagens em CSV/XLSX e exige associação explícita para sensores sem ID SUMO. Converte contagens em veículos/h usando a duração das janelas e rejeita sobreposição conhecida. Importa também pares origem/destino com taxas. Há modelos de CSV para baixar. Arquivos por execução registram os dados efetivamente aplicados; contagens reais continuam responsabilidade da coleta.
+
+O SUMO-GUI executou 120 segundos com 17 controladores, pedestres, zoom/centralização, atraso visual e captura gráfica pela API. A imagem foi inspecionada. A conexão do automatizador nativo de janelas estava indisponível, portanto cliques manuais em toolbar não foram conferidos nesta sessão; isso não impediu a execução gráfica pelo TraCI.
+
+Pedestres podem ser ativados pela tabela de travessias. Há rotas associadas a oito dos nove locais; Rondon × Belém não tem travessia cadastrada nessa rede. O programa mostra essa cobertura e não inventa uma travessia física. Trata-se de limite do cadastro, não de falha de execução. Uma futura travessia de Belém precisa de geometria e associação informadas antes de inclusão no cenário. Os pisos atuais assumem caminhada de pelo menos 0,8 m/s.
+
 | Pendência | Resultado |
 |---|---|
 | Ciclos artificiais por atendimento serial | Grupos protegidos pela matriz de conflitos SUMO; 17 controladores dos nove locais. Ciclos iniciais verificados de 67–221 s e teto de 296 s. |
@@ -29,9 +41,9 @@ Escolha Nove cruzamentos e Prepare e verifique. Prepare um cenário novo para ob
 ## Limites que permanecem
 
 - As rotas ajustadas usam destinos sintéticos e um conjunto limitado de candidatos. Contagens e destinos reais continuam necessários para representar o trânsito observado.
-- As travessias têm estágios e pisos geométricos, mas não existe geração de demanda real de pedestres.
+- A demanda de pedestres agora é gerada a partir de volumes configurados; contagens reais e a cobertura física das travessias precisam ser fornecidas/verificadas. Belém continua sem travessia cadastrada.
 - Programas e premissas de limpeza são experimentais; planos reais ficaram fora do escopo escolhido.
 - A escolha de algoritmo, observações por movimento/jusante, recompensa, treino longo e demonstração de redução de filas continuam etapas do experimento. Testes funcionais não demonstram convergência ou melhoria de tráfego.
-- Resultados parciais de treinamento não equivalem a episódios completos; a tabela de episódios conserva somente os concluídos.
+- Resultados parciais são preservados e identificados. Não equivalem a episódios completos e são excluídos das comparações finais.
 
-Verificações: instalação isolada e pip check aprovados; suíte de 27 testes aprovada e teste adicional de rejeição de contagens incompatíveis aprovado. AppTest verificou os nove cruzamentos, formulários, catálogos e exportação. Não executado estudo longo de otimização nem validação em campo.
+Verificações atuais: suíte completa de 33 testes aprovada em 220,933 s, mais uma regressão de normalização de contagens parciais aprovada; 34 testes distintos verificados. AppTest conferiu recuperação em duas sessões, quatro gráficos ao vivo, curva dos episódios, cancelamento, importações, catálogos e exportação. Catálogo atualizado com 87 métricas, 462 opções SUMO e 596 consultas TraCI. SUMO-GUI executou 120 s com 17 controladores e pedestres, atraso visual e imagem inspecionada. Não executado estudo longo de otimização nem validação em campo.

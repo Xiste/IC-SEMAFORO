@@ -36,10 +36,12 @@ class FlowCounts:
         for loop, edge in self.loops.items():
             self.passed[edge].update(traci.inductionloop.getLastStepVehicleIDs(loop))
 
-    def rows(self):
+    def rows(self, observed_seconds=None):
+        seconds = self.duration if observed_seconds is None else float(observed_seconds)
         rows = [{"edge_id": edge, "measured_vehicles_per_hour": self.target[edge],
                  "fitted_vehicles_per_hour": self.fitted[edge], "passed_vehicles": len(passed),
-                 "realized_vehicles_per_hour": len(passed) * 3600 / self.duration}
+                 'observed_seconds': seconds,
+                 "realized_vehicles_per_hour": len(passed) * 3600 / seconds if seconds > 0 else None}
                 for edge, passed in self.passed.items()]
         if rows:
             with (self.output / "flow_counts.csv").open("w", encoding="utf-8", newline="") as file:

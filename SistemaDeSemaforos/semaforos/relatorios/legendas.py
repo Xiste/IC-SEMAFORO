@@ -5,12 +5,30 @@ import re
 
 # Nome legível, significado, unidade.
 METRICS = {
+    'observed_seconds': ('Duração observada', 'Tempo efetivamente simulado usado para converter passagens em veículos/h, inclusive em episódios parciais.', 's'),
+    "episode_complete": ("Episódio completo", "Verdadeiro quando a simulação atingiu o horizonte; falso identifica métricas parciais, excluídas das comparações finais.", "sim/não"),
+    "episode_number": ("Número do episódio", "Sequência do episódio na execução do ambiente.", "número"),
+    "controller_count": ("Controladores do cruzamento", "Quantidade de IDs SUMO associados ao mesmo cruzamento físico.", "controladores"),
+    "unique_lane_count": ("Faixas distintas", "Cada faixa da união dos controladores é medida uma vez neste cruzamento.", "faixas"),
+    "planned_pedestrians": ("Pedestres planejados", "Pessoas previstas na demanda de caminhadas do episódio.", "pessoas"),
+    "pedestrians_departed": ("Pedestres inseridos", "Pessoas que iniciaram a caminhada.", "pessoas"),
+    "pedestrians_arrived": ("Pedestres que chegaram", "Pessoas que concluíram a caminhada no horizonte observado.", "pessoas"),
+    "pedestrians_unfinished": ("Caminhadas em andamento", "Pedestres inseridos que ainda não chegaram.", "pessoas"),
+    "pedestrians_pending": ("Pedestres aguardando partida", "Pessoas previstas que ainda não começaram a caminhada.", "pessoas"),
+    "pedestrian_wait_person_seconds": ("Espera de pedestres", "Espera acumulada por pessoa; na tabela de travessias considera a área de espera da travessia indicada na demanda.", "pessoa·s"),
+    "pedestrians_waiting_now": ("Pedestres esperando agora", "Quantidade de pessoas com tempo de espera positivo no instante da amostra.", "pessoas"),
+    "maximum_pedestrian_wait_seconds": ("Maior espera de pedestre", "Maior espera consecutiva observada em uma pessoa.", "s"),
+    "mean_pedestrian_travel_time_seconds": ("Tempo médio das caminhadas", "Média entre partida e chegada dos pedestres que concluíram; não inclui caminhadas em andamento.", "s"),
+    "crossing_id": ("Travessia", "ID da travessia existente na rede SUMO.", "ID"),
+    "crossing_passages": ("Passagens de pedestres", "Pares pessoa/travessia distintos detectados; uma pessoa pode passar em mais de uma travessia.", "passagens"),
+    "queue_vehicles_now": ("Fila atual", "Veículos parados nas faixas medidas por cruzamento no último instante.", "veículos"),
+    "reward_step": ("Recompensa por decisão", "Recompensa retornada pelo ambiente para a última decisão.", "valor"),
     "intersection": ("Cruzamento", "Nome do cruzamento associado ao controlador SUMO; métricas continuam discriminadas por controlador.", "nome"),
     "edge_id": ("Trecho medido", "ID SUMO do trecho onde o detector virtual conta passagens.", "ID"),
     "measured_vehicles_per_hour": ("Fluxo informado", "Contagem por hora fornecida pelo usuário para calibração.", "veículos/h"),
     "fitted_vehicles_per_hour": ("Fluxo ajustado nas rotas", "Passagens previstas pela combinação de rotas sintéticas antes da simulação.", "veículos/h"),
     "passed_vehicles": ("Veículos que passaram", "Veículos distintos detectados durante o episódio, somando as faixas do trecho.", "veículos"),
-    "realized_vehicles_per_hour": ("Fluxo realizado", "Passagens detectadas divididas pelo horizonte, convertidas para uma hora; pode diferir devido a congestionamento e início da simulação.", "veículos/h"),
+    "realized_vehicles_per_hour": ("Fluxo realizado", "Passagens detectadas divididas pela duração efetivamente observada, convertidas para uma hora; pode diferir devido a congestionamento e início da simulação.", "veículos/h"),
     "planned_vehicles": ("Veículos planejados", "Viagens previstas na demanda; fluxos podem ter contagem estimada.", "veículos"),
     "planned_vehicles_estimated": ("Contagem planejada estimada", "Indica se a quantidade planejada foi estimada a partir de fluxos.", "sim/não"),
     "departed": ("Veículos inseridos", "Veículos que efetivamente entraram na simulação.", "veículos"),
@@ -110,6 +128,10 @@ def portuguese_metric_table(table):
 
 
 PARAMETERS = {
+    "gui_delay_milliseconds": ("Atraso da visualização", "Pausa visual por passo do SUMO-GUI, em milissegundos. Não altera a duração simulada, mas aumenta o tempo real."),
+    "pedestrians.enabled": ("Simular pedestres", "Ativa geração opcional de pessoas caminhando em rotas explícitas; a recompensa dos veículos permanece a configurada."),
+    "walking_speed_meters_per_second": ("Velocidade de caminhada", "Velocidade configurada em metros por segundo; os pisos experimentais atuais usam 0,8 m/s."),
+    "persons_per_hour": ("Pessoas por hora", "Volume planejado para cada par de acessos de pedestres; partidas uniformes no horizonte."),
     "algorithm": ("Algoritmo de aprendizado", "Nome do algoritmo registrado para construir, treinar e carregar a política; padrão PPO."),
     "network": ("Rede SUMO", "Arquivo .net.xml com vias, faixas, conexões e programas semafóricos."),
     "plans": ("Planilha de planos", "Fonte dos tempos reais para auditoria; não substitui automaticamente os programas da rede."),

@@ -16,6 +16,9 @@ from semaforos.relatorios.catalogos import export_catalogs
 from semaforos.relatorios.exportacao import write_evaluation_report
 from semaforos.cenario.rede import network_programs, phase_action_spec
 from semaforos.arquivos import write_json, write_text
+from semaforos.arquivos import read_json
+from semaforos.relatorios.episodios import scalar_metrics, append_episode, export_details, export_training_details
+from .tarefas import cancellation_requested
 
 
 class ProgressCallback(BaseCallback):
@@ -36,15 +39,15 @@ class ProgressCallback(BaseCallback):
                 self.episode_rows.append({"episode": self.episodes, "timesteps": self.num_timesteps,
                                           "reward": item.get("episode", {}).get("r"),
                                           **trips,
-                                          **{key: value for key, value in item.items() if key not in ("signals", "flow_counts", "terminal_observation", "episode")}})
+                                          **scalar_metrics(item)})
                 import pandas as pd
                 write_text(self.output / "training_episodes.csv", pd.DataFrame(self.episode_rows).to_csv(index=False))
-        if self.num_timesteps % 10 == 0 or (self.output / "cancel.flag").exists():
+        if self.num_timesteps % 10 == 0 or cancellation_requested(self.output):
             progress = {"timesteps": self.num_timesteps, "episodes_completed": self.episodes,
                         "simulated_seconds_current_episode": infos[0].get("simulated_seconds") if infos else None,
                         "real_seconds": round(time.perf_counter() - self.started, 2)}
             write_json(self.output / "progress.json", progress)
-        if (self.output / "cancel.flag").exists():
+        if cancellation_requested(self.output):
             self.cancelled = True
             return False
         return True
@@ -98,10 +101,20 @@ def train_rl(config, output):
         manifest["algorithm_effective"] = {**constructor, "device": str(model.device)}
         (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
         model.learn(total_timesteps=total_steps, callback=callback)
+        env.close()
+        partial = read_json(env.current_output / 'episode_metrics.json') if env.current_output else None
+        if partial and not partial.get('episode_complete', True):
+            import pandas as pd
+            callback.episode_rows.append({'episode': callback.episodes + 1, 'timesteps': model.num_timesteps,
+                                          **scalar_metrics(partial)})
+            write_text(output / 'training_episodes.csv', pd.DataFrame(callback.episode_rows).to_csv(index=False))
+            write_json(output / 'partial_episode.json', partial)
+        export_training_details(output, algorithm.name)
         model_name = f"{algorithm.name.lower()}_model"
         model.save(str(output / model_name))
         summary = {"algorithm": algorithm.name, "timesteps": model.num_timesteps,
                    "episodes_completed": callback.episodes, "cancelled": callback.cancelled,
+                   "partial_episode_saved": bool(partial and not partial.get('episode_complete', True)),
                    "real_seconds": round(time.perf_counter() - started, 2),
                    "model": str(output / f"{model_name}.zip")}
         write_json(output / "summary.json", summary)
@@ -142,6 +155,8 @@ def evaluate_rl(config, output, model_path, seeds=None):
     rows = []
     signal_rows = []
     flow_rows = []
+    intersection_rows, crossing_rows = [], []
+    cancelled = False
     started = time.perf_counter()
     control = config.get("control", config.get("ppo", {}))
     env = SemaforosEnv(config, output / "episodes", gui=bool(control.get("gui", False)))
@@ -159,23 +174,18 @@ def evaluate_rl(config, output, model_path, seeds=None):
                         action = np.ones(len(env.action_spec), dtype=np.int64)
                     observation, reward, done, truncated, info = env.step(action)
                     episode_reward += reward
-                    if done or truncated:
+                    cancelled = cancellation_requested(output)
+                    if done or truncated or cancelled:
                         env.close()
-                        trips = trip_summary(env.current_output / "tripinfo.xml")
-                        signals = info.pop("signals")
-                        flow_rows.extend({"controller": controller, "seed": seed, **row} for row in info.pop("flow_counts", []))
-                        rows.append({"controller": controller, "seed": seed,
-                                     "reward": episode_reward, **info, **trips})
-                        for tls_id, values in signals.items():
-                            signal_rows.append({"controller": controller, "seed": seed,
-                                                "tls_id": tls_id, **{key: value for key, value in values.items()
-                                                                     if key != "phase_seconds"},
-                                                **{f"phase_{index}_seconds": seconds for index, seconds
-                                                   in values["phase_seconds"].items()}})
+                        info = read_json(env.current_output / 'episode_metrics.json')
+                        append_episode(rows, signal_rows, intersection_rows, crossing_rows, flow_rows,
+                                       info, controller, seed, episode_reward)
                         break
-        if flow_rows:
-            import pandas as pd
-            pd.DataFrame(flow_rows).to_csv(output / "flow_counts.csv", index=False)
+                if cancelled:
+                    break
+            if cancelled:
+                break
+        export_details(output, intersection_rows, crossing_rows, flow_rows)
         summary = write_evaluation_report(output, rows, signal_rows, {
             "real_seconds": round(time.perf_counter() - started, 2),
             "versions": versions(), "model_path": str(model_path),
@@ -186,6 +196,7 @@ def evaluate_rl(config, output, model_path, seeds=None):
             "evaluation_demand": config["demand"],
             "training_manifest": training_manifest,
             "algorithm": algorithm.name,
+            "cancelled": cancelled,
         })
         return summary
     finally:

@@ -37,3 +37,15 @@ Em **Volume por via**, selecione o significado dos números:
 Clique em **Calibrar demanda e conferir contagens** para comparar valores informados e ajustados antes de executar. Ajustes acima da tolerância impedem a execução. Os destinos continuam sintéticos; o método considera rotas candidatas e não substitui dados reais de origem/destino. Durante a simulação, detectores E1 contam veículos distintos por trecho. `flow_counts.csv` mostra fluxo informado, ajustado e efetivamente observado, que pode mudar por filas, partidas pendentes e início da simulação.
 
 Perfil horário, composição de veículos, distribuição de destinos, pares origem/destino e limites por fase são tabelas. Percentuais devem somar 100%; janelas devem cobrir o episódio sem lacunas. A soma dos maiores tempos por controlador respeita o teto de ciclo. O preview gera a demanda do episódio completo e executa apenas seus primeiros 30 s, preservando inclusive janelas iniciais sem tráfego.
+
+## Importação, pedestres e acompanhamento
+
+Em **Importar contagens medidas**, baixe o modelo e envie CSV/XLSX com `edge_id,vehicles_per_hour`. Também são aceitos `sensor_id,vehicles,window_seconds`, ou o formato local `vlink_id,vehicle_total,hora_inicio,hora_fim`. Janelas do mesmo sensor são agregadas pelo total de veículos dividido pelo tempo observado, sem somar veículos/h. Janelas com sobreposição conhecida são rejeitadas. Associe sensores sem ID SUMO ao trecho correto na tabela e clique em **Aplicar contagens associadas**. Todos os trechos da rede podem ser associados; os 34 acessos pré-listados não são uma restrição para importar sensores.
+
+Em **Pares origem–destino → Importar origens e destinos**, envie `from_edge,to_edge,vehicles_per_hour` e clique em **Aplicar arquivo de OD**. São viagens informadas por par, diferentes do ajuste de rotas sintéticas das contagens internas. As taxas e IDs usados ficam em `cenario.json` de cada execução.
+
+Ative **Simular pedestres** e informe pessoas/h nas rotas de travessia disponíveis. A demanda é opcional e não muda a fórmula da recompensa. Há travessias associadas a oito locais; Rondon × Belém não possui travessia cadastrada nessa rede. A interface identifica essa ausência, sem inventar uma travessia. Pisos atuais pressupõem pelo menos 0,8 m/s de caminhada. Filas de pedestres, espera e passagens ficam nos relatórios.
+
+O painel atualiza gráficos de filas, espera, chegadas e recompensa a cada dois segundos. Em **Acompanhar ou recuperar uma execução**, selecione o processo para reconectar após refresh. O processo continua independentemente da página; reconectar não reinicia um treino encerrado. **Carregar configurações desta execução** recupera seus parâmetros. Para observar o mapa, marque SUMO-GUI e ajuste o atraso visual.
+
+Episódios interrompidos são salvos com `episode_complete=false`. Suas métricas e ações são exportadas, mas os episódios parciais ficam fora de agregados e gráficos comparativos. `intersections.csv` usa união das faixas por cruzamento; não é soma de `signals.csv`. Contagens realizadas usam `observed_seconds`, inclusive quando o episódio é parcial.

@@ -1,4 +1,4 @@
-"""Normaliza a planilha auditada em dados intermediários, sem emitir programas SUMO.
+"""Normaliza a fonte SETTRAN e conserva suplementos operacionais explícitos.
 
 Uso: python3 scripts/audit_settran.py [--check]. A fonte tem layout e hash
 conhecidos: uma revisão do XLSX exige nova auditoria antes de alterar este leitor.
@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
 import xml.etree.ElementTree as ET
 from zipfile import ZipFile
 
@@ -26,20 +27,83 @@ BLOCKS = (
 TIMING_FIELDS = (
     "green_seconds", "yellow_seconds", "clearance_red_seconds", "red_seconds",
 )
-# Associações físicas confirmadas em settran_audit.csv, identificadas pelas
-# células do cabeçalho/estágio e pelo rótulo original. Não definem permissões,
-# phase.state, sequência ou transições entre estágios que compartilham links.
-CONFIRMED_STAGE_LINKS = {
-    ("A39", "A51", "A"): ("FAM_CESARIO_PARANA", (1, 2)),
-    ("A39", "A52", "B"): ("FAM_CESARIO_PARANA", (3, 4)),
-    ("A39", "A53", "C"): ("FAM_CESARIO_PARANA", (0,)),
-    ("A56", "A70", "C"): ("FAM_RONDON_PORTO_ALEGRE", (3, 4)),
-    ("A74", "A86", "A"): ("FAM_RONDON_BELEM", (4, 5, 6)),
-    ("A74", "A87", "B"): ("FAM_RONDON_BELEM", (0, 1, 2, 3, 4, 5, 6)),
-    ("A74", "A88", "C"): ("FAM_RONDON_BELEM", (0, 1, 2, 3)),
-    ("A74", "A89", "D"): ("FAM_RONDON_BELEM", (7, 8, 9)),
-    ("A110", "A122", "A"): ("FAM_RONDON_NITEROI", (0, 1, 2, 3, 4, 5, 6)),
-    ("A110", "A124", "C"): ("FAM_RONDON_NITEROI", (12, 13, 14, 15, 16)),
+# Cobertura geográfica inclui retenções auxiliares, mesmo quando o XLSX não
+# demonstra se elas recebem o mesmo comando do cruzamento principal.
+INTERSECTION_TLS_IDS = {
+    "A3": ("FAM_RONDON_BENJAMIM",),
+    "A21": ("FAM_RONDON_PARANA",),
+    "A39": ("FAM_CESARIO_PARANA",),
+    "A56": ("FAM_RONDON_PORTO_ALEGRE", "3386573305", "3386573306", "5494111603"),
+    "A74": ("FAM_RONDON_BELEM",),
+    "A92": ("FAM_RONDON_ROTARY_CLUB",),
+    "A110": ("FAM_RONDON_NITEROI", "5494111596", "5494111597"),
+    "A128": ("5494111589", "5494111590", "5494111594"),
+    "A144": ("FAM_RONDON_ANSELMO", "338654991"),
+}
+
+# São conjuntos físicos de connections, não uma matriz de permissões.
+# Esquerdas/retornos presentes nesses conjuntos podem conflitar com retas:
+# aplicar G a todos os índices seria uma interpretação operacional indevida.
+PHYSICAL_STAGE_LINKS = {
+    ("A3", "A15", "A"): (("FAM_RONDON_BENJAMIM", (0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14)),),
+    ("A3", "A16", "B"): (("FAM_RONDON_BENJAMIM", (6, 7, 8)),),
+    ("A3", "A17", "C"): (("FAM_RONDON_BENJAMIM", (15, 16, 17)),),
+    ("A21", "A33", "A"): (("FAM_RONDON_PARANA", (0, 1, 2, 3)),),
+    ("A21", "A34", "B"): (("FAM_RONDON_PARANA", (7, 8, 9, 10)),),
+    ("A21", "A35", "C"): (("FAM_RONDON_PARANA", (4,)),),
+    ("A21", "A36", "D"): (("FAM_RONDON_PARANA", (5, 6)),),
+    ("A39", "A51", "A"): (("FAM_CESARIO_PARANA", (1, 2)),),
+    ("A39", "A52", "B"): (("FAM_CESARIO_PARANA", (3, 4)),),
+    ("A39", "A53", "C"): (("FAM_CESARIO_PARANA", (0,)),),
+    ("A56", "A68", "A"): (("FAM_RONDON_PORTO_ALEGRE", (0, 1, 2)),),
+    ("A56", "A69", "B"): (("FAM_RONDON_PORTO_ALEGRE", (0, 1, 2, 5, 6, 7, 8, 9)),),
+    ("A56", "A70", "C"): (("FAM_RONDON_PORTO_ALEGRE", (3, 4)),),
+    ("A74", "A86", "A"): (("FAM_RONDON_BELEM", (4, 5, 6)),),
+    ("A74", "A87", "B"): (("FAM_RONDON_BELEM", (0, 1, 2, 3, 4, 5, 6)),),
+    ("A74", "A88", "C"): (("FAM_RONDON_BELEM", (0, 1, 2, 3)),),
+    ("A74", "A89", "D"): (("FAM_RONDON_BELEM", (7, 8, 9)),),
+    ("A92", "A104", "A"): (("FAM_RONDON_ROTARY_CLUB", (5, 6, 7, 8)),),
+    ("A92", "A105", "B"): (("FAM_RONDON_ROTARY_CLUB", (1, 2, 3, 4, 5, 6, 7, 8)),),
+    ("A92", "A106", "C"): (("FAM_RONDON_ROTARY_CLUB", (1, 2, 3, 4)),),
+    ("A110", "A122", "A"): (("FAM_RONDON_NITEROI", (0, 1, 2, 3, 4, 5, 6)),),
+    ("A110", "A123", "B"): (("FAM_RONDON_NITEROI", (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)),),
+    ("A110", "A124", "C"): (("FAM_RONDON_NITEROI", (12, 13, 14, 15, 16)),),
+    ("A128", "A140", "A"): (("5494111590", (0, 1, 2, 3, 4)),),
+    ("A128", "A141", "B"): (("5494111589", (0, 1, 2, 3)), ("5494111594", (0, 1, 2, 3))),
+    ("A144", "A156", "A"): (("FAM_RONDON_ANSELMO", (3, 4, 5, 6, 7)),),
+    ("A144", "A157", "B"): (("FAM_RONDON_ANSELMO", (0, 1, 2, 3, 4, 5, 6, 7)),),
+    ("A144", "A158", "C"): (("338654991", (0, 1)),),
+}
+CONFIRMED_BINDINGS = {
+    ("A3", "A16", "B"), ("A39", "A51", "A"), ("A39", "A52", "B"),
+    ("A39", "A53", "C"), ("A56", "A70", "C"),
+    ("A74", "A86", "A"), ("A74", "A87", "B"), ("A74", "A88", "C"), ("A74", "A89", "D"),
+    ("A110", "A122", "A"), ("A110", "A124", "C"), ("A144", "A158", "C"),
+}
+MAPPING_NOTES = {
+    ("A3", "A17", "C"):
+        "Alagoas 30620978#11 alimenta -403166934 (trecho Ricardo Siquierolli Tucci), "
+        "depois 853751181#0, única aproximação lateral restante. Continuidade física "
+        "comprovada, sem renomear vias ou presumir grupo focal.",
+    ("A92", "A107", "D"):
+        "Falta documento que identifique quais movimentos pertencem ao Grupo D: "
+        "a fonte diz Antônio Crescêncio, via 303101571 de saída; a entrada controlada "
+        "463014795#0, índice 0, é Rotary Club. Não associar nomes distintos automaticamente.",
+    ("A144", "A158", "C"):
+        "B158 identifica Anselmo Alves dos Santos e corresponde à via 625668273#2, "
+        "índices 0/1. Cabeçalho A144 Nascimento preservado como divergência de origem; "
+        "não impede a identificação física explícita desta descrição.",
+}
+INTERSECTION_MAPPING_NOTES = {
+    "A56": "Retenções auxiliares: 3386573305 rumo centro índices 0–3, "
+            "3386573306 rumo BR050 índices 0/1 e 5494111603 saída BR050 índices 0/1. "
+            "Falta comprovar seus grupos focais e coordenação; não vinculadas automaticamente ao estágio.",
+    "A110": "Retenções auxiliares: 5494111596 saída rumo centro índices 0–3 e "
+             "5494111597 entrada rumo BR050 índices 0–3. Falta comprovar seus grupos "
+             "focais e coordenação; não vinculadas automaticamente ao estágio.",
+    "A128": "A identifica o conjunto físico rumo centro 5494111590, incluindo a alça "
+             "de índice 4; B identifica retas rumo BR050 5494111589/5494111594. "
+             "Não comprova comando comum ou coordenação entre as retenções.",
 }
 
 
@@ -70,7 +134,7 @@ def read_source(path):
 
 
 def normalize_source(path=SOURCE):
-    """Conserva planos e tempos; lacunas impedem conversão em phase.state."""
+    """Extrai a fonte imutável; não reconstrói permissões ou fases ausentes."""
     cells = read_source(path)
     programs = []
     anomalies = []
@@ -88,17 +152,34 @@ def normalize_source(path=SOURCE):
                     name: int(cells[f"{column}{row}"])
                     for name, column in zip(TIMING_FIELDS, columns)
                 }
-                binding = CONFIRMED_STAGE_LINKS.get(
-                    (f"A{heading}", f"A{description_row}", stage_id)
-                )
+                key = (f"A{heading}", f"A{description_row}", stage_id)
+                binding = PHYSICAL_STAGE_LINKS.get(key)
+                scope = "pedestrian" if cells[f"B{description_row}"].strip() == "Pedestres" else "vehicle"
+                if scope == "pedestrian":
+                    mapping_status = "NAO_APLICAVEL"
+                    mapping_note = "Dados originais conservados; programação pedestre fora do escopo da V2 veicular."
+                elif binding is None:
+                    mapping_status = "DADO_EXTERNO_AUSENTE"
+                    mapping_note = MAPPING_NOTES[key]
+                else:
+                    mapping_status = "CONFIRMADO" if key in CONFIRMED_BINDINGS else "INFERIVEL_COM_SEGURANCA"
+                    mapping_note = MAPPING_NOTES.get(
+                        key, "Cobertura física das aproximações descritas, determinada pela "
+                        "topologia e identificação das vias; não define grupo focal, G/g, ordem ou transições."
+                    )
+                    if f"A{heading}" in INTERSECTION_MAPPING_NOTES:
+                        mapping_note += " " + INTERSECTION_MAPPING_NOTES[f"A{heading}"]
                 stages.append({
                     "stage_id": stage_id,
                     "movement": cells[f"B{description_row}"].strip(),
+                    "scope": scope,
+                    "mapping_status": mapping_status,
+                    "mapping_note": mapping_note,
                     **timings,
                     "sumo_links": [{
-                        "tls_id": binding[0],
-                        "link_indices": list(binding[1]),
-                    }] if binding is not None else None,
+                        "tls_id": tls_id,
+                        "link_indices": list(indices),
+                    } for tls_id, indices in binding] if binding is not None else None,
                     "source_cells": {
                         "stage_id": f"A{description_row}",
                         "movement": f"B{description_row}",
@@ -126,11 +207,8 @@ def normalize_source(path=SOURCE):
                 "cycle_seconds": cycle,
                 "offset_seconds": int(cells[f"B{row}"]),
                 "stages": stages,
-                "sumo_tls_ids": sorted({
-                    link["tls_id"] for stage in stages
-                    for link in (stage["sumo_links"] or [])
-                }),
-                "sumo_phases": None,
+                "sumo_tls_ids": sorted(INTERSECTION_TLS_IDS[f"A{heading}"]),
+                "operational": None,
                 "source_cells": {
                     "intersection": f"A{heading}",
                     "plan_id": f"A{row}",
@@ -145,10 +223,10 @@ def normalize_source(path=SOURCE):
         "resolution": "pending_settran_confirmation",
     })
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "signal_profile": "settran",
-        "status": "blocked",
-        "representation": "audited_intermediate_not_executable",
+        "status": "partial_external_data",
+        "representation": "normalized_source_with_optional_operational_supplements",
         "source": {
             "path": "RondonNorte.xlsx",
             "sha256": SOURCE_SHA256,
@@ -166,23 +244,77 @@ def normalize_source(path=SOURCE):
             "Vermelho é residual do ciclo em 125 fórmulas; não é fase adicional a concatenar.",
             "Os três vermelhos discrepantes são preservados sem correção automática.",
             "null representa informação ausente ou não comprovada; não representa agenda de dia inteiro.",
-            "sumo_links conserva apenas associações físicas confirmadas na auditoria; não define permissões, estados ou transições.",
-            "sumo_tls_ids reúne somente TLS de estágios com vínculo físico confirmado; não inventaria toda a interseção.",
+            "sumo_links descreve cobertura física confirmada ou inferível; não define grupos focais, permissões, estados ou transições.",
+            "sumo_tls_ids inventaria todos os TLS geográficos associados à interseção, inclusive auxiliares sem comando SETTRAN comprovado.",
+            "stages.scope distingue descrições veiculares de pedestres; estas últimas são preservadas sem reconstrução nesta V2.",
+            "operational é suplemento explícito por interseção/plano; null significa dados operacionais ainda ausentes.",
         ],
         "programs": programs,
         "schedule": None,
         "operational_day_start": None,
         "initial_plan_id": None,
         "blockers": [
-            {"id": "missing_schedule", "detail": "Faltam horários, dias e vínculos horário→plano por interseção."},
-            {"id": "missing_operational_day_start", "detail": "Falta o marco oficial para iniciar o relógio operacional de cada episódio."},
-            {"id": "unconfirmed_stage_links", "detail": "Não há correspondência confirmada de todos os estágios com controlled links, permissões e travessias SUMO."},
-            {"id": "unconfirmed_transitions", "detail": "Faltam estados, transições entre grupos e interpretação dos tempos de pedestres."},
-            {"id": "unconfirmed_offset_reference", "detail": "Falta confirmar a referência e o sinal da defasagem para SUMO."},
-            {"id": "source_anomalies", "detail": "Três vermelhos de Niterói e a divergência Nascimento/Santos exigem confirmação da SETTRAN."},
+            {"id": "missing_vehicle_permissions", "scope": "fixed_plan",
+             "detail": "Falta matriz grupo/intervalo→movimentos, indicando proteção, permissão ou exclusão de cada conexão veicular."},
+            {"id": "unconfirmed_transitions", "scope": "fixed_plan",
+             "detail": "Falta ordem dos intervalos e quadro de continuidade/amarelo/limpeza entre grupos sobrepostos; a ordem das linhas não comprova a sequência."},
+            {"id": "unconfirmed_offset_reference", "scope": "fixed_plan",
+             "detail": "Falta evento de referência da defasagem, relógio/interseção de referência e sentido da contagem para convertê-la a SUMO."},
+            {"id": "unconfirmed_auxiliary_control", "scope": "local_tls",
+             "detail": "Porto Alegre, Niterói e João Naves: faltam grupos focais e coordenação das retenções auxiliares identificadas em mapping_note."},
+            {"id": "rotary_stage_d_identity", "scope": "local_stage",
+             "detail": MAPPING_NOTES[("A92", "A107", "D")]},
+            {"id": "missing_schedule", "scope": "temporal_operation",
+             "detail": "Faltam start_time, end_time, plan_id, weekdays e exceções aplicáveis por interseção; não bloqueia por si só um plano fixo explicitamente selecionado."},
+            {"id": "missing_operational_day_start", "scope": "temporal_operation",
+             "detail": "Falta marco oficial do relógio operacional; nenhum início do dia é presumido."},
         ],
         "anomalies": anomalies,
     }
+
+
+def source_values(document):
+    """Somente valores/células provenientes do XLSX, independentes do schema."""
+    values = {}
+    for program in document["programs"]:
+        key = (program["intersection"], program["plan_id"])
+        if key in values:
+            raise ValueError("Artefato SETTRAN contém interseção/plano duplicado.")
+        values[key] = {
+            **{field: program[field] for field in (
+                "intersection", "plan_id", "cycle_seconds", "offset_seconds", "source_cells"
+            )},
+            "stages": [{field: stage[field] for field in (
+                "stage_id", "movement", *TIMING_FIELDS, "source_cells"
+            )} for stage in program["stages"]],
+        }
+    return values
+
+
+def preserve_supplements(document, previous):
+    """Migra dados derivados sem apagar suplementos nem ocultar fonte alterada."""
+    if previous["source"] != document["source"] or source_values(previous) != source_values(document):
+        raise ValueError("Artefato SETTRAN altera valores/células da fonte; nenhuma informação foi sobrescrita.")
+    previous_programs = {(p["intersection"], p["plan_id"]): p for p in previous["programs"]}
+    for program in document["programs"]:
+        prior = previous_programs[program["intersection"], program["plan_id"]]
+        if prior.get("sumo_phases") is not None:
+            raise ValueError("Artefato legado contém sumo_phases preenchido; migre esses dados para operational antes de regenerar.")
+        program["operational"] = prior.get("operational")
+    for field in ("schedule", "operational_day_start", "initial_plan_id"):
+        if field in previous:
+            document[field] = previous[field]
+    return document
+
+
+def validate_source_document(document):
+    """Confere origem e mapeamentos; suplementos são validados na execução."""
+    try:
+        expected = preserve_supplements(normalize_source(SOURCE), document)
+    except (OSError, KeyError, TypeError) as error:
+        raise ValueError("Artefato SETTRAN está incompleto ou possui estrutura incompatível com a origem auditada.") from error
+    if document != expected:
+        raise ValueError("Artefato SETTRAN diverge da origem ou dos mapeamentos auditados; reaudite antes de executar.")
 
 
 def main(argv=None):
@@ -191,15 +323,26 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         document = normalize_source(SOURCE)
+        previous = None
+        if OUTPUT.exists():
+            previous = json.loads(OUTPUT.read_text(encoding="utf-8"))
+            document = preserve_supplements(document, previous)
+        # A agenda é somente validada como dado; isto não habilita operação
+        # temporal nem interfere na seleção deliberada de um plano fixo.
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from SistemaDeSemaforos.simulation.settran_configuration import validate_schedule
+        schedule_status = validate_schedule(document)
         content = json.dumps(document, ensure_ascii=False, indent=2) + "\n"
         if args.check:
-            if not OUTPUT.exists() or OUTPUT.read_text(encoding="utf-8") != content:
+            if previous != document:
                 raise ValueError("settran_programs.json está ausente ou diverge da fonte auditada.")
         else:
             OUTPUT.write_text(content, encoding="utf-8")
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, KeyError, TypeError) as error:
         parser.exit(1, f"Erro: {error}\n")
-    print("SETTRAN: 36 planos e 128 estágios conferidos; perfil bloqueado pelas lacunas documentadas.")
+    print("SETTRAN: 36 planos e 128 descrições conferidos; suplementos explícitos preservados. "
+          f"Agenda: {schedule_status}. Validação operacional por plano/TLS na execução.")
     return 0
 
 

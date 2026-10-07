@@ -1,193 +1,246 @@
 # Funcionamento do projeto
 
-Guia técnico principal, na ordem do pipeline. Para executar, consulte
-[GUIA_DE_EXECUCAO_E_TESTES.md](GUIA_DE_EXECUCAO_E_TESTES.md). Os catálogos são referências para consulta;
-o runner não carrega esses CSVs como configuração.
+Documentação canônica para executar, compreender, validar e continuar o sistema.
+O pipeline gera viagens aleatórias, calcula rotas, executa SUMO e consolida
+observações. A rede física é única; demanda e perfil semafórico são independentes.
 
-Consulta por assunto: [mapa](#1-mapa-e-condições-de-referência),
-[demanda](#2-demanda-random), [APIs](#3-execução-e-apis-utilizadas),
-[métricas](#4-métricas-seleção-e-interpretação),
-[arquivos de saída](#5-resultados-e-por-que-são-separados) e
-[desempenho](#6-desempenho-já-medido).
-A direção estratégica e a distinção entre estado atual, consolidação em andamento
-e etapas futuras ficam no [README](../../README.md#direção-estratégica).
+```text
+rede Rondon Norte → demanda random → current ou settran → SUMO → métricas
+```
+
+| Local | Responsabilidade |
+| --- | --- |
+| `SistemaDeSemaforos/network/` | Rede física compartilhada e programas de referência. |
+| `SistemaDeSemaforos/demand/` | Geração de viagens e roteamento. |
+| `SistemaDeSemaforos/simulation/` | Episódios, baseline e validação/conversão SETTRAN. |
+| `SistemaDeSemaforos/metrics/` | Configuração de observações, agregação, apresentação e gravação. |
+| `docs/settran/settran_programs.json` | Fonte normalizada, vínculos físicos e suplementos operacionais. |
+| `docs/catalogos/` | Referências detalhadas de configuração e métricas; não são configuração de execução. |
+| `scripts/`, `tests/` | Manutenção/reprodução e testes automatizados. |
+| `outputs/` | Episódios e baselines gerados; não versionados. |
+
+## Preparação e comandos
+
+Requisitos: Python 3.10+, `make`, SUMO com `randomTrips.py` e `duarouter`.
+O código de produção usa a biblioteca padrão Python. `sumo` e `duarouter`
+devem estar no `PATH`; GUI exige `sumo-gui` e sessão gráfica.
+A instalação de referência é **SUMO 1.27.1**.
+
+```bash
+export SUMO_HOME=/usr/share/sumo
+sumo --version
+make test
+make run-random
+make run-random RUN_ARGS='--episodes 3'
+make run-random RUN_ARGS='--gui'
+make run-random RUN_ARGS='--duration 30 --period 5'
+make run-random RUN_ARGS='--duration 30 --period 5 --end 60'
+make demand-random DEMAND_ARGS='--duration 60 --period 5'
+```
+
+Os episódios são sequenciais; cada um sorteia uma seed e possui pasta exclusiva.
+Sem `--end`, SUMO termina ao esgotar a demanda. Com horizonte explícito, podem
+restar viagens incompletas. `make demand-random` gera somente viagens/rotas,
+sem simular. `make test` não abre SUMO e impede caches Python.
+
+| Opção do runner | Padrão | Efeito |
+| --- | --- | --- |
+| `--episodes` | `1` | Quantidade de episódios. |
+| `--gui` | Desativado | Abre/fecha GUI em cada episódio. |
+| `--duration` | `7200` | Janela de partidas da demanda, em segundos. |
+| `--period` | `1.5` | Intervalo entre partidas, em segundos. |
+| `--end` | Sem limite explícito | Limite de tempo simulado. |
+| `--net-file` | Rede Rondon Norte | Rede de entrada; identifica o baseline. |
+| `--output-dir` | `outputs/outputs-random/` | Subpasta desse diretório para organizar resultados. |
+| `--metrics-profile` | `core` | `core` ou `full`; seleciona observações. |
+| `--signal-profile` | `current` | `current` ou `settran`; seleciona programação semafórica. |
+| `--settran-plan` | Sem plano presumido | ID oficial para teste fixo SETTRAN; inválido com `current`. |
+| `--settran-intersection` | Todas as interseções do plano | Nome exato na fonte; opção repetível para recorte explícito. Inválida com `current`. |
+
+Consulte `python3 -m SistemaDeSemaforos.simulation.episode_runner --help`.
+O gerador independente também aceita `--seed`, `--net-file` e `--output-dir`;
+o runner sorteia seeds e não possui opção CLI de replay.
+As opções do projeto não equivalem a todas as opções SUMO.
 
 ## 1. Mapa e condições de referência
 
-O único mapa fonte é
-`SistemaDeSemaforos/network/uberlandia.vehicular.families.16_2_4.net.xml`.
-O nome é histórico; o responsável confirmou o cenário **Rondon Norte**.
-O XML contém geometria, faixas, conexões, permissões e programas semafóricos.
-Não há fontes OSM de construção versionadas neste repositório.
+A rede é
+[`uberlandia.vehicular.families.16_2_4.net.xml`](../../SistemaDeSemaforos/network/uberlandia.vehicular.families.16_2_4.net.xml):
+Rondon Norte, confirmada pelo responsável. O XML define geometria, faixas,
+conexões, permissões e programas. Coordenadas locais estão em metros
+(UTM zona 22/WGS84). Não há fonte OSM de construção versionada no repositório.
 
-| Característica | Referência histórica V1 de 26/09/2026, anterior às correções abaixo |
-| --- | --- |
-| Vias direcionadas | 2.142 externas e 5.706 segmentos internos |
-| Faixas | 8.578, sendo 2.497 externas |
-| Nós/conexões | 1.996 junctions (901 internos); 11.261 conexões; cinco rotatórias |
-| Semáforos | 34 nós, 28 programas estáticos, 106 fases; ciclos de 90 s e offset 0 |
-| Extensão de faixas externas | 181,77929 km-faixa; soma de faixas, não extensão geográfica das ruas |
-| Limites de velocidade externos | 11,11 a 27,78 m/s; não são velocidades medidas no tráfego |
-| Largura | 242 faixas explicitam 1,75 m; 8.336 omissões foram medidas em t=0 como 3,2 m |
+A malha tem **36 TLS**, **314 índices**, **316 conexões controladas** e
+**43 travessias**: 34 TLS fisicamente OK e dois com evidência insuficiente,
+sem erro estrutural comprovado. TLS pode atender vários nós. Correções físicas
+valem para todos os perfis e são reproduzíveis pelo
+[`corretor determinístico`](../../scripts/correct_signal_infrastructure.py).
 
-Um controlador pode atender vários nós. Coordenadas locais estão em metros
-(UTM zona 22/WGS84), não em latitude/longitude. Detalhes por elemento permanecem
-no XML, sem outro inventário por edge/lane. Fonte V1 auditada: 5.201.327 bytes,
-SHA-256 `46e7c4a4627cd511d419c01f15d65f66724941ac83360c4fc424b86626a5c10b`.
+`current` usa programas de referência SUMO, inclusive prioridades `O/o`;
+os tempos não são certificados como operação real. Batalhão permanece verde
+no regime normal, sem acionamento emergencial. Travessias existentes ficam na
+rede; índices pedestres sem programação comprovada permanecem vermelhos.
+Os avisos correspondentes não rebaixam a infraestrutura veicular.
 
-**Baseline** é o conjunto de condições de referência, não uma simulação vazia:
-mapa e seus programas, versões, código, defaults SUMO e parâmetros da demanda.
-A instalação auditada é **SUMO 1.27.1**, com passo de 1 s, seed interna 23423,
-modelo veicular Krauss e `time-to-teleport=300` s. Defaults dependem do tipo/classe;
-não devem ser extrapolados para modelos ausentes.
+**Baseline** reúne rede/programas, versões, código, defaults SUMO e parâmetros.
+A referência usa passo de 1 s, seed interna SUMO 23423, Krauss e
+`time-to-teleport=300` s. Defaults dependem do tipo/classe; não devem ser
+extrapolados para modelos ausentes. Correções físicas podem alterar rotas e
+resultados; isso não altera o gerador de demanda.
 
-| Classe de mudança | Exemplos | Regra experimental |
-| --- | --- | --- |
-| Operacional | GUI, pasta de saída, quantidade de episódios, perfil de observação | Pode variar; registrar pois altera custo/volume. Perfil deve preservar a dinâmica. |
-| Experimental | Seed, intensidade/janela de demanda, limite `--end` | Pode variar em comparação explicitamente identificada; afeta os resultados. |
-| Condicional | Passo, car-following, teleportes, modelos/dispositivos, duração de fases | Exige hipótese, validação e compatibilidade dos agregadores; não é ajuste operacional automático. |
-| Estrutural | Geometria, conexões, permissões, associação de semáforos | Preservar neste baseline; mudança define outro cenário. |
-| Resultado/derivado | Métricas, hashes, contagens estruturais | Não é entrada editável; recalcular a partir de suas fontes. |
+Mudanças de demanda, seed, horizonte, rede ou programação definem condições
+experimentais diferentes; registre-as. Opções de observação/GUI alteram custo e
+volume, preservando a dinâmica. Passo, modelos e teleporte exigem validação.
 
-O [catálogo principal de configurações](../catalogos/configuration_catalog.csv) tem
-**104 entradas selecionadas** para decisões experimentais, operacionais, estruturais
-e de proveniência. A [referência completa](../catalogos/configuration_reference.csv)
-mantém **2.007 entradas** agrupadas por classe/interface, incluindo opções SUMO,
-duarouter, randomTrips, argumentos do projeto, atributos XML e defaults auditados.
-Conhecer uma opção SUMO não a torna uma flag do nosso CLI.
+O [catálogo de configurações](../catalogos/configuration_catalog.csv) seleciona
+campos úteis à decisão; a [referência completa](../catalogos/configuration_reference.csv)
+cobre opções SUMO/ferramentas, CLI, XML e defaults. Ambos vêm do mesmo gerador.
+Para leitura profunda, consulte uso atual, defaults, impacto de alterações e
+fontes/hashes. Default ausente não é zero; opção catalogada não é flag do nosso CLI.
 
-Filtre `currently_used`, `category` e `scientific_relevance`. Compare
-`native_default`, `current_core` e `current_full`; consulte `modifiable`,
-`change_impact`, `source_reference`, versão e hash. Ausência de default não é zero.
-Recursos inativos precisam de validação ao habilitar. A cobertura é versionada;
-extensões e chaves genéricas de `<param>` não formam um conjunto finito.
+### Pendências físicas e limites conhecidos
+
+- **Europa × Benjamim:** a representação legada da Europa conserva uma faixa e
+  27,78 m/s, ainda sem comprovação. Faltam fotos/croqui das duas pistas e placas
+  R-19; não transferir o limite da Benjamim.
+  [Imagens consultadas](https://www.mapillary.com/app/?pKey=27886827067676861).
+- **Maria das Dores Dias × Segismundo:** faltam placas/setas vistas desde Maria.
+  Esquerdas 3/11 chegam à faixa comum; 4/12 à faixa bus. As restrições OSM
+  8531027/8531030 partem da Segismundo e não comprovam proibição desde Maria.
+  [Imagem consultada](https://www.mapillary.com/app/?pKey=1252092370200250).
+- **Suíça/Viena:** diagnósticos com veículos longos apresentaram colisões em
+  condições específicas; a causa física não foi comprovada. Esses resultados
+  independentes não justificam alterar geometria para liberar SETTRAN nem
+  certificam a rede para qualquer carga/modelo.
+
+Rio de Janeiro e Batalhão possuem controles físicos, mesmo sem plano no XLSX.
+A existência foi documentada pela Prefeitura:
+[Rondon × Rio de Janeiro, 2020](https://www.uberlandia.mg.gov.br/2020/06/10/mais-de-350-semaforos-ja-contam-com-botoeiras-para-travessia-de-pedestres/)
+e [5º Batalhão, 2025](https://www.uberlandia.mg.gov.br/2025/06/11/bombeiros-terao-controle-de-sistema-de-fechamento-semaforico-nas-imediacoes-do-5o-batalhao-para-garantir-agilidade-e-seguranca-na-saida-de-viaturas/).
+Não existe programação SETTRAN inventada para esses sinais.
 
 ### Perfil semafórico SETTRAN
 
-`current` usa os programas de referência presentes na rede geral corrigida
-e continua sendo o comportamento padrão. `settran` é uma possibilidade de configuração separada da
-demanda `random`. É possível indicar explicitamente um plano para validar sua
-seleção como teste fixo; atualmente a execução ainda é bloqueada por movimentos,
-transições e referência da defasagem não comprovados. A [auditoria](../settran/settran_audit.csv) conserva os campos
-originais, planos, ciclos e tempos; o [artefato normalizado](../settran/settran_programs.json)
-é intermediário, consultado somente ao selecionar SETTRAN. Associações físicas
-confirmadas não constituem permissões de verde nem fases SUMO executáveis.
+`current` é padrão e independente dos dados SETTRAN. `settran` seleciona
+programação semafórica para teste de plano fixo; a demanda continua `random`.
+As nove interseções documentadas abrangem **17 TLS**, todos fisicamente OK.
+Vínculos e tempos ficam em [`settran_programs.json`](../settran/settran_programs.json).
 
-A rede-base corrigida é comum aos perfis: 36 TLS, 314 índices de controle
-(316 conexões controladas) e 43 travessias físicas. Benjamim recebeu quatro faixas
-contínuas e um único miolo físico; Porto Alegre, Niterói e Belém tiveram os
-fragmentos artificiais de suas aproximações eliminados. Foram representadas
-travessias comprovadas, corrigidas prioridades cedentes e recompostos cruzamentos
-fragmentados que provocavam bloqueios. Rio de Janeiro possui controle físico,
-sem plano SETTRAN no dataset. Anselmo conserva as três retas e o limite local
-comprovado. Fotografias de 2020 e março de 2026, referenciadas no CSV, distinguem
-os focos veiculares das retas do foco pedestre baixo na ilhota. O ramo direito
-se separa antes das retas; a representação veicular `priority` foi preservada,
-sem criar um TLS veicular a partir do foco pedestre. O
-[corretor determinístico](../../scripts/correct_signal_infrastructure.py)
-reproduz essas mudanças sobre a fonte auditada, sem uma rede exclusiva da SETTRAN.
+A V2 está consolidada no limite dos dados disponíveis. O conversor está
+implementado, mas **nenhum plano real 2/4/16/24 pode ser executado hoje**:
+faltam permissões, intervalos/transições e referência da defasagem.
+A agenda ausente não bloqueia, por si só, um teste fixo.
 
-`current` é uma referência SUMO, não uma reprodução dos tempos reais. Os controles
-novos da Rondon usam `O/o` para conservar prioridades; os sinais do Batalhão ficam
-verdes no regime normal, com acesso pelo canteiro reservado a `emergency`, sem
-acionamento especial implementado. Cruzamentos cujo programa antigo não cobria
-as aproximações recuperadas receberam programas de referência calculados pelo
-SUMO. Nos demais, estados veiculares e durações foram preservados ou estendidos
-às faixas equivalentes. Travessias novas possuem geometria; seus links vinculados a TLS permanecem
-vermelhos em `current`: não foi inventada uma programação pedestre. Três zebras
-permanecem sem vínculo TLS comprovado. O SUMO avisa
-sobre essas fases verdes ausentes; a demanda atual é veicular.
+```bash
+make run-random RUN_ARGS='--signal-profile current --duration 30 --period 5 --end 60'
+make run-random RUN_ARGS='--signal-profile settran --settran-plan 2 --duration 30 --period 5 --end 60'
+make run-random RUN_ARGS='--signal-profile settran --settran-plan 2 --settran-intersection "Av. Rondon Pacheco x Rua Belém" --duration 30 --period 5 --end 60'
+```
 
-Benjamim, Paraná, Cesário × Paraná, Porto Alegre, Belém, Antônio Crescêncio/Rotary,
-Niterói e João Naves tiveram a cobertura veicular corrigida. O atendimento pedestre
-ainda está incompleto; em Belém também falta confirmar quais focos controlam as
-zebras. Isso não torna os planos executáveis: ainda faltam diagramas de grupos,
-permissões, sequência, transições e referência da defasagem. Niterói conserva
-os três vermelhos discrepantes, e Anselmo a identidade Nascimento/Santos.
-Antônio Crescêncio é saída de sentido único; nenhuma entrada artificial foi
-criada. A travessia OSM 13340894097 pertence ao acesso de serviço do shopping,
-e não indica um TLS ausente na pista principal da Rondon.
+Os dois comandos SETTRAN são recusados com os dados atuais, antes de sortear
+seed, gerar demanda ou iniciar SUMO. Selecionar um plano significa executá-lo
+deliberadamente, sem afirmar em qual horário real estaria ativo. O recorte por
+interseção é explícito e repetível; não existe subconjunto automático ou
+fallback. Os demais TLS continuam `current` e são registrados.
 
-Corrigir a malha pode mudar rotas e resultados: a mesma rede corrigida é usada
-na geração e simulação de todos os perfis. Acessos pedonais sintéticos tiveram
-seus envelopes limitados para preservar 24 contornos, incluindo Anselmo e
-João Naves, e a ilha do Rotary.
-A lógica de `random`, o sorteio de
-seeds, as métricas e os formatos de saída permanecem inalterados. A ausência de
-plano SETTRAN não impede preservar ou corrigir um semáforo físico comprovado.
+Das 29 descrições veiculares, 28 possuem cobertura física vinculada:
+12 `CONFIRMADO` e 16 `INFERIVEL_COM_SEGURANCA`. Falta identificar o estágio D
+Antônio Crescêncio/Rotary: o nome da fonte corresponde à saída, enquanto a
+entrada controlada é Rotary Club. Os cinco controles auxiliares de
+Porto Alegre/Niterói e os controles João Naves ainda precisam de escopo/coordenação.
+Cobertura física não demonstra permissão simultânea: Benjamim e Niterói incluem
+conversões conflitantes com retas. Não converter todos os vínculos em `G`.
+SUMO distingue verde protegido `G` de permissivo `g`:
+[estados e fases](https://sumo.dlr.de/docs/Simulation/Traffic_Lights.html#signal-state-definitions).
 
-A [conferência temporária dos TLS atuais](../settran/current_tls_audit.csv) tem
-uma linha por TLS. `plan_capable` indica capacidade técnica de receber outro
-programa; `has_settran_plan` indica dados conhecidos para a interseção, sem
-certificar sua atribuição a cada controle. Os estados são independentes:
-`physical_status=OK` indica ausência de defeito veicular identificado nas
-evidências disponíveis; `EVIDENCIA_INSUFICIENTE` exige a confirmação de campo
-descrita em `note`. `real_world_status` conserva a confiança da associação.
-`pedestrian_status=DADOS_AUSENTES` registra a lacuna operacional já conhecida;
-`NAO_AVALIADO` não afirma ausência de travessias ou necessidade de novo controle.
-Pedestres estão fora desta etapa e não rebaixam o estado físico veicular.
-`settran_status` distingue `SEM_PLANOS`, `MAPEAMENTO_INCOMPLETO` e
-`DADOS_OPERACIONAIS_AUSENTES` (descrições de estágios vinculadas, mas ainda sem
-permissões/fases comprovadas). As contagens se sobrepõem; nenhum desses campos
-declara um plano SETTRAN executável.
+#### Contrato para receber os dados restantes
 
-A classificação cobre os TLS, sem certificar todas as cargas da malha. Nos
-cruzamentos sem TLS de Suíça e Viena, colisões com ônibus também foram
-reproduzidas em lotes menores, sem teleports, variando com os encontros e o passo
-simulado. As conexões, prioridades e conflitos estão registrados; não foi
-comprovado um erro físico que autorize alterar curvas ou permissões. Faltam
-cotas de retenções/raios ou vídeo de trajetórias de veículos longos. O diagnóstico
-com passo de 0,1 s altera a dinâmica do modelo e não substitui o protocolo de
-1 s ([documentação SUMO](https://sumo.dlr.de/docs/Simulation/Safety.html)).
+O [settran_programs.json](../settran/settran_programs.json), schema 2, separa fonte,
+suplemento operacional e agenda. Os 36 programas preservam os IDs 2/4/16/24,
+ciclos, defasagens, 128 descrições e todos os 512 tempos/células do XLSX. A ordem
+das descrições é apresentação da fonte; não demonstra sequência operacional.
+As três discrepâncias de vermelho pedestre e Nascimento/Santos ficam registradas,
+sem correção automática. As três descrições pedestres são conservadas fora do
+escopo veicular, sem inventar atendimento ou rebaixar a infraestrutura.
 
-Planos e agenda permanecem separados: existem 36 definições dos IDs oficiais
-2/4/16/24; `schedule`, `operational_day_start` e `initial_plan_id` continuam nulos.
-`--settran-plan` valida uma escolha explícita, sem assumir ordem temporal entre
-planos. Um teste fixo não precisa de agenda; precisa de programa compilado e
-comprovado, ainda indisponível. Não há scheduler, troca automática ou plano
-inicial presumido. A sugestão de 00:00 não foi convertida em regra operacional.
-Futuramente, com a agenda real, a seleção contextual poderá usar o tempo simulado
-do SUMO. Esse comportamento não está implementado. A
-[auditoria existente](../settran/settran_audit.csv) distingue a infraestrutura
-corrigida das lacunas operacionais. A fonte georreferenciada descartada não foi
-usada.
+Cada `programs[]` identifica `intersection`, `plan_id` e todos os `sumo_tls_ids`
+geográficos. `stages[]` registra `scope`, `mapping_status`, `mapping_note` e
+`sumo_links` físicos. O campo **`operational` permanece `null` até receber
+dados comprovados**, com o seguinte contrato:
+
+| Campo de `operational` | Dados necessários |
+| --- | --- |
+| `network_sha256` | Hash da rede à qual os índices foram associados. |
+| `tls_ids`, `current_tls_ids` | Partição explícita dos TLS geográficos: quais recebem SETTRAN e quais conservam `current`, comprovada por `evidence.control_scope`. |
+| `stage_links` | Mapa de `stage_id` para listas de `{tls_id, link_indices}` operacionais, com grupos e movimentos demonstrados. |
+| `phases` | Intervalos na ordem comprovada: `stage_id`, `transition` (`green`, `yellow`, `clearance_red`), `duration_seconds`, `states` por TLS aplicado e `source_reference`. Estados `r/G/g/y` completos, incluindo continuidade entre intervalos. |
+| `offset_reference` | Referência comum ou `by_tls`: `reference_type` (`clock`/`tls_event`), `reference_id`, `reference_time_seconds`, `direction` (`delay`/`advance`), `target_phase_index` e `source_reference`; `reference_event` identifica o evento quando o tipo é `tls_event`. |
+| `evidence` | `movement_mapping`, `control_scope`, `permissions`, `sequence`, `transitions`, `offset_reference`, cada um com `status` (`CONFIRMADO`/`INFERIVEL_COM_SEGURANCA`) e `source_reference`. |
+
+A defasagem numérica da planilha permanece em `offset_seconds`; o suplemento
+deve demonstrar seu marco e sentido. `reference_time_seconds` é o instante
+comprovado do evento no relógio do teste, fornecido explicitamente; o código não
+calcula esse alinhamento a partir do nome do TLS. Não há default de referência. A conversão
+usa `SUMO offset = (referência + defasagem com sinal - posição do evento alvo) mod ciclo`;
+atraso soma a defasagem, adiantamento a subtrai.
+em [settran_configuration.py](../../SistemaDeSemaforos/simulation/settran_configuration.py)
+confere hash, escopo, grupos, durações, ciclo, estados, conflitos/prioridades e
+transições; somente então emite programas adicionais para o mesmo SUMO e a mesma
+rede. A validação é por plano/interseção/TLS, antes de seed, demanda ou simulação.
+O erro identifica o requisito ausente. Sem `--settran-intersection`, todas as
+nove interseções precisam estar prontas; seleção menor exige nomes explícitos.
+Nenhum TLS desconhecido fica silenciosamente com `current`.
+
+`schedule=null` significa **agenda não fornecida**; `schedule=[]` significa
+**agenda fornecida vazia**, sem fallback para o primeiro plano. O contrato recebe
+linhas com `intersection`, `start_time`, `end_time`, `plan_id`, `weekdays` ISO 1–7,
+`exceptions` (`date`, `plan_id` ou `null`), `valid_from`, `valid_until` e
+`source_reference`. Horários usam `HH:MM:SS` e faixas [início, fim); faixas que
+cruzam meia-noite são divididas. A vigência usa datas ISO inclusivas; uma exceção
+troca/ativa a faixa naquela data ou, com `null`, cancela sua ocorrência.
+`operational_day_start` e `initial_plan_id` também continuam
+nulos. A validação dessa estrutura não ativa relógio, scheduler ou troca automática.
+Esses comportamentos dependerão da agenda real e da política comprovada de troca segura.
+
+Ao receber a fonte complementar, preencha `operational` na chave
+`intersection + plan_id` e, separadamente, a agenda. O importador conserva esses
+suplementos ao regenerar e recusa deriva dos valores/células originais. O fluxo
+é **preencher contrato → validar → selecionar explicitamente**; a emissão de
+programas fixos já está implementada. Agenda futura usará tempo simulado SUMO,
+sem contextualizar artificialmente a demanda.
+
+#### Dados externos necessários
+
+- Diagrama/exportação veicular por plano: grupos/movimentos/focos, permissões
+  protegidas ou cedentes, ordem, amarelos, limpeza e continuidade.
+- Identidade Rotary D e escopo/coordenação dos controles auxiliares e João Naves.
+- Defasagem: evento alvo, relógio/TLS/evento de referência, alinhamento e
+  sentido atraso/adiantamento.
+- Agenda: interseção, plano, início/fim, dias, vigência, exceções e política de
+  troca segura. Marco do dia/plano inicial precisam de fonte; não são presumidos.
+
+O [Manual Brasileiro de Sinalização Semafórica, Volume V](https://www.gov.br/transportes/pt-br/assuntos/transito/arquivos-senatran/docs/copy_of___05___MBST_Vol._V___Sinalizacao_Semaforica.pdf)
+e SUMO fundamentam os conceitos, sem comprovar a referência particular da SETTRAN.
+Dados pedestres originais permanecem conservados, fora desta V2 veicular.
 
 ## 2. Demanda random
 
 Origens/destinos são sorteados; partidas são regulares. A demanda serve para
 exercitar o cenário e ainda não é calibrada por contagens reais.
 
-```text
-make run-random (um episódio)
-        ↓
-runner sorteia a seed e chama random_demand_generator.generate_random_demand
-        ↓
-randomTrips.py sorteia viagens na rede Rondon Norte
-        ↓
-viagens com origem, destino e partida
-        ↓
-duarouter calcula rotas e verifica conectividade
-        ↓
-random.trips.xml — viagens verificadas
-random.rou.xml   — veículos com suas rotas
-        ↓
-SUMO carrega random.rou.xml
-```
+O runner sorteia a seed e chama `generate_random_demand`; `randomTrips.py`
+sorteia as viagens e `duarouter` calcula/valida rotas. SUMO carrega o
+`random.rou.xml` resultante.
 
-Nosso código chama `randomTrips.py` uma vez. Na versão instalada, a ferramenta
-chama `duarouter` para produzir rotas e novamente com `--write-trips` para validar
-viagens. Pode filtrar solicitações inviáveis; os XMLs finais representam os
-respectivos resultados. O `.trips.xml` não é um template vazio nem uma cópia do
-`.rou.xml`: descreve intenções de viagem, enquanto o segundo contém caminhos.
-Os dois XMLs finais são conferidos antes de substituir uma demanda anterior.
+Nosso código chama `randomTrips.py` uma vez. A ferramenta chama `duarouter`
+para rotear e novamente com `--write-trips` para validar viagens; pode filtrar
+solicitações inviáveis. Os dois XMLs finais são conferidos antes de substituir
+uma demanda anterior.
 
 | Arquivo | Função | Uso |
 | --- | --- | --- |
 | `random.trips.xml` | Viagens verificadas: origem, destino e partida. | Intermediário do roteamento e conferência do sorteio. |
 | `random.rou.xml` | Veículos e sequências de vias a percorrer. | **Demanda carregada pela simulação.** |
-
-Manter ambos permite conferir o processo. O gerador retorna apenas o caminho
-de `random.rou.xml`; a simulação recebe um arquivo de rotas pronto.
 
 ### De onde vêm as 4.800 viagens
 
@@ -206,62 +259,44 @@ a seed interna SUMO é registrada separadamente e permanece no default.
 O gerador aceita `--seed`; o runner não possui CLI de replay. Os destinos de
 dados são ignorados pelo Git por serem gerados, não por serem templates ou caches.
 
+### Dados reais preservados
+
+`RondonNorte.xlsx` é a fonte original dos planos. `Medicoes_5_6.csv` contém
+medições locais e permanece como fonte para futura calibração/validação.
+A associação dos pontos 5/6 a Niterói é textual, não comprovada por coordenadas
+ou TLS. A convenção de `vehicle_total` e a unidade de `speed_pxm` não estão
+confirmadas; zero não prova velocidade nula em m/s.
+Essas observações não alimentam `random`, não geram OD e não representam
+demanda global nem agenda dos planos.
+
 ## 3. Execução e APIs utilizadas
 
-O pipeline usa **linha de comando e XML**, sem endpoint HTTP ou cliente
-TraCI/libsumo durante os episódios. As ferramentas vêm da instalação SUMO,
-separadamente do mapa. Episódios são sequenciais; sem `--end`, terminam ao
-esgotar a demanda. Não há controlador Python nem mudança dos sinais pela coleta.
+O pipeline usa **CLI e XML**, sem HTTP ou TraCI/libsumo nos episódios.
+Ferramentas SUMO são instaladas separadamente; chamadas usam listas de argumentos
+via `subprocess.run`, sem shell intermediário ou controlador Python.
 
-| Interface | Função que chama / módulo | Entrada → saída | Uso e dependência |
-| --- | --- | --- | --- |
-| [randomTrips.py](https://sumo.dlr.de/docs/Tools/Trip.html) | `generate_random_demand` / `demand/random_demand_generator.py`; `_find_random_trips` localiza o script. | Rede, janela de partidas, período, seed, classe `passenger` → viagens e rotas XML. | Prepara demanda; script em `$SUMO_HOME/tools/randomTrips.py`. |
-| [duarouter](https://sumo.dlr.de/docs/duarouter.html) | Chamada **indireta** por `randomTrips.py`, com `--route-file` e `--validate`. | Viagens e rede → rotas válidas e viagens verificadas. | Calcula caminhos e verifica conectividade; pode descartar solicitações inviáveis. |
-| [sumo](https://sumo.dlr.de/docs/sumo.html) / [sumo-gui](https://sumo.dlr.de/docs/sumo-gui.html) | `run_simulation` / `simulation/episode_runner.py`, via `subprocess.run`. | Rede, rotas, opções e arquivo adicional → processo concluído, código de saída e observações. | Binário no `PATH`; GUI exige sessão gráfica. |
-| Configuração/template do SUMO | `prepare_baseline` / `simulation/experiment_baseline.py`: `--version`, `--save-template`; `run_simulation`: `--save-configuration`. | Executável e opções → versão, defaults e opções explícitas em XML. | Defaults ficam no baseline compartilhado; o episódio preserva suas diferenças. |
-
-Geração: `--net-file`, `--output-trip-file`, `--route-file`, `--begin`, `--end`,
-`--period`, `--seed`, `--vehicle-class`, `--validate`. O gerador retorna `Path`;
-o argumento opcional `metadata` recebe parâmetros, contagens, seed, comando,
-hash do script e tempos. `log_file` recebe stdout/stderr quando solicitado.
-
-Execução: `--net-file`, `--route-files`, `--begin`, `--no-step-log`,
-`--aggregate-warnings`; `--end` quando solicitado; `--start --quit-on-end`
-para GUI. Com `recording_dir`, salva a configuração explícita e executa o SUMO.
-Versão e template são consultados ao criar um baseline novo, não em cada episódio.
-O manifesto referencia o snapshot e registra os argumentos utilizados.
-Falhas de processo geram exceção, com contexto preservado pelo runner.
-
-Não há configuração HTTP nem credenciais. As funções públicas recebem `Path`
-ou strings de caminhos locais. O gerador retorna o caminho de rotas;
-`run_simulation` retorna `None` após sucesso e preenche `metadata` quando fornecido.
-As chamadas usam listas de argumentos, sem shell intermediário.
-
-### Biblioteca padrão Python
-
-| Interface | Onde / chamadas | Responsabilidade |
+| Interface | Chamada no projeto | Responsabilidade |
 | --- | --- | --- |
-| `subprocess` / `shutil.which` | Gerador e runner: `run`, localização de binários. | Passar argumentos, aguardar e conferir processos, sem shell intermediário. |
-| `xml.etree.ElementTree` | Gerador: `parse`; `sumo_output_configuration`: `parse`, `Element`, `SubElement`, `write`; coletor: `iterparse`. | Validar XML, configurar observadores e ler registros incrementalmente. |
-| `time` / `datetime` | Gerador/runner: `perf_counter`, `datetime.now(timezone.utc)`. | Duração monotônica e datas UTC. |
-| `random` / `uuid` | Gerador/runner: `randint`; runner: `uuid4`. | Seed da demanda e identificação sem sobrescrita. |
-| `json` / `gzip` / `hashlib` | Storage/baseline: `dump`, `open`, `sha256`; coletor: `gzip.open`. | Dados tipados, compressão, hashes e identificação do baseline. |
-| `tempfile` / `pathlib` | Gerador: `TemporaryDirectory`; storage: `NamedTemporaryFile`, `Path.replace`. | Limpeza automática e publicação de arquivos completos. |
+| [randomTrips.py](https://sumo.dlr.de/docs/Tools/Trip.html) | `generate_random_demand` em `demand/random_demand_generator.py` | Rede/janela/período/seed/classe → viagens e rotas XML. |
+| [duarouter](https://sumo.dlr.de/docs/duarouter.html) | Indiretamente por randomTrips, inclusive `--write-trips` | Roteia e valida viagens; pode descartar solicitações inviáveis. |
+| [sumo](https://sumo.dlr.de/docs/sumo.html)/[sumo-gui](https://sumo.dlr.de/docs/sumo-gui.html) | `run_simulation` em `simulation/episode_runner.py` | Executa rede, rotas e observações; aguarda término e confere retorno. |
+| Template/configuração SUMO | `prepare_baseline` e `run_simulation` | Registra versão/defaults uma vez por baseline e opções explícitas por episódio. |
+| Conversão SETTRAN | `prepare_selection`/`compile_selection` em `simulation/settran_configuration.py` | Valida e emite XML adicional; programa e observações compartilham `--additional-files`. |
 
-`sumolib` é dependência interna das ferramentas SUMO, sem importação direta no
-projeto.
+O gerador recebe caminhos, retorna `Path` das rotas e pode preencher `metadata`
+(parâmetros, seed, contagens, comando, hash e duração) e `log_file`.
+`run_simulation` retorna `None` após sucesso; com `recording_dir`, preserva
+configuração/observações e preenche `metadata`.
+A biblioteca padrão oferece leitura XML incremental, JSON/gzip, hashes, relógio
+monotônico, criação exclusiva de episódios e publicação atômica de arquivos.
 
-### Interfaces usadas somente na auditoria
-
-[TraCI](https://sumo.dlr.de/docs/TraCI.html) e
-[libsumo](https://sumo.dlr.de/docs/Libsumo.html) permitem consultas/controle durante
-passos; não são acionados pelo runner. `netconvert`/`netedit` também não são chamados.
-`scripts/audit_configuration_catalog.py --probe-defaults` usa TraCI somente em t=0:
-`start`, `getConnection`, `simulation.getTime`, `vehicletype.getIDList`, os
-26 getters de `PROBE_GETTERS`, `lane.getWidth` e `close`. Mede defaults dos seis
-tipos embutidos e larguras omitidas, sem inserir veículos ou avançar passos.
-`audit_metrics_catalog.py` apenas inspeciona métodos/docstrings, sem conectar ao SUMO.
-Esses utilitários usam o TraCI que acompanha `$SUMO_HOME/tools`.
+TraCI, libsumo, netconvert/netedit são ferramentas de manutenção/validação,
+não controles por timestep no runner. O probe opcional
+`audit_configuration_catalog.py --probe-defaults` usa TraCI em t=0 para medir
+defaults e larguras omitidas, sem avançar simulação. O auditor de métricas
+inspeciona schemas/métodos/docstrings, sem conectar ao SUMO.
+Esses utilitários usam bibliotecas de `$SUMO_HOME/tools`; `sumolib` também é
+dependência interna das ferramentas SUMO.
 
 ## 4. Métricas: seleção e interpretação
 
@@ -353,22 +388,20 @@ Emissões e ruído são estimativas de modelos, não medições ambientais.
 
 ```text
 outputs/baselines/<hash>/
-├── baseline.json         # rede/controladores, versões, hashes e defaults
-├── network.net.xml       # rede exata, preservada uma vez
-├── sumo_options.xml      # catálogo nativo de defaults desta instalação
+├── baseline.json         # versões, hashes, rede/controladores e defaults
+├── network.net.xml       # rede exata compartilhada
+├── sumo_options.xml      # defaults desta instalação
 └── code/                 # código de produção utilizado
 
 outputs/outputs-random/[subpasta/]<UTC>_seed-<seed>_<UUID>/
-├── metrics.json          # resultados globais e contexto, tipados e interpretáveis
-├── entities.json.gz      # consolidado por entidade, tipado e comprimido
-├── manifest.json         # contexto, comandos, referência ao baseline e hashes
-├── generation.log        # diagnóstico de randomTrips/duarouter
-├── sumo.log              # diagnóstico dos processos SUMO
+├── metrics.json          # resultados globais e contexto
+├── entities.json.gz      # consolidado por entidade
+├── manifest.json         # comandos, hashes e referência ao baseline
+├── generation.log, sumo.log
 ├── inputs/
-│   ├── random.trips.xml
-│   ├── random.rou.xml
-│   ├── observations.add.xml
-│   └── sumo_config.sumocfg
+│   ├── random.trips.xml, random.rou.xml
+│   ├── observations.add.xml, sumo_config.sumocfg
+│   └── settran.add.xml, settran_programs.json  # somente SETTRAN validado
 └── raw/
     ├── summary.xml.gz, trips.xml.gz, statistics.xml
     ├── queues.xml.gz, tls.xml.gz, lanechanges.xml.gz
@@ -376,191 +409,176 @@ outputs/outputs-random/[subpasta/]<UTC>_seed-<seed>_<UUID>/
     └── edges.xml.gz, lanes.xml.gz, fcd.xml.gz, emissions.xml.gz  # apenas full
 ```
 
-`raw/` conserva as observações originais, inclusive temporais. **Os consolidados
-não têm linhas por timestep.** O arquivo por entidade é separado e comprimido
-para tornar rápida a consulta do resumo global.
+`raw/` conserva observações, inclusive temporais. Os consolidados não têm linhas
+por timestep; entidades ficam separadas/comprimidas para permitir leitura rápida
+do resumo global. Baselines guardam cenário e código uma vez, sem duplicar a
+rede em cada episódio; sua integridade é conferida na reutilização.
 
-O manifesto registra parâmetros, argv reais, opções explícitas e horários.
-`baseline.id` e o hash de `baseline.manifest` vinculam rede, controladores,
-defaults, ambiente, ferramentas e código. Arquivos compartilhados têm integridade
-verificada ao reutilizar o baseline; nunca devem ser editados no lugar.
-O argv de geração registra a pasta temporária originalmente usada; os caminhos
-finais também ficam disponíveis. As configurações preservam texto XML nativo;
-as métricas numéricas exportadas usam números.
-
-Opção efetiva = `baseline.json.sumo_defaults` sobreposto por
-`manifest.json.simulation.configured_options`. A configuração salva contém
-as opções explícitas. Os caminhos são absolutos: uma reprodução precisa
-adaptar entradas movidas e usar novos destinos para todas as saídas.
-
-Ao arquivar um episódio, preserve também seu baseline. Novos manifestos usam
-schema 2; novos `metrics.json` usam schema 2; `entities.json.gz` permanece no
-schema 1. São contratos independentes. Episódios históricos não são regravados.
-
-Resultados e logs são ignorados pelo Git, mas não são caches. Excluir testes
-autorizados é diferente de apagar experimentos científicos automaticamente.
+O manifesto registra parâmetros, argv, horários, versões, hashes e arquivos.
+`baseline.id` e o hash de `baseline.manifest` vinculam o episódio ao cenário.
+O argv da geração registra a pasta temporária utilizada; os destinos finais
+também estão disponíveis. Opção efetiva = `baseline.json.sumo_defaults`
+sobreposto por `manifest.json.simulation.configured_options`. A configuração
+XML salva guarda opções explícitas; caminhos podem ser absolutos.
 
 ### Formato dos consolidados
 
-`metrics.json` conserva a lista `metrics`, o nome técnico canônico, o tipo e o
-valor de cada registro. O schema 2 acrescenta uma legenda curta em português,
-unidade e classificação, e ordena os registros pela utilidade experimental.
-Exemplo de estrutura, com valor apenas ilustrativo:
+`metrics.json` schema 2 conserva `metrics`: nomes técnicos, tipos e valores.
+Cada registro recebe legenda/unidade/classificação e ordem de apresentação:
 
 ```json
 {
   "schema_version": 2,
-  "metrics": [
-    {
-      "metric_name": "completed_trip_time_loss_mean",
-      "data_type": "float",
-      "value": 12.84,
-      "label_pt": "Tempo médio perdido (viagens concluídas)",
-      "description_pt": "Média do tempo perdido ao circular abaixo da velocidade ideal individual, excluindo paradas programadas, entre viagens concluídas.",
-      "unit": "s",
-      "kind": "result",
-      "category": "performance",
-      "priority": 1
-    }
-  ],
+  "metrics": [{
+    "metric_name": "completed_trip_time_loss_mean",
+    "data_type": "float",
+    "value": 12.84,
+    "label_pt": "Tempo médio perdido (viagens concluídas)",
+    "description_pt": "Média do tempo perdido entre viagens concluídas.",
+    "unit": "s",
+    "kind": "result",
+    "category": "performance",
+    "priority": 1
+  }],
   "entity_metrics_file": "entities.json.gz"
 }
 ```
 
-Tipos: `int`, `float`, `bool`, `string`; `NaN` e infinito são rejeitados.
-A lista global conserva todos os nomes e valores anteriormente exportados,
-inclusive contexto. Nenhuma métrica CORE foi adicionada ou removida por essa
-reorganização; campos condicionais continuam ausentes quando a fonte/população
-não existe. A apresentação não modifica fórmulas, amostras ou perfis de coleta.
+O valor acima é ilustrativo. Tipos: `int`, `float`, `bool`, `string`;
+NaN/infinito são recusados. Campos condicionais permanecem ausentes quando não
+há fonte/população; apresentação não muda fórmulas, valores ou coleta.
 
-| Campo novo | Interpretação |
+| Campo | Interpretação |
 | --- | --- |
-| `label_pt` | Nome curto para leitura humana, ao lado do nome canônico estável. |
-| `description_pt` | O que o valor representa, incluindo a população ou agregação pertinente. |
-| `unit` | Unidade do valor; `null` quando não se aplica ou não foi confirmada. Contagem de amostras tem unidade própria, não a unidade da grandeza observada. |
-| `kind` | `result`: resultado medido; `context`: condição/identificação; `diagnostic`: observação técnica da execução/coleta. |
-| `category` | `performance`: desempenho; `operation`: comportamento operacional; `integrity`: confiabilidade; `diagnostic`: diagnóstico; `context`: contexto experimental. |
-| `priority` | Inteiro de 1 a 4 para importância de apresentação, independente do CORE/OPTIONAL do catálogo. |
+| `metric_name` | Chave técnica estável; não selecionar pela posição na lista. |
+| `label_pt`, `description_pt` | Nome legível e significado/população/agregação. |
+| `unit` | Unidade; `null` se não aplicável/não confirmada. Amostras têm unidade própria. |
+| `kind` | `result`, `context` ou `diagnostic`. |
+| `category` | `performance`, `operation`, `integrity`, `diagnostic` ou `context`. |
+| `priority` | Importância de apresentação, 1–4; independente de CORE/OPTIONAL. |
 
-Ordem de apresentação:
+A ordem inicia por perda/espera médias de viagens concluídas, vazão e chegadas;
+depois traz comportamento operacional, integridade e diagnóstico/contexto.
+Leia também `status`, `error`, incompletas/não iniciadas, colisões e
+teletransportes. `completed` não garante que todas as viagens chegaram.
+`seed`, `simulation_seed`, `vehicles_generated` e tempos continuam na lista.
 
-1. **Resultado principal:** perda média de tempo e espera média das viagens
-   concluídas, vazão de chegadas e veículos concluídos; depois os indicadores
-   complementares de eficiência. Abrem a leitura por serem evidências diretamente
-   comparáveis entre controladores, demandas e versões sob condições declaradas.
-2. **Comportamento operacional:** velocidade, duração/distância das viagens,
-   utilização e emissões modeladas ajudam a explicar os resultados.
-3. **Integridade:** viagens incompletas/não iniciadas, remoções anormais,
-   teletransportes, colisões e situação de execução delimitam sua confiabilidade.
-4. **Diagnóstico e contexto:** tempos de processamento, cobertura/amostras,
-   parâmetros, seeds e identificação encerram a lista. Continuam necessários
-   para auditoria, reprodução e comparação, mesmo aparecendo depois dos resultados.
+Médias `completed_*` descrevem apenas viagens concluídas; confrontar com
+incompletas/teletransportes evita viés. Vazão de chegadas usa toda a duração
+simulada: comparar demanda, horizonte e critério de término compatíveis.
+`vehicles_halting_*` mede veículos parados, não comprimento de fila.
+`queue_observation_steps` indica cobertura da coleta, não congestionamento.
 
-`kind` distingue resultado de contexto sem retirar registros dos consumidores
-existentes. `status` e `error` exigem atenção mesmo quando aparecem após os
-resultados: um episódio encerrado não garante que todas as viagens tenham sido
-concluídas. O manifesto continua sendo a fonte completa de configuração,
-controladores, proveniência e integridade dos arquivos; contexto não é ganho de
-desempenho. Os nomes técnicos continuam sendo as chaves de integração.
+O catálogo mantém definições técnicas completas. As legendas e ordem de leitura
+ficam em [`metric_presentation.py`](../../SistemaDeSemaforos/metrics/metric_presentation.py),
+incluído no baseline; o runner não carrega CSVs. Nomes globais sem definição de
+apresentação são recusados. Consumidores devem indexar por `metric_name`,
+respeitar `data_type`/`value` e tolerar campos adicionais.
+Leitores estritos do schema 1 precisam aceitar o schema 2; outputs históricos
+não são regravados. Não há dashboard/treinamento implementado nem certificação
+de consumidores externos não disponíveis.
 
-Esperas no trânsito e atrasos de inserção são grandezas distintas. As médias
-`completed_*` descrevem apenas viagens concluídas; confronte-as com viagens
-incompletas e teletransportes para evitar uma comparação enviesada. A vazão de
-chegadas usa toda a duração simulada, portanto compare demandas, horizonte e
-critério de término compatíveis. `vehicles_halting_*` mede veículos parados,
-não o comprimento de uma fila. As filas existentes continuam por entidade;
-`queue_observation_steps` mede cobertura temporal da coleta, não congestionamento.
+`entities.json.gz` permanece schema 1: `entities` organiza registros
+`metric_name/data_type/value` por `vehicles`, `lanes`, `edges`,
+`traffic_lights`, `approaches`, `intersections`.
+Chave única: escopo + ID + nome da métrica. Aproximações usam
+`controlador/via_de_entrada`; interseções agrupam suas faixas de entrada.
 
-As explicações técnicas completas continuam no [catálogo de métricas](../catalogos/metrics_catalog.csv).
-As legendas curtas e regras de ordem ficam em
-[`metric_presentation.py`](../../SistemaDeSemaforos/metrics/metric_presentation.py),
-incluído no snapshot de código do baseline, sem carregar o CSV durante a execução.
-Essa separação prepara a leitura por dashboards futuros sem duplicar o catálogo
-em cada episódio nem implementar a visualização.
-Nomes globais sem uma definição de apresentação são rejeitados explicitamente;
-ao adicionar uma fonte ou atualizar o SUMO, revise também essa cobertura.
-Nenhuma tradução ou unidade é inventada para atributos desconhecidos.
+`metrics/` separa solicitação (`sumo_output_configuration.py`), agregação
+(`episode_metrics_collector.py`), apresentação (`metric_presentation.py`)
+e validação/gravação (`metrics_storage.py`).
+Manifestos são schema 2, independente dos schemas dos dois consolidados.
 
-Compatibilidade: leitores devem selecionar registros por `metric_name`, preservar
-o tipo/valor e tolerar os campos adicionais. Não use posições da lista ou a ordem
-alfabética como chave. Leitores estritos de schema 1 precisam aceitar explicitamente
-o schema 2; arquivos históricos continuam legíveis pelos campos canônicos, mas não
-possuem necessariamente legendas/prioridades. No repositório, a auditoria lê esses
-campos por nome; testes de persistência/runner exercitam o contrato. O benchmark
-compara observações/viagens e entidades diretamente, sem ler `metrics.json`.
-Não há consumidores implementados de dashboard ou treinamento no repositório;
-consumidores externos não disponíveis não podem ser certificados aqui.
+### Tempos, falhas e preservação
 
-Recomendações futuras, **não implementadas**: avaliar um resumo global de filas
-somente com definição explícita de cobertura espacial, ponderação e ausência de
-dupla contagem; poderia facilitar comparações sem substituir as entidades.
-Uma eventual taxa de conclusão também exige declarar o denominador (solicitados,
-gerados ou inseridos) e o horizonte. Os totais existentes são preservados e nenhuma
-dessas propostas acrescenta uma métrica nesta etapa.
+IDs de episódio combinam UTC/microssegundos, seed e UUID; criação exclusiva
+impede sobrescrita. Horários são UTC; duração usa `perf_counter`.
+Tempos distinguem preparação, geração, SUMO, agregação, exportação e inventário.
+Parsers são subetapas da agregação, não parcelas adicionais.
+O total exclui apenas a escrita final dos dois JSONs pequenos que guardam sua
+própria duração. Tempo SUMO inclui startup e escrita nativa.
 
-`entities.json.gz.entities` mantém os registros de três campos
-`metric_name`/`data_type`/`value` do schema 1, organizados por escopo e ID original:
-`vehicles`, `lanes`, `edges`, `traffic_lights`, `approaches`, `intersections`.
-A chave única é **escopo + ID + metric_name**; nomes `snake_case` não se repetem
-dentro de uma lista.
+Falhas interrompem o lote e preservam arquivos/contexto; leia `error` e logs.
+`Ctrl+C` registra interrupção; encerramento forçado pode deixar `running`.
+Saída obrigatória ausente ou período incompatível impede consolidação.
+XMLs são lidos incrementalmente; memória depende das entidades/métricas.
+Limitar avisos repetidos no log não altera regras SUMO de teletransporte.
 
-Uma aproximação usa ID `controlador/via_de_entrada`. Uma interseção agrupa
-faixas de entrada do controlador; ele pode controlar vários nós físicos.
+Outputs são ignorados pelo Git, mas experimentos não são caches.
+Preserve episódio e baseline referenciado; não edite baseline existente.
+`outputs/benchmarks/` só aparece no benchmark, não na execução cotidiana.
+O [ZIP de fontes históricas](../historico/auditoria_historica.zip) conserva
+tabelas originais, índice/hashes e instruções próprias; há medições/notas únicas.
+Sua nomenclatura é histórica e não descreve o estado atual.
 
-`metrics/` separa configuração, cálculo, apresentação e gravação:
-`sumo_output_configuration.py` solicita observações, `episode_metrics_collector.py`
-agrega, `metric_presentation.py` descreve/ordena os resultados globais e
-`metrics_storage.py` valida nomes/tipos e exporta. O runner coordena essas tarefas.
+## Validação e manutenção
 
-`simulation/experiment_baseline.py` preserva uma cópia compartilhada do cenário, evitando
-copiar mapa/código/defaults em cada episódio. Ela permite recuperar as condições
-antigas mesmo se o projeto mudar. `inputs/observations.add.xml` solicita
-observações; não é outro mapa nem outra demanda. Pastas são criadas sob demanda.
+```bash
+make test
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/correct_signal_infrastructure.py --check
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/audit_settran.py --check
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/audit_configuration_catalog.py --check
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/audit_metrics_catalog.py
+make run-random RUN_ARGS='--duration 30 --period 5'
+```
 
-IDs de episódio combinam UTC com microssegundos, seed e UUID; criação exclusiva
-impede sobrescrita. Horários são UTC e durações usam `perf_counter`. Há tempos
-separados para preparação, geração, SUMO, agregação, exportação e inventário.
-Parsers são subetapas da agregação, não parcelas adicionais. O total exclui
-somente a escrita final dos dois JSONs pequenos que contêm sua própria duração.
-O tempo SUMO inclui startup e escrita nativa, sem isolá-los artificialmente.
+A suíte cobre demanda, runner, baseline, contrato SETTRAN, infraestrutura e
+métricas, sem abrir SUMO. A prova curta executa SUMO real. Para validar estrutura
+com schema e API SUMO/TraCI, confira XML, TLS, controlledLinks e estados; a suíte
+não substitui essa conferência externa.
 
-Falhas interrompem o lote e preservam contexto/arquivos parciais. `Ctrl+C`
-registra interrupção; encerramento forçado pode deixar `status: running`.
-Saída obrigatória ausente ou período incompatível causa erro de consolidação.
-Observações XML são lidas incrementalmente; memória depende das entidades/métricas.
+O check SETTRAN confere fonte, mapeamentos e contrato de agenda; não declara
+plano pronto. A seleção explícita valida cada plano/interseção/TLS, estados,
+transições, ciclo, conflitos e referência de offset. Com os dados reais,
+os quatro IDs devem continuar recusados antes da demanda/simulação.
+Uma prova com suplemento sintético valida o conversor, sem certificar plano real.
 
-### Pastas de teste e histórico
+Para conferir outputs e custo de observação:
 
-`outputs/benchmarks/` só aparece ao executar `scripts/benchmark_observation_pipeline.py`.
-É uma comparação de custo entre perfis com a mesma demanda, não parte do run normal.
-Baselines podem ser apagados junto dos testes quando nenhum episódio preservado
-precisar deles. Procedimentos de reprodução ficam no guia de comandos.
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/audit_metrics_catalog.py --episodes outputs/outputs-random
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/benchmark_observation_pipeline.py --repetitions 2
+```
 
-[auditoria_historica.zip](../historico/auditoria_historica.zip) reúne as 27 tabelas das
-planilhas originais em CSV convencional, com índice e instruções dentro do ZIP.
-Há medições/notas históricas únicas; por isso foi preservado. Não é documentação
-corrente. Não há pasta `archive/` nem leitor especial para acessar seu conteúdo.
+O benchmark preserva evidências em `outputs/benchmarks/`: mesma demanda de
+400 viagens, observação mínima/core/full e duas repetições em ordem invertida.
+`--seed` pertence ao benchmark/gerador, não ao runner. `full` acrescenta séries
+densas e aumenta custos de coleta, agregação e exportação; escolher pela pergunta
+experimental. Observações não devem alterar a dinâmica.
 
-## 6. Desempenho já medido
+Após trocar a instalação, revise fontes/defaults e revalide observadores.
+`audit_configuration_catalog.py --probe-defaults` atualiza medições em t=0;
+`--refresh-descriptions` consulta documentação oficial versionada e exige rede.
+São tarefas de manutenção, não etapas por episódio.
 
-Na validação de 26/09/2026, dez episódios padrão `core`, sem GUI nem `--end`,
-concluíram 48.000 viagens em **316,98 s**. Média **31,70 s**, intervalo
-**21,71–62,66 s**: dez episódios foram operacionalmente viáveis naquele ambiente.
-Houve 3–1.027 teletransportes por episódio e zero colisões; conclusão integral
-não comprova calibração ou suficiência estatística.
+## Reproduzir uma execução
 
-Médias por episódio: geração 3,487 s; SUMO 22,094 s; agregação 4,457 s;
-exportação de entidades 1,604 s. SUMO representou aproximadamente 70% do total.
-Não há consultas TraCI por timestep, DataFrames ou flush por passo neste pipeline.
+1. Preserve a pasta do episódio e o baseline indicado em `manifest.json.baseline`,
+   com ferramentas externas na versão registrada.
+2. Reutilize `inputs/random.rou.xml` e `network.net.xml` do baseline.
+   `manifest.json.simulation.command` guarda os argumentos; a configuração SUMO
+   guarda opções explícitas. SETTRAN validado também exige o suplemento congelado
+   `inputs/settran_programs.json` e os programas `inputs/settran.add.xml`.
+3. Troque todos os destinos de saída, inclusive no adicional de observação.
+   Caminhos podem ser absolutos; executar configuração antiga sem adaptá-los
+   pode sobrescrever a evidência.
+4. Para refazer a geração, use seed/parâmetros registrados e mesmas rede/ferramentas:
 
-Comparação controlada, mesma demanda de 400 viagens e duas repetições:
-observação mínima 0,900 s; `core` 2,796 s; `full` 29,463 s. Todos os atributos de
-viagem coincidiram, exceto a lista de dispositivos observadores. No `full`, séries
-detalhadas elevaram sobretudo agregação e exportação. A observação mínima ainda
-gravava tripinfo; não é custo zero de coleta. Tempos não incluem geração/baseline compartilhados.
+```bash
+make demand-random DEMAND_ARGS='--seed 123 --duration 7200 --period 1.5 --net-file outputs/baselines/ID/network.net.xml --output-dir SistemaDeSemaforos/demandas/reproducao'
+```
 
-Seeds, método e decomposição estão no [relatório incremental](../../RELATORIO_INCREMENTAL.md).
-Os outputs de teste foram apagados a pedido do responsável; estes são registros
-históricos, não novas medições desta limpeza. Próxima investigação possível:
-paralelismo limitado de dois episódios, conferindo resultados por seed e
-contenção de recursos antes de adotá-lo.
+O exemplo exige substituir seed e ID. Executar novamente `make run-random`
+não reproduz a demanda anterior, pois sorteia nova seed.
+Apague somente temporários próprios comprovados; não remova baseline necessário
+a um episódio preservado.
+
+## Continuidade
+
+Agora: rede comum, demanda aleatória, observações/métricas, seleção explícita
+e contrato SETTRAN com bloqueios corretos. Dados futuros entram em
+`operational` e `schedule`, são validados e usam o pipeline existente.
+
+Demandas reais/contextuais, reconstrução/estimação de fluxo, Hazarika, RL,
+Acciai/TFR, outros controladores e treinamento permanecem futuros.
+Nenhuma dessas funcionalidades está implementada.

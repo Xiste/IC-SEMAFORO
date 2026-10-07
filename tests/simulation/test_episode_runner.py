@@ -6,6 +6,7 @@ O arquivo verifica os comandos construídos e uma demanda nova por episódio.
 
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
+from hashlib import sha256
 import io
 import json
 from pathlib import Path
@@ -15,6 +16,7 @@ import tempfile
 from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
+import xml.etree.ElementTree as ET
 
 from SistemaDeSemaforos.simulation import episode_runner as simulation
 
@@ -22,6 +24,41 @@ from SistemaDeSemaforos.simulation import episode_runner as simulation
 def option_value(command, option):
     """Retorna o valor que aparece depois de uma opção do comando."""
     return command[command.index(option) + 1]
+
+
+def synthetic_cesario_document():
+    """Suplemento deliberadamente sintético; não aprova o plano real da SETTRAN."""
+    document = json.loads(simulation.SETTRAN_PROGRAMS_FILE.read_text(encoding="utf-8"))
+    intersection = "Av. Cesário Alvin x Rua Paraná"
+    program = next(p for p in document["programs"]
+                   if p["intersection"] == intersection and p["plan_id"] == "2")
+    reference = "SYNTHETIC_TEST_FIXTURE_NOT_SETTRAN"
+    tls = "FAM_CESARIO_PARANA"
+    phases = []
+    for stage in program["stages"]:
+        indices = stage["sumo_links"][0]["link_indices"]
+        for transition, field, signal in (("green", "green_seconds", "G"),
+                                          ("yellow", "yellow_seconds", "y"),
+                                          ("clearance_red", "clearance_red_seconds", "r")):
+            state = ["r"] * 8
+            for index in indices:
+                state[index] = signal
+            phases.append({"stage_id": stage["stage_id"], "transition": transition,
+                           "duration_seconds": stage[field], "states": {tls: "".join(state)},
+                           "source_reference": reference})
+    program["operational"] = {
+        "network_sha256": sha256(simulation.DEFAULT_NET_FILE.read_bytes()).hexdigest(),
+        "tls_ids": [tls], "current_tls_ids": [],
+        "stage_links": {s["stage_id"]: s["sumo_links"] for s in program["stages"]},
+        "phases": phases,
+        "evidence": {field: {"status": "CONFIRMADO", "source_reference": reference}
+                     for field in ("movement_mapping", "control_scope", "permissions", "sequence",
+                                   "transitions", "offset_reference")},
+        "offset_reference": {"reference_type": "clock", "reference_id": "synthetic-clock",
+                             "reference_time_seconds": 0, "direction": "delay",
+                             "target_phase_index": 0, "source_reference": reference},
+    }
+    return document, intersection
 
 
 class RunSimulationTests(unittest.TestCase):
@@ -174,6 +211,67 @@ class RunSimulationTests(unittest.TestCase):
         self.assertNotIn("--fcd-output", command)
         self.assertTrue((recording / "inputs" / "observations.add.xml").is_file())
         self.assertTrue((recording / "sumo.log").is_file())
+
+    def test_ready_local_fixture_preserves_observations_and_records_exact_scope(self):
+        document, intersection = synthetic_cesario_document()
+        recording = self.directory / "episode"
+        recording.mkdir()
+        source = Mock()
+        source.read_text.return_value = json.dumps(document)
+        metadata = {}
+        commands = []
+
+        def fake_sumo(command, **kwargs):
+            commands.append(command)
+            if "--save-configuration" in command:
+                Path(option_value(command, "--save-configuration")).write_text(
+                    '<configuration><output><precision value="8" /></output></configuration>',
+                    encoding="utf-8")
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch.object(simulation, "SETTRAN_PROGRAMS_FILE", source):
+            with patch.object(simulation.shutil, "which", return_value="/usr/bin/sumo"):
+                with patch.object(simulation.subprocess, "run", side_effect=fake_sumo):
+                    simulation.run_simulation(
+                        net_file=simulation.DEFAULT_NET_FILE, demand_file=self.demand_file,
+                        end=60, recording_dir=recording, metadata=metadata,
+                        signal_profile="settran", settran_plan="2",
+                        settran_intersections=[intersection], baseline={"manifest": {
+                            "sumo_defaults": {"seed": "23423", "step-length": "1"}}})
+        for command in commands:
+            self.assertEqual(command.count("--additional-files"), 1)
+            additions = option_value(command, "--additional-files").split(",")
+            self.assertEqual([Path(a).name for a in additions],
+                             ["settran.add.xml", "observations.add.xml"])
+            self.assertNotIn("--seed", command)
+        self.assertEqual(metadata["seed"], 23423)
+        scope = metadata["signal_configuration"]
+        self.assertEqual(scope["intersections"], [intersection])
+        self.assertEqual(scope["tls_ids"], ["FAM_CESARIO_PARANA"])
+        self.assertEqual(len(scope["current_tls_ids"]), 35)
+        self.assertEqual(json.loads((recording / "inputs/settran_programs.json").read_text()), document)
+        logics = ET.parse(recording / "inputs/settran.add.xml").getroot().findall("tlLogic")
+        self.assertEqual([logic.get("id") for logic in logics], ["FAM_CESARIO_PARANA"])
+        self.assertEqual(logics[0].get("programID"), "settran_2")
+        self.assertEqual(sum(float(p.get("duration")) for p in logics[0]), 70)
+
+    def test_ready_fixture_without_recording_uses_temporary_program_then_removes_it(self):
+        document, intersection = synthetic_cesario_document()
+        additions = []
+
+        def fake_sumo(command, **kwargs):
+            additions.append(Path(option_value(command, "--additional-files")))
+            self.assertTrue(additions[-1].is_file())
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch.object(simulation.shutil, "which", return_value="/usr/bin/sumo"):
+            with patch.object(simulation.subprocess, "run", side_effect=fake_sumo):
+                simulation.run_simulation(net_file=simulation.DEFAULT_NET_FILE,
+                    demand_file=self.demand_file, end=60, signal_profile="settran",
+                    settran_plan="2", settran_intersections=[intersection],
+                    _settran_document=document)
+        self.assertEqual(len(additions), 1)
+        self.assertFalse(additions[0].exists())
 
 
 class RandomEpisodeTests(unittest.TestCase):
@@ -337,60 +435,58 @@ class RandomEpisodeTests(unittest.TestCase):
             for options, message in (
                 ({"signal_profile": "settran"}, "Escolha explicitamente --settran-plan"),
                 ({"signal_profile": "settran", "settran_plan": "1"}, "2/4/16/24"),
-                ({"signal_profile": "settran", "settran_plan": "2"}, "conversor"),
+                ({"signal_profile": "settran", "settran_plan": "2"}, "quadro veicular de intervalos"),
                 ({"signal_profile": "current", "settran_plan": "2"}, "exige"),
             ):
                 with self.subTest(options=options), self.assertRaisesRegex(ValueError, message):
-                    self.run_episodes(**options)
+                    self.run_episodes(net_file=simulation.DEFAULT_NET_FILE, **options)
         seed.assert_not_called()
         self.baseline_mock.assert_not_called()
         self.generate_mock.assert_not_called()
         self.run_mock.assert_not_called()
         self.assertFalse(self.output_dir.exists())
 
-    def test_selected_plan_reports_only_its_source_anomalies(self):
-        red_cells = {"2": None, "4": "R115", "16": "R116", "24": "R117"}
-        for plan, expected_cell in red_cells.items():
+    def test_real_plans_report_vehicle_requirements_without_pedestrian_blockers(self):
+        for plan in ("2", "4", "16", "24"):
             with self.subTest(plan=plan), self.assertRaises(ValueError) as error:
-                self.run_episodes(signal_profile="settran", settran_plan=plan)
+                self.run_episodes(net_file=simulation.DEFAULT_NET_FILE,
+                                  signal_profile="settran", settran_plan=plan)
             message = str(error.exception)
-            self.assertIn(f"Plano SETTRAN {plan} selecionado para teste fixo", message)
-            self.assertIn("9 definições de interseção", message)
-            self.assertIn("9 definições não possuem sumo_phases", message)
-            self.assertIn("A144/B158", message)
-            self.assertIn("Anselmo", message)
-            self.assertIn("A agenda ausente não impede esta escolha explícita", message)
+            self.assertIn(f"Plano {plan};", message)
+            self.assertEqual(message.count(f"Plano {plan};"), 9)
+            self.assertIn("quadro veicular de intervalos", message)
+            self.assertIn("referência da defasagem", message)
+            self.assertIn("FAM_RONDON_ANSELMO", message)
+            self.assertIn("FAM_RONDON_NITEROI", message)
+            self.assertIn("Agenda ausente não impede plano fixo", message)
             for cell in ("R115", "R116", "R117"):
-                self.assertEqual(cell in message, cell == expected_cell)
-            if plan == "2":
-                self.assertNotIn("Niterói", message)
+                self.assertNotIn(cell, message)
+            self.assertNotIn("conversor", message)
         self.baseline_mock.assert_not_called()
         self.generate_mock.assert_not_called()
         self.run_mock.assert_not_called()
         self.assertFalse(self.output_dir.exists())
 
-    def test_available_plan_ids_come_from_the_normalized_source(self):
+    def test_removing_source_plans_cannot_bypass_validation(self):
         document = json.loads(simulation.SETTRAN_PROGRAMS_FILE.read_text(encoding="utf-8"))
         document["programs"] = [program for program in document["programs"]
                                 if program["plan_id"] == "4"]
         source = Mock()
         source.read_text.return_value = json.dumps(document)
         with patch.object(simulation, "SETTRAN_PROGRAMS_FILE", source):
-            with self.assertRaisesRegex(ValueError, "Planos disponíveis na fonte: 4\\."):
+            with self.assertRaisesRegex(ValueError, "fonte|extração|originais"):
                 self.run_episodes(signal_profile="settran", settran_plan="2")
         self.generate_mock.assert_not_called()
         self.assertFalse(self.output_dir.exists())
 
-    def test_editing_intermediate_phases_cannot_enable_an_unimplemented_converter(self):
+    def test_ready_label_cannot_bypass_missing_operational_evidence(self):
         document = json.loads(simulation.SETTRAN_PROGRAMS_FILE.read_text(encoding="utf-8"))
         document["status"] = "ready"
-        for program in document["programs"]:
-            program["sumo_phases"] = [{"duration": 70, "state": "G"}]
         source = Mock()
         source.read_text.return_value = json.dumps(document)
         with patch.object(simulation, "SETTRAN_PROGRAMS_FILE", source):
             with patch.object(simulation.random, "randint") as seed:
-                with self.assertRaisesRegex(ValueError, "conversor .* não está implementado"):
+                with self.assertRaisesRegex(ValueError, "fonte|origem|extração|originais"):
                     self.run_episodes(signal_profile="settran", settran_plan="2")
         seed.assert_not_called()
         self.baseline_mock.assert_not_called()
@@ -398,12 +494,45 @@ class RandomEpisodeTests(unittest.TestCase):
         self.run_mock.assert_not_called()
         self.assertFalse(self.output_dir.exists())
 
+    def test_explicit_intersection_reports_only_its_missing_requirements(self):
+        with self.assertRaises(ValueError) as error:
+            self.run_episodes(net_file=simulation.DEFAULT_NET_FILE, signal_profile="settran",
+                              settran_plan="2",
+                              settran_intersections=["Av. Cesário Alvin x Rua Paraná"])
+        message = str(error.exception)
+        self.assertIn("FAM_CESARIO_PARANA", message)
+        self.assertIn("quadro veicular de intervalos", message)
+        self.assertNotIn("FAM_RONDON_ROTARY_CLUB", message)
+        self.assertNotIn("Niterói", message)
+        self.assertFalse(self.output_dir.exists())
+        self.generate_mock.assert_not_called()
+
+    def test_ready_local_selection_keeps_random_arguments_and_freezes_configuration(self):
+        document, intersection = synthetic_cesario_document()
+        source = Mock()
+        source.read_text.return_value = json.dumps(document)
+        with patch.object(simulation, "SETTRAN_PROGRAMS_FILE", source):
+            with patch.object(simulation.random, "randint", return_value=17):
+                self.run_episodes(net_file=simulation.DEFAULT_NET_FILE, duration=30, period=5,
+                                  end=60, signal_profile="settran", settran_plan="2",
+                                  settran_intersections=[intersection])
+        generated = self.generate_mock.call_args.kwargs
+        self.assertEqual((generated["duration"], generated["period"], generated["seed"]), (30, 5, 17))
+        self.assertNotIn("signal_profile", generated)
+        self.assertNotIn("settran_plan", generated)
+        executed = self.run_mock.call_args.kwargs
+        self.assertEqual(executed["_settran_document"], document)
+        self.assertEqual(executed["settran_intersections"], [intersection])
+        _, manifest = self.episode_results(next(self.output_dir.iterdir()))
+        self.assertEqual(manifest["signal_configuration"]["tls_ids"], ["FAM_CESARIO_PARANA"])
+        self.assertEqual(len(manifest["signal_configuration"]["current_tls_ids"]), 35)
+
     def test_cli_settran_returns_actionable_error_without_fallback(self):
         error = io.StringIO()
         with redirect_stderr(error), redirect_stdout(io.StringIO()):
             result = simulation.main(["--signal-profile", "settran"])
         self.assertEqual(result, 1)
-        self.assertIn("docs/settran/settran_audit.csv", error.getvalue())
+        self.assertIn("docs/guias/GUIA_DE_FUNCIONAMENTO.md", error.getvalue())
         self.generate_mock.assert_not_called()
         self.run_mock.assert_not_called()
 
@@ -506,25 +635,29 @@ class RandomEpisodeTests(unittest.TestCase):
         self.assertEqual(options["metrics_profile"], "full")
         self.assertEqual(options["signal_profile"], "current")
         self.assertIsNone(options["settran_plan"])
+        self.assertIsNone(options["settran_intersections"])
 
     @patch.object(simulation, "run_random_episodes")
     def test_cli_forwards_signal_profile_separately(self, run_random_episodes):
         with redirect_stdout(io.StringIO()):
             result = simulation.main(["--signal-profile", "settran", "--settran-plan", "16",
-                                      "--metrics-profile", "full"])
+                                      "--metrics-profile", "full", "--settran-intersection", "A",
+                                      "--settran-intersection", "B"])
         self.assertEqual(result, 0)
         self.assertEqual(run_random_episodes.call_args.kwargs["signal_profile"], "settran")
         self.assertEqual(run_random_episodes.call_args.kwargs["settran_plan"], "16")
         self.assertEqual(run_random_episodes.call_args.kwargs["metrics_profile"], "full")
+        self.assertEqual(run_random_episodes.call_args.kwargs["settran_intersections"], ["A", "B"])
 
-    def test_cli_recognizes_fixed_plan_and_reports_compilation_limit(self):
+    def test_cli_recognizes_fixed_plan_and_reports_missing_operational_data(self):
         error = io.StringIO()
         with redirect_stderr(error), redirect_stdout(io.StringIO()):
             result = simulation.main(["--signal-profile", "settran", "--settran-plan", "2"])
         self.assertEqual(result, 1)
-        self.assertIn("Plano SETTRAN 2 selecionado para teste fixo", error.getvalue())
-        self.assertIn("conversor", error.getvalue())
-        self.assertNotIn("Niterói", error.getvalue())
+        self.assertIn("Plano 2;", error.getvalue())
+        self.assertIn("quadro veicular de intervalos", error.getvalue())
+        self.assertIn("referência da defasagem", error.getvalue())
+        self.assertNotIn("conversor", error.getvalue())
         self.generate_mock.assert_not_called()
         self.run_mock.assert_not_called()
         self.assertFalse(self.output_dir.exists())

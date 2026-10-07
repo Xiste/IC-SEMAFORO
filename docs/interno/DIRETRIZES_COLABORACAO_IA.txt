@@ -12,29 +12,16 @@ Explique decisões importantes: qual problema está sendo resolvido, como a solu
 Preserve a correção e as verificações necessárias. Simplificar não significa esconder erros ou remover cuidados essenciais.
 Quando alguma complexidade for necessária, justifique-a em linguagem acessível.
 Antes de criar arquivo, pasta ou documento, verifique se a responsabilidade já tem um lugar no projeto. Amplie esse lugar quando fizer sentido; separe somente quando isso facilitar o entendimento de uma responsabilidade real.
-Mantenha uma fonte principal para cada explicação. O README orienta a leitura, o guia de comandos ensina a executar e o guia de funcionamento explica o pipeline. Catálogos são consultas detalhadas; o relatório incremental preserva o histórico. Ao consolidar, atualize referências e remova documentos substituídos, preservando informações únicas relevantes.
+Mantenha uma fonte principal para cada explicação. O README ensina a começar; GUIA_DE_FUNCIONAMENTO.md concentra funcionamento, comandos, contratos e validação. Catálogos são consultas profundas para humanos e IA; não os descarte por tamanho. Configuração operacional pertence aos dados estruturados, não à documentação. Ao consolidar, atualize referências e remova documentos substituídos, preservando informações únicas relevantes.
 
-2. Manter um relatório incremental compartilhado
+2. Preservar continuidade e histórico no Git
 
-Antes de alterar o projeto, leia as diretrizes e as entradas relevantes do relatório, e confira o estado atual do código. Não dependa apenas da memória da conversa.
-Utilize o relatório já adotado pela equipe. Se não existir, crie RELATORIO_INCREMENTAL.md na raiz do projeto.
-A cada etapa com alterações, acrescente uma entrada ao relatório junto das mudanças correspondentes. Se interromper uma tarefa incompleta, registre o ponto de parada e as pendências.
-Preserve as entradas anteriores. Registre correções ou decisões que substituem as antigas em novas entradas.
+Antes de alterar o projeto, leia estas diretrizes, o guia canônico e o código relevante. Confira o estado do Git; não dependa apenas da memória da conversa.
+O Git preserva o histórico. Não crie relatórios cumulativos ou versões sucessivas de auditoria para repetir decisões já registradas. Antes de podar arquivos, confirme que a versão atual é recuperável; alterações ainda não commitadas precisam de um checkpoint que também preserve arquivos novos.
+Conserve no guia apenas decisões e pendências necessárias à operação e à continuidade atual. Dados-fonte e artefatos necessários à reprodução devem permanecer, mesmo quando também existem no Git.
 Destaque mudanças de comportamento, interfaces, configurações ou dependências que afetem o trabalho do outro agente. Não desfaça mudanças dele sem compreender e justificar a necessidade.
 Registre apenas verificações realmente executadas. Se algo não foi testado, declare isso explicitamente.
-
-Use este modelo para cada entrada:
-
-[Data e hora]: [Resumo da etapa]
-Responsável: agente ou desenvolvedor.
-Objetivo: problema ou solicitação atendida.
-Alterações: arquivos afetados e o que mudou.
-Justificativa: por que a solução foi escolhida.
-Verificação: testes ou comandos executados e resultados; indique o que não foi verificado.
-Impactos e pendências: compatibilidade, limitações, riscos e trabalho restante.
-Continuidade: próximo passo e cuidados para o outro agente.
-
-Não considere uma etapa com alterações encerrada enquanto seu registro estiver desatualizado. O código deve ser compreensível, e o relatório deve permitir que o outro agente continue sem precisar reconstruir toda a conversa.
+Ao concluir, informe o que mudou, por quê, como foi validado e quais pendências continuam abertas. O código e o guia devem permitir continuidade sem reconstruir toda a conversa; o relato da tarefa e o histórico Git guardam a cronologia.
 
 3. Remover arquivos temporários com segurança
 

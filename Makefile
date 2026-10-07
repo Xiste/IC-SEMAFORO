@@ -1,5 +1,5 @@
 # Comandos principais. Use DEMAND_ARGS e RUN_ARGS para opções adicionais.
-# Documentação: docs/guias/GUIA_DE_FUNCIONAMENTO.md e docs/guias/GUIA_DE_EXECUCAO_E_TESTES.md.
+# Documentação: docs/guias/GUIA_DE_FUNCIONAMENTO.md.
 PYTHON ?= python3
 # Execuções e testes não deixam bytecode/caches Python no projeto.
 export PYTHONDONTWRITEBYTECODE := 1

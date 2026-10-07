@@ -10,7 +10,6 @@ import argparse
 from collections import Counter, defaultdict
 import csv
 import hashlib
-import inspect
 import io
 import json
 import os
@@ -97,11 +96,7 @@ def output_options(profile):
     with tempfile.TemporaryDirectory(prefix="configuration-audit-") as temporary:
         directory = Path(temporary)
         (directory / "inputs").mkdir()
-        signature = inspect.signature(prepare_outputs)
-        arguments = {"profile": profile} if "profile" in signature.parameters else {}
-        if "metrics_profile" in signature.parameters:
-            arguments = {"metrics_profile": profile}
-        command = prepare_outputs(directory, **arguments)
+        command = prepare_outputs(directory, profile=profile)
         options = {command[index][2:]: command[index + 1].replace(temporary, "<episode>")
                    for index in range(0, len(command), 2)}
         additional = ET.parse(directory / "inputs" / "observations.add.xml").getroot()
@@ -389,7 +384,7 @@ def project_options(version):
                 default = str(default.relative_to(ROOT))
             result.append(row(
                 configuration_name=f"project:{name}.{option}", interface="project", category=name,
-                description=action.help or f"Parâmetro público {option}; ver docs/guias/GUIA_DE_EXECUCAO_E_TESTES.md e função {name}.main.",
+                description=action.help or f"Parâmetro público {option}; ver docs/guias/GUIA_DE_FUNCIONAMENTO.md e função {name}.main.",
                 data_type=getattr(action.type, "__name__", "bool" if isinstance(default, bool) else type(default).__name__),
                 native_default=default, current_core=default, current_full="full" if option == "metrics-profile" else default,
                 value_origin="argparse do código atual", source_file=str(Path(module.__file__).relative_to(ROOT)),
@@ -398,9 +393,9 @@ def project_options(version):
                 else "altera condições do episódio; registrar e comparar como variante",
                 currently_used="sim", scientific_relevance="alta para rastreabilidade",
                 aliases_or_elements=" ".join(action.option_strings), constraints=f"choices={action.choices}",
-                source_reference="docs/guias/GUIA_DE_EXECUCAO_E_TESTES.md", source_sha256=digest(module.__file__), sumo_version=version,
-                notes=("Demanda e perfil semafórico são independentes. SETTRAN exige --settran-plan explícito para teste fixo; seleção é validada, mas não há programas compilados comprovados. Sem agenda ou troca automática; lacunas em docs/settran/settran_audit.csv."
-                       if option in {"signal-profile", "settran-plan"}
+                source_reference="docs/guias/GUIA_DE_FUNCIONAMENTO.md", source_sha256=digest(module.__file__), sumo_version=version,
+                notes=("Demanda e perfil semafórico são independentes. O conversor de programas SETTRAN está implementado; valida cada plano, interseção/TLS e requisito operacional antes da simulação. Nenhum plano real está seguro para execução atualmente: faltam intervalos luminosos, permissões e referência da defasagem. Teste fixo exige --settran-plan explícito e dispensa agenda; não há troca automática. --settran-intersection aceita o nome exato da fonte e pode ser repetido; nesse recorte explícito, os demais TLS mantêm current. Sem recorte, todas as interseções do plano devem estar prontas. Lacunas em docs/guias/GUIA_DE_FUNCIONAMENTO.md."
+                       if option in {"signal-profile", "settran-plan", "settran-intersection"}
                        else "None indica ausência de override. Seed do gerador é distinta da seed interna do SUMO."),
             ))
     return result

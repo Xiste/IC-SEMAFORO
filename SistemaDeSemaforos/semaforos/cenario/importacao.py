@@ -23,8 +23,38 @@ def read_table(data, filename):
     return table.dropna(how='all')
 
 
-def parse_counts(data, filename):
-    table = read_table(data, filename).rename(columns={'from_edge': 'edge_id', 'vlink_id': 'sensor_id',
+def count_period(data, filename, start=None, end=None):
+    """Seleciona janelas completas; não inventa contagens para frações de janela."""
+    table = read_table(data, filename)
+    metadata = {'source_file': filename, 'source_rows': len(table), 'selected_rows': len(table)}
+    has_time = {'hora_inicio', 'hora_fim'} <= set(table)
+    if bool(start) != bool(end):
+        raise ValueError('Informe início e fim do período juntos')
+    if has_time:
+        starts = pd.to_datetime(table['hora_inicio'], errors='raise')
+        ends = pd.to_datetime(table['hora_fim'], errors='raise')
+        if (ends <= starts).any():
+            raise ValueError('Há janelas com fim anterior ou igual ao início')
+        metadata.update(available_start=starts.min().isoformat(), available_end=ends.max().isoformat())
+    if start and end:
+        if not has_time:
+            raise ValueError('Seleção de período exige hora_inicio e hora_fim')
+        begin, finish = pd.Timestamp(start), pd.Timestamp(end)
+        if finish <= begin:
+            raise ValueError('O fim do período deve ser posterior ao início')
+        mask = (starts >= begin) & (ends <= finish)
+        metadata.update(period_start=begin.isoformat(), period_end=finish.isoformat(),
+                        boundary_windows_excluded=int(((starts < finish) & (ends > begin) & ~mask).sum()))
+        table = table.loc[mask].copy()
+        if table.empty:
+            raise ValueError('Nenhuma janela completa no período selecionado')
+    metadata['selected_rows'] = len(table)
+    return table, metadata
+
+
+def parse_counts(data, filename, start=None, end=None):
+    table, _ = count_period(data, filename, start, end)
+    table = table.rename(columns={'from_edge': 'edge_id', 'vlink_id': 'sensor_id',
         'vehicle_total': 'vehicles', 'descricao_linha': 'label', 'veiculos_h': 'vehicles_per_hour'})
     location = 'edge_id' if 'edge_id' in table else 'sensor_id' if 'sensor_id' in table else None
     if location is None or table.empty:

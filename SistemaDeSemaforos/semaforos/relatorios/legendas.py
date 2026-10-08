@@ -1,6 +1,7 @@
 """Nomes e explicações em português, preservando os identificadores técnicos."""
 
 import re
+from semaforos.relatorios.metricas_ampliadas import EXTENDED
 
 
 # Nome legível, significado, unidade.
@@ -87,11 +88,13 @@ TRIPS = {
     "route_length_meters": ("distância percorrida", "Comprimento percorrido na viagem concluída.", "m"),
     "departure_delay_seconds": ("atraso na partida", "Diferença entre partida prevista e inserção efetiva.", "s"),
 }
-STATS = {"mean": "Média", "p95": "Percentil 95", "std": "Desvio padrão",
+STATS = {"mean": "Média", 'p50': 'Percentil 50', 'p90': 'Percentil 90', "p95": "Percentil 95", 'p99': 'Percentil 99', "std": "Desvio padrão",
          "min": "Mínimo", "max": "Máximo", "median": "Mediana"}
 
 
 def metric_legend(name):
+    if name in EXTENDED:
+        return EXTENDED[name][:3]
     if name in METRICS:
         return METRICS[name]
     if re.fullmatch(r"phase_\d+_seconds", name):

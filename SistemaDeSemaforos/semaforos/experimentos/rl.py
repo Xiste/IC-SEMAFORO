@@ -35,7 +35,8 @@ class ProgressCallback(BaseCallback):
         for item in infos:
             if "unfinished" in item:
                 self.episodes += 1
-                trips = trip_summary(Path(item["episode_output"]) / "tripinfo.xml") if item.get("episode_output") else {}
+                trips = trip_summary(Path(item["episode_output"]) / "tripinfo.xml", item.get('measurement_start_seconds'),
+                                     item.get('measurement_end_seconds')) if item.get("episode_output") else {}
                 self.episode_rows.append({"episode": self.episodes, "timesteps": self.num_timesteps,
                                           "reward": item.get("episode", {}).get("r"),
                                           **trips,
@@ -123,20 +124,20 @@ def train_rl(config, output):
         env.close()
 
 
-def evaluate_rl(config, output, model_path, seeds=None):
+def evaluate_rl(config, output, model_path=None, seeds=None):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
-    model_path = Path(model_path)
-    training_manifest_path = model_path.parent / "manifest.json"
-    training_manifest = json.loads(training_manifest_path.read_text(encoding="utf-8")) if training_manifest_path.is_file() else {}
-    model_algorithm = training_manifest.get("algorithm", "PPO")
+    model_path = Path(model_path) if model_path else None
+    training_manifest_path = model_path.parent / "manifest.json" if model_path else None
+    training_manifest = json.loads(training_manifest_path.read_text(encoding="utf-8")) if training_manifest_path and training_manifest_path.is_file() else {}
+    model_algorithm = training_manifest.get("algorithm", config.get("algorithm", "PPO"))
     if config.get("algorithm", model_algorithm).upper() != model_algorithm.upper():
         raise ValueError("O algoritmo selecionado difere do algoritmo do modelo")
     algorithm = get_algorithm(model_algorithm)
     action_mode, action_spec = phase_action_spec(config, network_programs(config["network"]))
-    if training_manifest.get("action_mode", "green_extension") != action_mode:
+    if model_path and training_manifest.get("action_mode", "green_extension") != action_mode:
         raise ValueError("O modo de ação mudou; treine um novo modelo PPO")
-    if action_mode == "phase_durations" and training_manifest.get("action_spec") != action_spec:
+    if model_path and action_mode == "phase_durations" and training_manifest.get("action_spec") != action_spec:
         raise ValueError("As fases ou os limites de duração mudaram; treine um novo modelo PPO")
     if training_manifest.get("targets") and training_manifest["targets"] != config["targets"]:
         raise ValueError("O modelo foi treinado com outros semáforos/fases")
@@ -147,8 +148,10 @@ def evaluate_rl(config, output, model_path, seeds=None):
     if (training_manifest.get("mapping_sha256") and config.get("mapping_path")
             and training_manifest["mapping_sha256"] != file_hash(config["mapping_path"])):
         raise ValueError("O mapeamento difere do usado no treinamento")
-    model = algorithm.load(model_path)
+    model = algorithm.load(model_path) if model_path else None
     seeds = seeds or config.get("evaluation", {}).get("seeds") or config["seeds"]
+    if len(set(seeds)) != len(seeds):
+        raise ValueError('Sementes de avaliação devem ser distintas')
     if training_manifest.get("training_seed") in seeds:
         raise ValueError("Use sementes de avaliação diferentes da semente do treino")
     export_catalogs(output, config)
@@ -162,7 +165,7 @@ def evaluate_rl(config, output, model_path, seeds=None):
     env = SemaforosEnv(config, output / "episodes", gui=bool(control.get("gui", False)))
     try:
         for seed in seeds:
-            for controller in ("network_reference", "queue_actuated", algorithm.name):
+            for controller in (("network_reference", "queue_actuated", algorithm.name) if model else ("network_reference", "queue_actuated")):
                 observation, _ = env.reset(seed=int(seed))
                 episode_reward = 0.0
                 while True:
@@ -188,14 +191,15 @@ def evaluate_rl(config, output, model_path, seeds=None):
         export_details(output, intersection_rows, crossing_rows, flow_rows)
         summary = write_evaluation_report(output, rows, signal_rows, {
             "real_seconds": round(time.perf_counter() - started, 2),
-            "versions": versions(), "model_path": str(model_path),
+            "versions": versions(), "model_path": str(model_path) if model_path else None,
             "network_sha256": file_hash(config["network"]),
             "plans_sha256": file_hash(config["plans"]),
             "mapping_sha256": file_hash(config["mapping_path"]) if config.get("mapping_path") else None,
             "evaluation_config": config,
             "evaluation_demand": config["demand"],
+            "evaluation_seeds": list(seeds),
             "training_manifest": training_manifest,
-            "algorithm": algorithm.name,
+            "algorithm": algorithm.name if model else "Comparação sem treinamento",
             "cancelled": cancelled,
         })
         return summary

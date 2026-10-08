@@ -20,7 +20,7 @@ ROOT = PROJECT_ROOT
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("inspect", "mapping", "mapping-review", "mapping-scaffold", "measurements", "options", "algorithms", "run", "run-reference", "train", "rl-train", "rl-eval", "ppo-train", "ppo-eval"))
+    parser.add_argument("command", choices=("inspect", "mapping", "mapping-review", "mapping-scaffold", "measurements", "options", "algorithms", "run", "run-reference", "validate-demand", "compare-baselines", "run-study", "train", "rl-train", "rl-eval", "ppo-train", "ppo-eval"))
     parser.add_argument("--config", default=str(ROOT / "config" / "cenario.json"))
     parser.add_argument("--candidate", help="JSON com durações das fases por ID:índice")
     parser.add_argument("--output", help="Pasta de saída da execução")
@@ -63,9 +63,19 @@ def main():
         print(json.dumps(export_mapping_scaffold(config, output), ensure_ascii=False, indent=2))
     elif args.command == "run":
         run(config, output, args.candidate)
-    elif args.command == "run-reference":
+    elif args.command in ("run-reference", "validate-demand"):
         from semaforos.experimentos.referencia import run_reference
+        if args.command == 'validate-demand':
+            if config['demand']['mode'] != 'observed_counts':
+                raise ValueError('Validação de demanda exige contagens observadas')
+            config['seeds'] = config.get('evaluation', {}).get('seeds') or config['seeds']
         run_reference(config, output)
+    elif args.command == 'compare-baselines':
+        from semaforos.experimentos.rl import evaluate_rl
+        print(json.dumps(evaluate_rl(config, output), indent=2, default=str))
+    elif args.command == 'run-study':
+        from semaforos.experimentos.repeticoes import run_study
+        print(json.dumps(run_study(config, output), indent=2, default=str))
     elif args.command == "train":
         train(config, output)
     elif args.command in ("ppo-train", "rl-train"):

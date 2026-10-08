@@ -57,6 +57,8 @@ def write_evaluation_report(output, rows, signal_rows, metadata):
                "same_planned_demand_per_seed": same_demand,
                "partial_runs": len(runs) - len(complete),
                "comparison_complete": len(complete) == len(runs) and not metadata.get('cancelled', False), **metadata}
+    from .diagnostico import export_diagnostics
+    summary['diagnostico'] = export_diagnostics(output, runs, metadata)
     write_json(output / "summary.json", summary)
     lines = ["# Comparação PPO × programa da rede", "",
              f"Sementes de avaliação: {', '.join(map(str, sorted(runs['seed'].unique())))}.",
@@ -73,5 +75,11 @@ def write_evaluation_report(output, rows, signal_rows, metadata):
     if len(complete) != len(runs) or metadata.get('cancelled'):
         lines.append('Execução interrompida: estes arquivos não constituem uma comparação completa de desempenho.')
     lines.append('Métricas físicas por cruzamento estão em intersections.csv; passagens e espera de travessias em pedestrian_crossings.csv quando disponíveis.')
+    lines.extend(['', '## Diagnóstico de melhoria', summary['diagnostico']['scope'],
+                  summary['diagnostico']['method'], summary['diagnostico']['limitations']])
+    lines.extend(f"- {item['controller']}: {item['status']} ({item['paired_seeds']} sementes pareadas)." for item in summary['diagnostico']['conclusions'])
+    if summary['diagnostico']['calibration_valid_in_reference'] is not None:
+        lines.append(f"Fluxos realizados da referência dentro da tolerância: {summary['diagnostico']['calibration_valid_in_reference']}.")
+    lines.append('Detalhes: diagnostico.json, melhorias.csv, melhorias_cruzamentos.csv e validacao_demanda.csv quando disponíveis.')
     (output / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return summary

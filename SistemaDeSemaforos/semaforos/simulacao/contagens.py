@@ -32,9 +32,9 @@ class FlowCounts:
         self.file = output / "measurement_detectors.add.xml"
         ET.ElementTree(root).write(self.file, encoding="utf-8", xml_declaration=True)
 
-    def step(self):
+    def step(self, window_start=0):
         for loop, edge in self.loops.items():
-            self.passed[edge].update(traci.inductionloop.getLastStepVehicleIDs(loop))
+            self.passed[edge].update(data[0] for data in traci.inductionloop.getVehicleData(loop) if data[2] >= window_start)
 
     def rows(self, observed_seconds=None):
         seconds = self.duration if observed_seconds is None else float(observed_seconds)

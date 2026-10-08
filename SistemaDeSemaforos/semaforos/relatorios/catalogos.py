@@ -133,11 +133,14 @@ def metric_rows(config):
     options = config.get("metrics", {})
 
     def add(names, unit, scope, source, flag=None):
+        enabled = flag is None or options.get(flag, flag != 'collect_emissions')
+        if flag in ('collect_vehicle_dynamics', 'collect_vehicle_classes'):
+            enabled = enabled and options.get('collect_extended', True)
         for name in names.split():
             label, description, _ = metric_legend(name)
             rows.append({"métrica": name, "nome em português": label,
                          "legenda em português": description, "unidade": unit, "escopo": scope,
-                         "fonte": source, "coleta": "habilitada" if flag is None or options.get(flag, flag != "collect_emissions")
+                         "fonte": source, "coleta": "habilitada" if enabled
                          else "opcional desabilitada"})
 
     add("planned_vehicles departed arrived unfinished pending_departure tripinfo_completed tripinfo_unfinished",
@@ -167,7 +170,7 @@ def metric_rows(config):
     add("phase_N_seconds", "s", "por alvo/fase", "TraCI trafficlight")
     for label in TRIP_FIELDS.values():
         unit = "m" if "meters" in label else "contagem" if label == "stops" else "s"
-        add(" ".join(f"{stat}_{label}" for stat in ("mean", "p95", "std", "min", "max", "median")),
+        add(" ".join(f"{stat}_{label}" for stat in ("mean", 'p50', 'p90', "p95", 'p99', "std", "min", "max", "median")),
             unit, "viagens concluídas; nulo se não há chegada", "tripinfo")
     add("co2_grams fuel_grams co_grams hc_grams nox_grams pmx_grams", "g", "veículos ativos no horizonte",
         "TraCI vehicle; depende do modelo de emissão", "collect_emissions")
@@ -178,6 +181,11 @@ def metric_rows(config):
     add("peak_rss_mb", "MiB", "Python e filhos; pico amostrado", "psutil", "collect_resources")
     add("reward", "adimensional", "episódio de avaliação", "soma das recompensas")
     add("actions.csv", "s / índice / escolha", "ações por alvo/fase", "registro TraCI", "collect_actions")
+    from .metricas_ampliadas import EXTENDED
+    registered = {row['métrica'] for row in rows}
+    for name, (_, _, unit, flag) in EXTENDED.items():
+        if name not in registered:
+            add(name, unit, 'janela medida; rede, faixa, movimento ou classe conforme a tabela', 'TraCI / detectores E1-E2 / integração temporal', flag)
     return rows
 
 

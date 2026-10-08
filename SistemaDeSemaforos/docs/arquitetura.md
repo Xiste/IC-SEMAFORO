@@ -73,6 +73,33 @@ O reaproveitamento é de rede, demanda, coleta e avaliação SUMO. Métodos que 
 
 ## Limpeza realizada
 
+### Revisão de organização em 07/10/2026
+
+A divisão atual em seis camadas atende ao pipeline. Não é necessário mover módulos ou alterar imports nesta revisão. `apresentacao/app.py` concentra os formulários e a composição do painel; é o principal candidato a divisão por telas caso a interface cresça. Essa divisão deve preservar as chaves dos widgets e a recuperação das tarefas.
+
+| Recurso | Módulos responsáveis |
+| --- | --- |
+| Preparar grupos compatíveis e conferir conflitos | `cenario/preparacao.py`, `cenario/grupos.py`, `cenario/experimental.py` |
+| Importar contagens/OD e calibrar demanda | `cenario/importacao.py`, `cenario/calibracao.py`, `cenario/demanda.py` |
+| Gerar e observar pedestres | `cenario/pedestres.py`, `simulacao/pedestres.py` |
+| Medir cruzamentos, contagens e acompanhamento ao vivo | `simulacao/observacao.py`, `simulacao/contagens.py` |
+| Executar referência sem treino | `experimentos/referencia.py` |
+| Persistir tarefas, reconhecer processos e cancelar | `experimentos/tarefas.py` |
+| Exportar episódios completos e parciais | `relatorios/episodios.py` |
+| Escrever arquivos compartilhados de forma atômica | `arquivos.py` |
+
+#### Critérios para manter ou apagar arquivos
+
+- `config/` e `dados/`: entradas e evidências. O mapeamento dos planos reais e o mapeamento experimental têm finalidades distintas; ambos são úteis.
+- `scripts/`: manutenção, auditoria, benchmark e verificações da interface/GUI. Não fazem parte da inicialização diária, mas continuam necessários para reproduzir verificações.
+- `tests/`: contratos de comportamento e regressões. Nomes relacionados a pendências registram o contexto dos testes e não indicam que estejam obsoletos.
+- `docs/catalogos/`: exportações para consulta, inclusive fora da interface; são regeneráveis pelo exportador atual.
+- `resultados/`: execuções locais. Modelos podem depender das redes e configurações geradas nessa pasta. Antes de apagar um cenário, conferir os manifestos dos modelos que o utilizam.
+- `.venv/` e `.venv-verificacao/`: ambientes locais. O inicializador utiliza o ambiente isolado; eles não devem entrar no Git.
+- `__pycache__/`: cache regenerável, pode ser removido com os processos encerrados.
+
+Nesta revisão foram identificados para exclusão o script pontual `resultados/extra_ir_snapshot.py`, a resolução temporária do pip `resultados/instalacao_resolvida.json` e o arquivo vazio `resultados/eval_research_console.json`, além dos caches de código do projeto. Não são entradas do pipeline nem resultados científicos. A política automática de execução bloqueou o comando de exclusão; esses arquivos e caches permanecem no disco.
+
 Removidos arquivos duplicados/obsoletos: ajuda estática opcoes_sumo_1.27.1.txt, template estático modelo_todas_opcoes.sumocfg, gerador antigo gerar_catalogo_sumo.py e script pontual verificar_relatorios_catalogos.py, que dependia de um experimento datado e reescrevia resultados históricos. O exportador atual gera CSV e Markdown diretamente da instalação. A migração temporária também foi removida.
 
 Os antigos módulos planos foram movidos para as camadas; não há cópias duplicadas. A busca antiga permanece disponível porque tem implementação e comando ativos. Redes, fontes, medições, evidências, modelos e resultados anteriores são preservados. A limpeza de caches é limitada ao código do projeto, sem alterar .venv ou .git.

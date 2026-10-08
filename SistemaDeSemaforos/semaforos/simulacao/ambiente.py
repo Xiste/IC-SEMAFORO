@@ -4,6 +4,7 @@ import json
 import csv
 import time
 import uuid
+import hashlib
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -23,6 +24,8 @@ from semaforos.simulacao.contagens import FlowCounts
 from semaforos.cenario.pedestres import create_pedestrian_demand
 from semaforos.simulacao.pedestres import PedestrianMetrics
 from semaforos.simulacao.observacao import IntersectionMetrics, LiveMetrics
+from semaforos.simulacao.janela import measurement_window
+from semaforos.simulacao.detalhes import DetailedMetrics
 from semaforos.arquivos import write_json
 from semaforos.relatorios.metricas import trip_summary
 
@@ -34,7 +37,8 @@ class SemaforosEnv(gym.Env):
         super().__init__()
         self.config = config
         self.demand_config = demand_config if demand_config is not None else config
-        self.output = Path(output)
+        # Arquivos additional do SUMO resolvem saídas a partir da sua própria pasta.
+        self.output = Path(output).resolve()
         self.output.mkdir(parents=True, exist_ok=True)
         _, self.network, self.programs = load_scenario(config)
         self.targets = config["targets"]
@@ -54,6 +58,7 @@ class SemaforosEnv(gym.Env):
                         raise ValueError("green_extension só pode atuar em fases verdes")
         self.interval = float(control_parameters(config).get("decision_seconds", 5))
         self.step_length = float(config["step_seconds"])
+        self.measurement = measurement_window(config)
         if self.interval < self.step_length:
             raise ValueError("decision_seconds deve ser >= step_seconds")
         self.gui = gui
@@ -87,6 +92,11 @@ class SemaforosEnv(gym.Env):
         self.flow_counts = None
         self.last_info = None
         self.reward_total = 0.0
+        self.demand_sha256 = None
+        self.total_departed = self.total_arrived = 0
+        self.window_end_state = None
+        self.detailed_metrics = None
+        self.warming_up = False
 
     def _resources(self):
         process = psutil.Process()
@@ -134,6 +144,14 @@ class SemaforosEnv(gym.Env):
         self.real_started = time.perf_counter()
         routes = create_demand(self.demand_config, self.network, folder, self.seed_value)
         pedestrian_routes, planned_people = create_pedestrian_demand(self.demand_config, folder)
+        # Comparar viagens, horários, tipos e pedestres, removendo comentários de geração.
+        digest = hashlib.sha256()
+        for path in (routes, pedestrian_routes):
+            if path:
+                xml = ET.tostring(ET.parse(path).getroot(), encoding='unicode')
+                digest.update(ET.canonicalize(xml, strip_text=True).encode('utf-8'))
+            digest.update(b'\0')
+        self.demand_sha256 = digest.hexdigest()
         self.planned = planned_vehicle_count(routes)
         binary = sumo_executable()
         if self.gui:
@@ -146,8 +164,10 @@ class SemaforosEnv(gym.Env):
                    "--tripinfo-output", str(folder / "tripinfo.xml"),
                    "--tripinfo-output.write-unfinished", "true", "--no-step-log", "true"]
         self.flow_counts = FlowCounts(self.config, self.network, folder)
-        if self.flow_counts.file:
-            command.extend(["--additional-files", str(self.flow_counts.file)])
+        self.detailed_metrics = DetailedMetrics(self.config, folder, ET.parse(self.config['network']).getroot())
+        additional = [str(path) for path in (self.flow_counts.file, self.detailed_metrics.file) if path]
+        if additional:
+            command.extend(["--additional-files", ','.join(additional)])
         if self.gui:
             delay = float(control_parameters(self.config).get('gui_delay_milliseconds', 0))
             if not 0 <= delay <= 2000:
@@ -188,6 +208,10 @@ class SemaforosEnv(gym.Env):
             self.live_metrics = LiveMetrics(folder, self.episode, self.seed_value, self.output.parent)
             self.reward_total = 0.0
             self.departed = self.arrived = 0
+            self.total_departed = self.total_arrived = 0
+            self.window_end_state = None
+            self.vehicles_at_window_start = 0
+            self.last_vehicle_ids = set()
             self.wait_seconds = self.queue_seconds = self.vehicle_seconds = 0.0
             self.previous_wait = {}
             self.signal_metrics = {target["tls_id"]: {
@@ -206,7 +230,19 @@ class SemaforosEnv(gym.Env):
             self.action_log = []
             self.duration_applied = set()
             self.desired_durations = {}
-            return self._observation(), {"seed": self.seed_value, "output": str(folder)}
+            self.warming_up = True
+            interval = self.interval
+            try:
+                while traci.simulation.getTime() < self.measurement.warmup:
+                    from semaforos.experimentos.tarefas import cancellation_requested
+                    if cancellation_requested(self.output.parent):
+                        raise InterruptedError('Aquecimento interrompido pelo usuário')
+                    self.interval = min(interval, self.measurement.warmup - traci.simulation.getTime())
+                    self.step(np.ones(len(self.action_spec), dtype=np.int64))
+            finally:
+                self.interval = interval
+                self.warming_up = False
+            return self._observation(), {"seed": self.seed_value, "output": str(folder), **self.measurement.metadata(traci.simulation.getTime())}
         except Exception:
             self.close()
             raise
@@ -226,7 +262,7 @@ class SemaforosEnv(gym.Env):
             before = traci.trafficlight.getNextSwitch(tls_id) - traci.simulation.getTime()
             traci.trafficlight.setPhaseDuration(tls_id, remaining)
             self.duration_applied.add(tls_id)
-            if self.config.get("metrics", {}).get("collect_actions", True):
+            if not self.warming_up and self.config.get("metrics", {}).get("collect_actions", True):
                 self.action_log.append({"time_seconds": traci.simulation.getTime(), "tls_id": tls_id,
                     "phase_index": index, "phase_kind": phase_kind(self.programs[tls_id][index]["state"]),
                     "action": choice, "phase_elapsed_seconds": elapsed,
@@ -265,7 +301,7 @@ class SemaforosEnv(gym.Env):
                   and elapsed + remaining + self.interval + self.step_length <= upper):
                 traci.trafficlight.setPhaseDuration(tls_id, remaining + self.interval)
                 applied_duration = remaining + self.interval
-            if self.config.get("metrics", {}).get("collect_actions", True):
+            if not self.warming_up and self.config.get("metrics", {}).get("collect_actions", True):
                 self.action_log.append({"time_seconds": now, "tls_id": tls_id,
                                         "phase_index": index, "action": int(choice),
                                         "phase_elapsed_seconds": elapsed,
@@ -275,19 +311,39 @@ class SemaforosEnv(gym.Env):
         metric_options = self.config.get("metrics", {})
         end = min(float(self.config["duration_seconds"]), now + self.interval)
         while traci.simulation.getTime() < end:
+            previous_time = traci.simulation.getTime()
             traci.simulationStep()
-            self.flow_counts.step()
-            self.pedestrian_metrics.sample()
-            self.intersection_metrics.sample(metric_options.get('collect_lane_details', True))
             current = traci.simulation.getTime()
-            self.departed += traci.simulation.getDepartedNumber()
-            self.arrived += traci.simulation.getArrivedNumber()
+            measured = self.measurement.contains_step(previous_time, current)
+            departing = traci.simulation.getDepartedNumber()
+            arriving = traci.simulation.getArrivedNumber()
+            self.total_departed += departing
+            self.total_arrived += arriving
             vehicle_ids = traci.vehicle.getIDList()
-            active += len(vehicle_ids) * self.step_length
-            global_halted = sum(traci.vehicle.getSpeed(vehicle) < 0.1 for vehicle in vehicle_ids)
-            self.global_halted_seconds += global_halted * self.step_length
-            self.global_peak_halted = max(self.global_peak_halted, global_halted)
-            if metric_options.get("collect_emissions", False):
+            speeds = {vehicle: traci.vehicle.getSpeed(vehicle) for vehicle in vehicle_ids}
+            current_wait = {vehicle: traci.vehicle.getWaitingTime(vehicle) for vehicle in vehicle_ids}
+            self.pedestrian_metrics.sample(measure=measured)
+            if previous_time <= self.measurement.start < current:
+                self.vehicles_at_window_start = len(self.last_vehicle_ids)
+            self.last_vehicle_ids = set(vehicle_ids)
+            if measured:
+                self.departed += departing
+                self.arrived += arriving
+                active += len(vehicle_ids) * self.step_length
+                global_halted = sum(speed < 0.1 for speed in speeds.values())
+                self.global_halted_seconds += global_halted * self.step_length
+                self.global_peak_halted = max(self.global_peak_halted, global_halted)
+                self.flow_counts.step(window_start=self.measurement.start)
+                self.intersection_metrics.sample(metric_options.get('collect_lane_details', True))
+                self.detailed_metrics.sample(self.step_length, speeds, current_wait, self.measurement.start)
+                wait += sum(min(self.step_length, value) if vehicle not in self.previous_wait else
+                            max(0, value - self.previous_wait[vehicle]) for vehicle, value in current_wait.items())
+                self.window_end_state = {'unfinished': len(vehicle_ids), 'pending_departure': len(traci.simulation.getPendingVehicles()),
+                                         'vehicles_at_window_end': len(vehicle_ids)}
+            else:
+                self.detailed_metrics.prime(speeds)
+            self.previous_wait = current_wait
+            if measured and metric_options.get("collect_emissions", False):
                 self.co2_mg += sum(max(0, traci.vehicle.getCO2Emission(vehicle))
                                    for vehicle in vehicle_ids) * self.step_length
                 self.fuel_mg += sum(max(0, traci.vehicle.getFuelConsumption(vehicle))
@@ -300,21 +356,18 @@ class SemaforosEnv(gym.Env):
                     ("electricity_wh", traci.vehicle.getElectricityConsumption, 1),
                 ):
                     self.extra_emissions[key] += sum(max(0, getter(vehicle)) for vehicle in vehicle_ids) * self.step_length * factor
-            if metric_options.get("collect_events", True):
+            if measured and metric_options.get("collect_events", True):
                 self.teleports += traci.simulation.getStartingTeleportNumber()
                 self.collisions += traci.simulation.getCollidingVehiclesNumber()
-            current_wait = {vehicle: traci.vehicle.getWaitingTime(vehicle) for vehicle in vehicle_ids}
-            wait += sum(max(0, value - self.previous_wait.get(vehicle, 0))
-                        for vehicle, value in current_wait.items())
-            self.previous_wait = current_wait
             for target in self.targets:
                 tls_id = target["tls_id"]
                 halted = sum(traci.lane.getLastStepHaltingNumber(lane) for lane in self.lanes[tls_id])
-                queue += halted * self.step_length
                 signal = self.signal_metrics[tls_id]
-                signal["queue_vehicle_seconds"] += halted * self.step_length
-                signal["peak_halted_vehicles"] = max(signal["peak_halted_vehicles"], halted)
-                if metric_options.get("collect_lane_details", True):
+                if measured:
+                    queue += halted * self.step_length
+                    signal["queue_vehicle_seconds"] += halted * self.step_length
+                    signal["peak_halted_vehicles"] = max(signal["peak_halted_vehicles"], halted)
+                if measured and metric_options.get("collect_lane_details", True):
                     for lane in self.lanes[tls_id]:
                         speed = traci.lane.getLastStepMeanSpeed(lane)
                         if speed >= 0:
@@ -322,7 +375,8 @@ class SemaforosEnv(gym.Env):
                             signal["occupancy_percent_sum"] += traci.lane.getLastStepOccupancy(lane)
                             signal["lane_samples"] += 1
                 index = traci.trafficlight.getPhase(tls_id)
-                signal["phase_seconds"][str(index)] += self.step_length
+                if measured:
+                    signal["phase_seconds"][str(index)] += self.step_length
                 if index != self.phase[tls_id]:
                     self.phase[tls_id] = index
                     self.phase_since[tls_id] = current
@@ -341,7 +395,8 @@ class SemaforosEnv(gym.Env):
         reward = -(weights["waiting"] * wait / 60 + weights["queues"] * queue / 60
                    + weights["travel"] * active / 600) / total
         done = traci.simulation.getTime() >= self.config["duration_seconds"]
-        info = {"simulated_seconds": traci.simulation.getTime(), "departed": self.departed,
+        info = {"simulated_seconds": traci.simulation.getTime(), "demand_sha256": self.demand_sha256, "departed": self.departed,
+                **self.measurement.metadata(traci.simulation.getTime()),
                 "arrived": self.arrived, "wait_vehicle_seconds": self.wait_seconds,
                 "queue_vehicle_seconds": self.queue_seconds,
                 "global_halted_vehicle_seconds": self.global_halted_seconds,
@@ -359,19 +414,28 @@ class SemaforosEnv(gym.Env):
 
     def snapshot(self, complete=False):
         """Captura também episódios parciais antes de fechar a conexão TraCI."""
-        unfinished = max(0, self.departed - self.arrived)
         people = self.pedestrian_metrics.summary()
-        pending = max(0, traci.simulation.getMinExpectedNumber() - unfinished
-                      - people['pedestrians_unfinished'] - people['pedestrians_pending'])
+        end_state = self.window_end_state or {'unfinished': 0, 'pending_departure': 0, 'vehicles_at_window_end': 0}
+        measured_seconds = self.measurement.elapsed(traci.simulation.getTime())
+        lane_rows, movement_rows = self.detailed_metrics.rows()
         info = {'episode_complete': bool(complete), 'episode_output': str(self.current_output),
+                'demand_sha256': self.demand_sha256,
                 'episode_number': self.episode, 'simulated_seconds': traci.simulation.getTime(),
                 'seed': self.seed_value, 'departed': self.departed, 'arrived': self.arrived,
-                'unfinished': unfinished, 'pending_departure': pending,
+                **end_state, **self.measurement.metadata(traci.simulation.getTime()),
+                'total_departed': self.total_departed, 'total_arrived': self.total_arrived,
+                'vehicles_at_window_start': self.vehicles_at_window_start,
+                'arrivals_per_hour': self.arrived * 3600 / measured_seconds if measured_seconds else None,
+                'departures_per_hour': self.departed * 3600 / measured_seconds if measured_seconds else None,
+                'mean_active_vehicles': self.vehicle_seconds / measured_seconds if measured_seconds else None,
+                'mean_global_queue_vehicles': self.global_halted_seconds / measured_seconds if measured_seconds else None,
+                **self.detailed_metrics.global_summary(), 'lanes': lane_rows, 'movements': movement_rows,
+                'vehicle_classes': self.detailed_metrics.class_rows(),
                 'wait_vehicle_seconds': self.wait_seconds, 'queue_vehicle_seconds': self.queue_seconds,
                 'global_halted_vehicle_seconds': self.global_halted_seconds,
                 'global_peak_halted_vehicles': self.global_peak_halted,
                 'active_vehicle_seconds': self.vehicle_seconds, **self.planned, **people,
-                'flow_counts': self.flow_counts.rows(traci.simulation.getTime()),
+                'flow_counts': self.flow_counts.rows(measured_seconds),
                 'intersections': self.intersection_metrics.rows(),
                 'pedestrian_crossings': self.pedestrian_metrics.rows(),
                 'real_seconds': round(time.perf_counter() - self.real_started, 3)}
@@ -390,6 +454,11 @@ class SemaforosEnv(gym.Env):
         if metric_options.get("collect_emissions", False):
             info.update(co2_grams=self.co2_mg / 1000, fuel_grams=self.fuel_mg / 1000)
             info.update(self.extra_emissions)
+            distance = info.get('vehicle_distance_meters', 0)
+            for name in ('co2_grams', 'fuel_grams', 'co_grams', 'hc_grams', 'nox_grams', 'pmx_grams', 'electricity_wh'):
+                info[f'{name}_per_kilometer'] = info[name] * 1000 / distance if distance > 0 else None
+        info['arrival_service_ratio_percent'] = self.arrived * 100 / (self.vehicles_at_window_start + self.departed) if self.vehicles_at_window_start + self.departed else None
+        info['aggregate_wait_seconds_per_arrival'] = self.wait_seconds / self.arrived if self.arrived else None
         if metric_options.get("collect_events", True):
             info.update(teleports_started=self.teleports, collision_vehicles=self.collisions)
         if metric_options.get("collect_resources", True):
@@ -410,7 +479,8 @@ class SemaforosEnv(gym.Env):
             self.connected = False
         if info is not None:
             info['reward'] = self.reward_total
-            info.update(trip_summary(self.current_output / 'tripinfo.xml'))
+            info.update(trip_summary(self.current_output / 'tripinfo.xml', self.measurement.start,
+                                     min(traci.simulation.getTime() if self.connected else info['simulated_seconds'], self.measurement.end)))
             self.last_info = info
             write_json(self.current_output / 'episode_metrics.json', info)
             if self.action_log:

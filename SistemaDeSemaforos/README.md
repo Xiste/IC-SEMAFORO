@@ -43,6 +43,8 @@ SistemaDeSemaforos/
 
 ## Estado do experimento
 
+A interface agora permite selecionar o período das contagens, validar os fluxos realizados no SUMO e comparar referência × controle por filas sem treinamento. Avaliações de modelos também mostram percentuais de melhora/piora, diferenças por cruzamento e evidência pareada entre sementes. Consulte [calibração e demonstração de melhoria](docs/calibracao_e_melhoria.md) para usar o fluxo e interpretar as conclusões.
+
 Consulte a [atualização funcional de 07/10/2026](docs/estado_funcional_2026-10-07.md) para correções verificadas e limites restantes.
 
 A interface permite importar contagens/OD em CSV ou XLSX, configurar pedestres nas travessias cadastradas, acompanhar quatro gráficos ao vivo, recuperar o acompanhamento após atualizar a página e exportar métricas de episódios completos ou parciais. `intersections.csv` mede cada faixa uma vez por cruzamento; `pedestrian_crossings.csv` registra atendimento das travessias. O SUMO-GUI oferece atraso visual configurável. Pedestres não alteram a fórmula da recompensa: métricas adicionais ficam disponíveis para definir futuros experimentos.
@@ -65,6 +67,10 @@ O único adaptador publicado é PPO. Outro algoritmo precisa de implementação,
 Os guias treinamento.md, parametros_simulacao.md e referencia_parametros.md documentam também a busca anterior de tempos fixos. O registro incremental da equipe fica em ../RELATORIO_INCREMENTAL.md.
 
 ## Manutenção e verificações
+
+A interface usa abas para **Cenário → Tráfego → Treinamento → Resultados**, com catálogos em **Referência técnica**. Consulte [o guia da interface](docs/interface.md).
+
+Aquecimento, janela medida, volumes totais por cruzamento, métricas ampliadas, mapa de gargalos e estudos repetidos estão descritos em [docs/metricas_janela_e_repeticoes.md](docs/metricas_janela_e_repeticoes.md). O estudo automático só inicia pelo botão correspondente ou pelo comando `run-study`. Os verificadores `scripts/verificar_interface_metricas.py` e `tests/test_metricas_ampliadas.py` usam dados artificiais e substituem SUMO/modelos.
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/exportar_catalogos.py

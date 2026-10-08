@@ -16,7 +16,7 @@ TRIP_FIELDS = {
 }
 
 
-def trip_summary(path):
+def trip_summary(path, start=None, end=None):
     """Agrega apenas viagens concluídas; conta incompletas separadamente."""
     completed = []
     unfinished = 0
@@ -24,9 +24,13 @@ def trip_summary(path):
         if element.tag != "tripinfo":
             continue
         arrival = float(element.attrib.get("arrival", -1))
-        if arrival < 0:
+        departure = float(element.attrib.get('depart', 0))
+        if end is not None and departure >= end:
+            element.clear()
+            continue
+        if arrival < 0 or end is not None and arrival > end:
             unfinished += 1
-        else:
+        elif start is None or arrival > start:
             completed.append(element.attrib.copy())
         element.clear()
     result = {"tripinfo_completed": len(completed), "tripinfo_unfinished": unfinished}
@@ -36,6 +40,8 @@ def trip_summary(path):
         result[f"p95_{label}"] = float(np.percentile(values, 95)) if len(values) else None
         for stat, function in (("std", np.std), ("min", np.min), ("max", np.max), ("median", np.median)):
             result[f"{stat}_{label}"] = float(function(values)) if len(values) else None
+        for percentile in (50, 90, 99):
+            result[f'p{percentile}_{label}'] = float(np.percentile(values, percentile)) if len(values) else None
     return result
 
 

@@ -16,13 +16,17 @@ from semaforos.caminhos import PROJECT_ROOT
 from semaforos.cenario.configuracao import read_config
 
 
-COMMANDS = {'rl-train', 'rl-eval', 'run-reference'}
+COMMANDS = {'rl-train', 'rl-eval', 'run-reference', 'compare-baselines', 'validate-demand', 'run-study'}
 LOCAL_PROCESSES = {}
 
 
 def cancellation_requested(output):
     output = Path(output)
-    return (output / 'cancel.flag').exists() or (output.parent / 'cancel.flag').exists()
+    # Um estudo tem execucao/repetition/train; também precisa enxergar a flag da UI.
+    for folder in (output, *list(output.parents)[:3]):
+        if (folder / 'cancel.flag').exists():
+            return True
+    return False
 
 
 def start_job(config, command, results, model=None):
@@ -86,21 +90,33 @@ def execute(folder):
     try:
         config = read_config(folder / 'cenario.json')
         output = folder / 'execucao'
-        if state['command'] == 'run-reference':
+        if state['command'] == 'run-study':
+            from .repeticoes import run_study
+            run_study(config, output)
+        elif state['command'] in ('run-reference', 'validate-demand'):
             from .referencia import run_reference
+            if state['command'] == 'validate-demand':
+                if config['demand']['mode'] != 'observed_counts':
+                    raise ValueError('Validação de demanda exige contagens observadas')
+                config['seeds'] = config.get('evaluation', {}).get('seeds') or config['seeds']
             run_reference(config, output)
         else:
             from .rl import train_rl, evaluate_rl
             if state['command'] == 'rl-train':
                 train_rl(config, output)
+            elif state['command'] == 'compare-baselines':
+                evaluate_rl(config, output)
             else:
                 evaluate_rl(config, output, state['model'])
         summary = read_json(output / 'summary.json') or {}
         state['status'] = 'cancelled' if summary.get('cancelled') else 'completed'
     except Exception as error:
-        code = 1
-        state.update(status='failed', error=str(error))
-        traceback.print_exc()
+        if isinstance(error, InterruptedError) and cancellation_requested(folder / 'execucao'):
+            state.update(status='cancelled', error=str(error))
+        else:
+            code = 1
+            state.update(status='failed', error=str(error))
+            traceback.print_exc()
     finally:
         state.update(exit_code=code, finished_at=datetime.now(timezone.utc).isoformat())
         write_json(folder / 'job.json', state)

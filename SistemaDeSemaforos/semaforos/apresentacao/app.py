@@ -9,6 +9,7 @@ import math
 import re
 import uuid
 import io
+import hashlib
 from collections import deque
 from pathlib import Path
 
@@ -23,7 +24,13 @@ from semaforos.cenario.rede import network_programs, phase_action_spec
 from semaforos.cenario.calibracao import calibration_report
 from semaforos.arquivos import read_json
 from semaforos.experimentos.tarefas import start_job as launch_job, saved_jobs, job_paths, job_state
-from semaforos.cenario.importacao import parse_counts, parse_od
+from semaforos.cenario.importacao import parse_counts, parse_od, count_period
+from semaforos.apresentacao.diagnostico import render_diagnostics
+from semaforos.apresentacao.layout import page_header, configuration_summary, select_workflow_tab
+from semaforos.apresentacao.gargalos import render_study
+from semaforos.cenario.volumes import intersection_entries, distribute_volumes
+from semaforos.simulacao.janela import measurement_window
+from semaforos.experimentos.repeticoes import study_plan
 from semaforos.cenario.pedestres import crossing_routes
 from semaforos.cenario.mapeamento import mapping_report
 from semaforos.cenario.experimental import prepare_experimental, validate_experimental, preview_experimental
@@ -141,137 +148,148 @@ def show_road_map(network_path, edge_id, labels):
 
 def start_job(command, config, model=None):
     st.session_state.job = launch_job(config, command, RESULTS, model)
+    select_workflow_tab('4 · Resultados')
 
 
 st.set_page_config(page_title="Semáforos Rondon Norte", layout="wide")
-st.title("Controle semafórico — Rondon Norte")
-st.caption("Selecione o piloto ou prepare o controle conjunto experimental dos nove cruzamentos. Programas experimentais não representam os planos reais.")
+page_header()
+scenario_tab, demand_tab, training_tab, results_tab, advanced_tab = st.tabs([
+    "1 · Cenário", "2 · Tráfego", "3 · Treinamento", "4 · Resultados", "Referência técnica"],
+    default=st.session_state.get('ui_default_tab', '1 · Cenário'))
+with scenario_tab:
+    st.subheader("Onde vamos estudar o tráfego?")
+    st.caption("Use o piloto para um cruzamento ou prepare o cenário experimental para os nove. Programas experimentais não representam os planos reais.")
 
-with st.expander("Acompanhar ou recuperar uma execução", expanded=bool(saved_jobs(RESULTS))):
-    jobs = saved_jobs(RESULTS)
-    current_folder = str(st.session_state['job']['folder']) if 'job' in st.session_state else ''
-    if not current_folder:
-        current_folder = next((str(j['folder']) for j in jobs if job_state(j)['status'] in ('starting', 'running')), '')
-    choices = [''] + [str(j['folder']) for j in jobs]
-    followed = st.selectbox('Execução para acompanhar', choices,
-        index=choices.index(current_folder) if current_folder in choices else 0,
-        format_func=lambda p: Path(p).name if p else 'Nenhuma execução selecionada', key=f'follow_{current_folder}')
-    if followed:
-        st.session_state.job = job_paths(followed)
-        st.caption('O processo continua ao atualizar a página. Este seletor recupera o acompanhamento; não reinicia nem retoma um treinamento encerrado.')
-        if st.button('Carregar configurações desta execução'):
-            loaded = read_config(Path(followed) / 'cenario.json')
-            st.session_state.loaded_config = loaded
-            if loaded.get('experimental'):
-                st.session_state.experimental_config = loaded
-                st.session_state.experimental_rows = validate_experimental(loaded)
-            st.session_state.controlled_scope = 'Nove cruzamentos: cenário experimental' if loaded.get('experimental') else 'Piloto: um cruzamento'
-    else:
-        st.session_state.pop('job', None)
+with st.sidebar:
+    with st.expander("Acompanhar ou recuperar uma execução", expanded=bool(saved_jobs(RESULTS))):
+        jobs = saved_jobs(RESULTS)
+        current_folder = str(st.session_state['job']['folder']) if 'job' in st.session_state else ''
+        if not current_folder:
+            current_folder = next((str(j['folder']) for j in jobs if job_state(j)['status'] in ('starting', 'running')), '')
+        choices = [''] + [str(j['folder']) for j in jobs]
+        followed = st.selectbox('Execução para acompanhar', choices,
+            index=choices.index(current_folder) if current_folder in choices else 0,
+            format_func=lambda p: Path(p).name if p else 'Nenhuma execução selecionada', key=f'follow_{current_folder}')
+        if followed:
+            st.session_state.job = job_paths(followed)
+            st.caption('O processo continua ao atualizar a página. Este seletor recupera o acompanhamento; não reinicia nem retoma um treinamento encerrado.')
+            if st.button('Carregar configurações desta execução'):
+                loaded = read_config(Path(followed) / 'cenario.json')
+                st.session_state.loaded_config = loaded
+                if loaded.get('experimental'):
+                    st.session_state.experimental_config = loaded
+                    st.session_state.experimental_rows = validate_experimental(loaded)
+                st.session_state.controlled_scope = 'Nove cruzamentos: cenário experimental' if loaded.get('experimental') else 'Piloto: um cruzamento'
+        else:
+            st.session_state.pop('job', None)
 
-base = st.session_state.get('loaded_config') or read_config(DEFAULT)
-scope = st.radio("Cruzamentos controlados", ["Piloto: um cruzamento", "Nove cruzamentos: cenário experimental"], horizontal=True, key='controlled_scope')
-joint = scope.startswith("Nove")
-if not joint and base.get('experimental'):
-    base = read_config(DEFAULT)
-if joint:
-    st.info("Preparação de 17 controladores com movimentos compatíveis agrupados e conferidos na matriz de conflitos, incluindo travessias e intervalos de limpeza. Controladores externos com movimentos sem verde são corrigidos na cópia experimental.")
-    saved_scenarios = sorted(RESULTS.glob("cenario_nove_*/cenario.json"), key=lambda p: p.stat().st_mtime, reverse=True) if RESULTS.exists() else []
-    saved_scenario = st.selectbox("Cenário conjunto salvo", [""] + [str(p) for p in saved_scenarios], format_func=lambda p: Path(p).parent.name if p else "Preparar um novo cenário")
-    if saved_scenario and st.button("Usar cenário salvo"):
-        try:
-            prepared = read_config(saved_scenario)
-            rows = validate_experimental(prepared)
-            st.session_state.experimental_config = prepared
-            st.session_state.experimental_rows = rows
-        except Exception as error:
-            st.error(str(error))
-    if st.button("Preparar e verificar os nove cruzamentos", type="primary"):
-        try:
-            with st.spinner("Preparando rede e verificando atendimento dos movimentos…"):
-                prepared, rows = prepare_experimental(base, RESULTS / f"cenario_nove_{uuid.uuid4().hex[:12]}")
+with scenario_tab:
+    base = st.session_state.get('loaded_config') or read_config(DEFAULT)
+    scope = st.radio("Cruzamentos controlados", ["Piloto: um cruzamento", "Nove cruzamentos: cenário experimental"], horizontal=True, key='controlled_scope')
+    joint = scope.startswith("Nove")
+    if not joint and base.get('experimental'):
+        base = read_config(DEFAULT)
+    if joint:
+        st.info("Preparação de 17 controladores com movimentos compatíveis agrupados e conferidos na matriz de conflitos, incluindo travessias e intervalos de limpeza. Controladores externos com movimentos sem verde são corrigidos na cópia experimental.")
+        saved_scenarios = sorted(RESULTS.glob("cenario_nove_*/cenario.json"), key=lambda p: p.stat().st_mtime, reverse=True) if RESULTS.exists() else []
+        saved_scenario = st.selectbox("Cenário conjunto salvo", [""] + [str(p) for p in saved_scenarios], format_func=lambda p: Path(p).parent.name if p else "Preparar um novo cenário")
+        if saved_scenario and st.button("Usar cenário salvo"):
+            try:
+                prepared = read_config(saved_scenario)
+                rows = validate_experimental(prepared)
                 st.session_state.experimental_config = prepared
                 st.session_state.experimental_rows = rows
-            st.success("Cenário experimental preparado. Os nove cruzamentos estão selecionados para treino.")
-        except Exception as error:
-            st.error(str(error))
-    if "experimental_config" in st.session_state:
-        base = st.session_state.experimental_config
-        st.dataframe(pd.DataFrame(st.session_state.experimental_rows), hide_index=True)
-        st.caption("17 controladores selecionados. Os grupos são conferidos contra a matriz de conflitos e todos os movimentos recebem atendimento. A verificação é da simulação, sem certificação em campo.")
-        if base["experimental"]["method"] == "serial_links_v1":
-            st.warning("Este cenário salvo usa atendimento serial antigo. Prepare um cenário novo para utilizar movimentos agrupados e correções externas.")
-        elif base["experimental"].get("external_repaired"):
-            st.write("Controladores externos corrigidos:", ", ".join(base["experimental"]["external_repaired"]))
-        st.warning("Para atender ao menos um ciclo completo de todos os sinais, use duração maior que o maior ciclo inicial mostrado na tabela. Compare com a referência experimental; ela é conservadora.")
-    else:
-        st.warning("Clique em Preparar e verificar antes de iniciar o treinamento.")
-with st.expander("Arquivos e mapeamento", expanded=False):
-    network_profile = st.selectbox("Rede", ("Original (piloto)", "Rondon Norte corrigida"))
-    selected_network = base["network"] if joint else (CORRECTED_NETWORK if network_profile == "Rondon Norte corrigida" else base["network"])
-    network = st.text_input("Rede SUMO (.net.xml)", str(selected_network), key=f"network_{network_profile}_{joint}_{selected_network}", help=config_help("network"), disabled=joint)
-    plans = st.text_input("Planilha (.xlsx)", str(base["plans"]), help=config_help("plans"))
-    if st.button("Inspecionar arquivos"):
-        try:
-            probe = dict(base, network=Path(network), plans=Path(plans))
-            report = inventory(probe)
-            st.write("Cruzamentos na planilha:", len(report["spreadsheet_intersections"]))
-            st.write("Elementos da rede:", report["network_element_counts"])
-            st.dataframe(pd.DataFrame([
-                {"nome": t["name"], "id_sumo": t["tls_id"],
-                 "fases_ajustáveis": str(t["phase_indices"])} for t in base["targets"]]),
-                hide_index=True)
-            st.info("Para controle conjunto sintético, use Preparar e verificar os nove cruzamentos. A auditoria abaixo trata da correspondência com planos reais.")
-        except Exception as error:
-            st.error(str(error))
-    if st.button("Verificar correspondência dos nove com planos reais"):
-        try:
-            probe = dict(base, network=Path(network), plans=Path(plans))
-            report = mapping_report(probe, base.get("mapping_path"))
-            st.write(f"Validados: {report['validated_count']} de {report['total']}")
-            st.dataframe(pd.DataFrame([{"cruzamento": item["name"], "id_sumo": item["tls_id"],
-                                        "ids_candidatos": ", ".join(c["tls_id"] for c in item["candidate_controllers"]),
-                                        "validado": item["validated"],
-                                        "pendências": "; ".join(item["issues"])}
-                                       for item in report["intersections"]]), hide_index=True)
-        except Exception as error:
-            st.error(str(error))
+            except Exception as error:
+                st.error(str(error))
+        if st.button("Preparar e verificar os nove cruzamentos", type="primary"):
+            try:
+                with st.spinner("Preparando rede e verificando atendimento dos movimentos…"):
+                    prepared, rows = prepare_experimental(base, RESULTS / f"cenario_nove_{uuid.uuid4().hex[:12]}")
+                    st.session_state.experimental_config = prepared
+                    st.session_state.experimental_rows = rows
+                st.success("Cenário experimental preparado. Os nove cruzamentos estão selecionados para treino.")
+            except Exception as error:
+                st.error(str(error))
+        if "experimental_config" in st.session_state:
+            base = st.session_state.experimental_config
+            st.dataframe(pd.DataFrame(st.session_state.experimental_rows), hide_index=True)
+            st.caption("17 controladores selecionados. Os grupos são conferidos contra a matriz de conflitos e todos os movimentos recebem atendimento. A verificação é da simulação, sem certificação em campo.")
+            if base["experimental"]["method"] == "serial_links_v1":
+                st.warning("Este cenário salvo usa atendimento serial antigo. Prepare um cenário novo para utilizar movimentos agrupados e correções externas.")
+            elif base["experimental"].get("external_repaired"):
+                st.write("Controladores externos corrigidos:", ", ".join(base["experimental"]["external_repaired"]))
+            st.warning("Para atender ao menos um ciclo completo de todos os sinais, use duração maior que o maior ciclo inicial mostrado na tabela. Compare com a referência experimental; ela é conservadora.")
+        else:
+            st.warning("Clique em Preparar e verificar antes de iniciar o treinamento.")
+    with st.expander("Arquivos e mapeamento", expanded=False):
+        network_profile = st.selectbox("Rede", ("Original (piloto)", "Rondon Norte corrigida"))
+        selected_network = base["network"] if joint else (CORRECTED_NETWORK if network_profile == "Rondon Norte corrigida" else base["network"])
+        network = st.text_input("Rede SUMO (.net.xml)", str(selected_network), key=f"network_{network_profile}_{joint}_{selected_network}", help=config_help("network"), disabled=joint)
+        plans = st.text_input("Planilha (.xlsx)", str(base["plans"]), help=config_help("plans"))
+        if st.button("Inspecionar arquivos"):
+            try:
+                probe = dict(base, network=Path(network), plans=Path(plans))
+                report = inventory(probe)
+                st.write("Cruzamentos na planilha:", len(report["spreadsheet_intersections"]))
+                st.write("Elementos da rede:", report["network_element_counts"])
+                st.dataframe(pd.DataFrame([
+                    {"nome": t["name"], "id_sumo": t["tls_id"],
+                     "fases_ajustáveis": str(t["phase_indices"])} for t in base["targets"]]),
+                    hide_index=True)
+                st.info("Para controle conjunto sintético, use Preparar e verificar os nove cruzamentos. A auditoria abaixo trata da correspondência com planos reais.")
+            except Exception as error:
+                st.error(str(error))
+        if st.button("Verificar correspondência dos nove com planos reais"):
+            try:
+                probe = dict(base, network=Path(network), plans=Path(plans))
+                report = mapping_report(probe, base.get("mapping_path"))
+                st.write(f"Validados: {report['validated_count']} de {report['total']}")
+                st.dataframe(pd.DataFrame([{"cruzamento": item["name"], "id_sumo": item["tls_id"],
+                                            "ids_candidatos": ", ".join(c["tls_id"] for c in item["candidate_controllers"]),
+                                            "validado": item["validated"],
+                                            "pendências": "; ".join(item["issues"])}
+                                           for item in report["intersections"]]), hide_index=True)
+            except Exception as error:
+                st.error(str(error))
 
-with st.expander("Conferência visual dos nove cruzamentos"):
-    evidence_path = ROOT / "dados/auditoria/conferencia_visual_maps.json"
-    if evidence_path.is_file():
-        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
-        st.info("O usuário confirmou que os cruzamentos do mapa são reais e geograficamente válidos. A auditoria dos planos reais continua em 0/9. O cenário experimental conjunto é preparado e verificado separadamente, sem exigir reprodução desses planos.")
-        st.dataframe(pd.DataFrame([{"cruzamento": row["mapping_name"],
-                                   "imagem": row["image_date"],
-                                   "observações": "; ".join(row["observations"]),
-                                   "pendências": "; ".join(row["limitations"]),
-                                   "Street View": row["panorama_url"]}
-                                  for row in evidence["intersections"]]), hide_index=True,
-                     column_config={"Street View": st.column_config.LinkColumn("Street View")})
-        image_path = ROOT / "dados/auditoria/geometria_nove_cruzamentos.png"
-        if image_path.is_file():
-            st.image(str(image_path), caption="Geometria dos candidatos SUMO; confira as aproximações com o cadastro operacional.")
+    with st.expander("Conferência visual dos nove cruzamentos"):
+        evidence_path = ROOT / "dados/auditoria/conferencia_visual_maps.json"
+        if evidence_path.is_file():
+            evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+            st.info("O usuário confirmou que os cruzamentos do mapa são reais e geograficamente válidos. A auditoria dos planos reais continua em 0/9. O cenário experimental conjunto é preparado e verificado separadamente, sem exigir reprodução desses planos.")
+            st.dataframe(pd.DataFrame([{"cruzamento": row["mapping_name"],
+                                       "imagem": row["image_date"],
+                                       "observações": "; ".join(row["observations"]),
+                                       "pendências": "; ".join(row["limitations"]),
+                                       "Street View": row["panorama_url"]}
+                                      for row in evidence["intersections"]]), hide_index=True,
+                         column_config={"Street View": st.column_config.LinkColumn("Street View")})
+            image_path = ROOT / "dados/auditoria/geometria_nove_cruzamentos.png"
+            if image_path.is_file():
+                st.image(str(image_path), caption="Geometria dos candidatos SUMO; confira as aproximações com o cadastro operacional.")
 
-with st.expander("Cadastro dos controladores, faixas, movimentos e estágios"):
-    register_folder = ROOT / "dados/auditoria/cadastro_nove"
-    if (register_folder / "summary.json").is_file():
-        register = json.loads((register_folder / "summary.json").read_text(encoding="utf-8"))
-        st.write(f"{register['intersections']} cruzamentos associados a {register['controllers_assigned']} controladores; {register['connections']} conexões, incluindo {register['pedestrian_connections']} de pedestres.")
-        st.caption("Extração da rede aceita pelo usuário. Os grupos reais e estágios ainda precisam de correspondência; este cadastro não muda o cenário de treino ativo.")
-        register_choice = st.selectbox("Tabela do cadastro", ["controladores.csv", "movimentos.csv", "estagios_a_associar.csv", "fases_por_movimento.csv"])
-        register_file = register_folder / register_choice
-        st.dataframe(pd.read_csv(register_file), hide_index=True)
-        st.download_button("Baixar tabela do cadastro", register_file.read_bytes(), file_name=register_choice, key="register_csv")
-    else:
-        st.caption("Gere o cadastro com scripts/preparar_cadastro_nove.py.")
+    with st.expander("Cadastro dos controladores, faixas, movimentos e estágios"):
+        register_folder = ROOT / "dados/auditoria/cadastro_nove"
+        if (register_folder / "summary.json").is_file():
+            register = json.loads((register_folder / "summary.json").read_text(encoding="utf-8"))
+            st.write(f"{register['intersections']} cruzamentos associados a {register['controllers_assigned']} controladores; {register['connections']} conexões, incluindo {register['pedestrian_connections']} de pedestres.")
+            st.caption("Extração da rede aceita pelo usuário. Os grupos reais e estágios ainda precisam de correspondência; este cadastro não muda o cenário de treino ativo.")
+            register_choice = st.selectbox("Tabela do cadastro", ["controladores.csv", "movimentos.csv", "estagios_a_associar.csv", "fases_por_movimento.csv"])
+            register_file = register_folder / register_choice
+            st.dataframe(pd.read_csv(register_file), hide_index=True)
+            st.download_button("Baixar tabela do cadastro", register_file.read_bytes(), file_name=register_choice, key="register_csv")
+        else:
+            st.caption("Gere o cadastro com scripts/preparar_cadastro_nove.py.")
 
-left, right = st.columns(2)
-with left:
-    st.subheader("Demanda sintética")
+with scenario_tab:
+    st.button('Continuar: configurar o tráfego', on_click=select_workflow_tab, args=('2 · Tráfego',))
+
+with demand_tab:
+    st.subheader("Qual tráfego você quer simular?")
+    st.caption("Escolha como informar os veículos. Se você tem contagens por cruzamento, use Volume por via.")
     demand_choices = ("Taxa pela rede", "Volume por via", "Pares origem–destino")
     default_mode = 1 if base['demand']['mode'] in ('edge_volumes', 'observed_counts') else 2 if base['demand']['mode'] == 'flows' else 0
-    demand_mode = st.radio("Modelo", demand_choices, index=default_mode, horizontal=True, help=config_help("demand.mode"))
+    demand_mode = st.radio("Modelo", demand_choices, index=default_mode, horizontal=True, format_func=lambda value: {"Taxa pela rede": "Volume total da rede", "Volume por via": "Volumes por cruzamento ou entrada", "Pares origem\u2013destino": "Origens e destinos"}[value], help=config_help("demand.mode"))
     rate = st.number_input("Volume total (veículos/h)", min_value=1,
                            value=int(base["demand"].get("vehicles_per_hour", 360)),
                            disabled=demand_mode != "Taxa pela rede", help=config_help("vehicles_per_hour"))
@@ -332,13 +350,25 @@ with left:
                 counts_file = st.file_uploader('Arquivo de contagens (.csv ou .xlsx)', type=['csv', 'xlsx'])
                 if counts_file is not None:
                     try:
-                        imported = parse_counts(counts_file.getvalue(), counts_file.name)
+                        _, period = count_period(counts_file.getvalue(), counts_file.name)
+                        period_start = period_end = None
+                        if period.get('available_start'):
+                            st.caption(f"Arquivo disponível de {period['available_start']} até {period['available_end']}.")
+                            filter_period = st.checkbox('Selecionar período das contagens', key=f'filter_counts_{counts_file.file_id}')
+                            if filter_period:
+                                period_start = st.text_input('Início da medição (AAAA-MM-DD HH:MM:SS)', value=period['available_start'], key=f'counts_start_{counts_file.file_id}')
+                                period_end = st.text_input('Fim da medição (AAAA-MM-DD HH:MM:SS)', value=period['available_end'], key=f'counts_end_{counts_file.file_id}')
+                            else:
+                                st.caption('Sem filtro, a taxa será a média de todas as janelas do arquivo, incluindo diferentes horários.')
+                        _, period = count_period(counts_file.getvalue(), counts_file.name, period_start, period_end)
+                        imported = parse_counts(counts_file.getvalue(), counts_file.name, period_start, period_end)
+                        st.caption(f"{period['selected_rows']} de {period['source_rows']} janelas selecionadas. Janelas que cruzam os limites são excluídas: {period.get('boundary_windows_excluded', 0)}.")
                         import_rows = [{**r, 'edge_id': labels[r['edge_id']] if r['edge_id'] in edge_ids else ''} for r in imported]
                         associations = st.data_editor(pd.DataFrame(import_rows), hide_index=True,
                             disabled=['source_id', 'label', 'vehicles_per_hour'],
                             column_config={'source_id': 'Trecho/sensor no arquivo', 'label': 'Descrição da medição',
                                            'vehicles_per_hour': 'Veículos/h', 'edge_id': st.column_config.SelectboxColumn('Associar ao trecho SUMO', options=[''] + [labels[e] for e in edge_ids])},
-                            key=f'associations_{network}_{counts_file.file_id}')
+                            key=f'associations_{network}_{counts_file.file_id}_{period_start}_{period_end}')
                         if st.button('Aplicar contagens associadas'):
                             rows = associations.to_dict('records')
                             if any(r['edge_id'] not in edge_by_label for r in rows):
@@ -348,10 +378,39 @@ with left:
                             if len({r['from_edge'] for r in new_rows}) != len(new_rows):
                                 raise ValueError('Mais de um sensor foi associado ao mesmo trecho; revise antes de importar')
                             st.session_state[f'imported_counts_{network}'] = new_rows
+                            st.session_state[f'counts_source_{network}'] = {**period,
+                                'source_sha256': hashlib.sha256(counts_file.getvalue()).hexdigest(),
+                                'sensor_associations': [{'source_id': r['source_id'], 'edge_id': edge_by_label[r['edge_id']]} for r in rows]}
                             st.session_state[f'counts_version_{network}'] = uuid.uuid4().hex
                             st.rerun()
                     except (ValueError, TypeError, KeyError) as error:
                         st.error(f'Importação de contagens: {error}')
+            with st.expander('Volume total por cruzamento e distribuição pelas entradas', expanded=True):
+                entries_by_intersection = intersection_entries(dict(base, network=network))
+                totals = st.data_editor(pd.DataFrame([{'intersection': name, 'vehicles_per_hour': 0.0} for name in entries_by_intersection]),
+                    hide_index=True, disabled=['intersection'], key=f'intersection_totals_{network}', column_config={
+                    'intersection': 'Cruzamento', 'vehicles_per_hour': st.column_config.NumberColumn('Volume total (veículos/h)', min_value=0.0)})
+                distribution_rows = [{'intersection': name, 'edge_id': edge, 'via': labels.get(edge, edge), 'percent': 100 / len(edges)}
+                                     for name, edges in entries_by_intersection.items() for edge in edges]
+                distribution_table = st.data_editor(pd.DataFrame(distribution_rows), hide_index=True,
+                    disabled=['intersection', 'edge_id', 'via'], key=f'intersection_distribution_{network}', column_config={
+                    'intersection': 'Cruzamento', 'edge_id': 'Trecho SUMO', 'via': 'Via e sentido',
+                    'percent': st.column_config.NumberColumn('Distribuição (%)', min_value=0.0, max_value=100.0)})
+                include_zero = st.checkbox('Considerar totais zero como contagens observadas', value=False, disabled=not observed_mode)
+                st.caption('Cada total deve ser distribuído em 100% pelas entradas. A distribuição inicial é uniforme: ajuste com suas contagens. Para veículos que passam por vários cruzamentos, use contagens observadas e calibração para evitar gerar o mesmo fluxo novamente.')
+                if st.button('Aplicar volumes por cruzamento'):
+                    try:
+                        rows = distribute_volumes(totals.to_dict('records'), distribution_table.to_dict('records'),
+                                                  entries_by_intersection, include_zero and observed_mode)
+                        st.session_state[f'imported_counts_{network}'] = rows
+                        st.session_state[f'counts_source_{network}'] = {'source_file': 'Volumes por cruzamento informados na interface',
+                            'input_method': 'intersection_totals', 'totals': totals.to_dict('records'),
+                            'distribution': distribution_table[['intersection', 'edge_id', 'percent']].to_dict('records')}
+                        st.session_state[f'counts_version_{network}'] = uuid.uuid4().hex
+                        initial = rows
+                        st.success('Volumes distribuídos pelas entradas. Confira a tabela de trechos abaixo.')
+                    except (ValueError, TypeError) as error:
+                        st.error(str(error))
             automatic_destination = "Automático: sortear uma saída alcançável"
             st.markdown("**Quantos veículos entram por cada trecho?**")
             if not joint:
@@ -388,6 +447,19 @@ with left:
     step_seconds = st.number_input("Passo do SUMO (s)", min_value=0.1,
                                    value=float(base["step_seconds"]), step=0.1, help=config_help("step_seconds"))
     pedestrian_table = None
+    with st.expander('Aquecimento e janela de medição'):
+        warmup_seconds = st.number_input('Aquecimento sem atuação do algoritmo (s)', min_value=0.0, max_value=float(duration),
+            value=min(float(base.get('measurement', {}).get('warmup_seconds', 0)), float(duration)), step=float(step_seconds))
+        custom_window = st.checkbox('Escolher início e fim da janela de medição',
+            value='measurement' in base and (base['measurement'].get('start_seconds', warmup_seconds) != warmup_seconds or base['measurement'].get('end_seconds', duration) != duration))
+        if custom_window:
+            measurement_start = st.number_input('Início da medição (s)', min_value=0.0, max_value=float(duration),
+                value=min(float(duration), max(warmup_seconds, float(base.get('measurement', {}).get('start_seconds', warmup_seconds)))), step=float(step_seconds))
+            measurement_end = st.number_input('Fim da medição (s)', min_value=0.0, max_value=float(duration),
+                value=min(float(duration), float(base.get('measurement', {}).get('end_seconds', duration))), step=float(step_seconds))
+        else:
+            measurement_start, measurement_end = warmup_seconds, float(duration)
+        st.caption(f'Métricas entre {measurement_start:g} e {measurement_end:g} s. O episódio inteiro dura {duration} s. No aquecimento todos os controles mantêm o programa de referência; esse tempo não entra nas métricas nem nos passos de aprendizado.')
     with st.expander('Demanda e atendimento de pedestres'):
         ped_routes = crossing_routes(network, base['targets'])
         pedestrian_enabled = st.checkbox('Simular pedestres', value=bool(base.get('pedestrians', {}).get('enabled', False)),
@@ -440,31 +512,34 @@ with left:
             st.caption("Contagens de trechos consecutivos não são somadas como veículos distintos. O total gerado aparece no relatório de calibração.")
         if rates.sum() == 0:
             st.warning("Todos os volumes estão em zero. Preencha pelo menos uma entrada para gerar tráfego neste cenário.")
-    seed = st.number_input("Semente", min_value=0, value=int(base["seeds"][0]), help=config_help("seeds"))
-    evaluation_seeds = st.text_input("Sementes de avaliação (separadas por vírgula)",
-                                     value=", ".join(map(str, base.get("evaluation", {}).get("seeds", [101, 102, 103]))), help=config_help("evaluation.seeds"))
-    st.caption("Os valores são exemplos sintéticos; não representam contagem medida em Uberlândia.")
-with right:
-    st.subheader("Objetivos e otimização")
+with training_tab:
+    st.subheader("Prepare seu treinamento")
+    st.caption("Escolha o algoritmo e o tamanho do treino. Os demais ajustes podem continuar nos valores atuais para uma primeira execução.")
     algorithm_names = available_algorithms()
     selected_algorithm = st.selectbox("Algoritmo de aprendizado", algorithm_names,
         index=algorithm_names.index(base.get("algorithm", "PPO")),
         help="Algoritmos registrados compartilham ambiente SUMO, avaliação e relatórios. Novos algoritmos aparecem após serem registrados.")
-    algorithm_parameters_text = "{}"
-    if selected_algorithm != "PPO":
-        algorithm_parameters_text = st.text_area("Parâmetros específicos do algoritmo (JSON)", value="{}",
-            help="Objeto com parâmetros aceitos pelo adaptador do algoritmo. Épocas e minibatches abaixo são específicos do PPO.")
-    w_wait = st.number_input("Prioridade: espera", min_value=0.0, value=1.0, step=0.1, help=config_help("objectives.waiting"))
-    w_queue = st.number_input("Prioridade: filas", min_value=0.0, value=1.0, step=0.1, help=config_help("objectives.queues"))
-    w_travel = st.number_input("Prioridade: tempo de viagem (aproximação)", min_value=0.0, value=1.0, step=0.1, help=config_help("objectives.travel"))
-    decision = st.number_input("Intervalo de decisão (s)", min_value=1, value=int(base["ppo"]["decision_seconds"]), help=config_help("decision_seconds"))
-    n_epochs = st.number_input("Épocas por lote", min_value=1, value=int(base["ppo"]["n_epochs"]), help=config_help("n_epochs"), disabled=selected_algorithm != "PPO")
-    n_steps = st.number_input("Passos por coleta", min_value=2, value=int(base["ppo"]["n_steps"]), help=config_help("n_steps"), disabled=selected_algorithm != "PPO")
-    batch_size = st.number_input("Tamanho do minibatch", min_value=2, value=int(base["ppo"]["batch_size"]), help=config_help("batch_size"), disabled=selected_algorithm != "PPO")
     total_steps = st.number_input("Total de passos de treinamento", min_value=2,
                                   value=int(base["ppo"]["total_timesteps"]), step=128, help=config_help("total_timesteps"))
-    all_phase_control = st.checkbox("PPO ajusta verde, amarelo e vermelho de limpeza",
-                                    value=base["ppo"].get("action_mode") == "phase_durations", help=config_help("action_mode"), key=f"all_phase_{joint}", disabled=joint)
+    st.caption("Passos são decisões do algoritmo, não segundos nem quantidade de veículos. Treinos curtos ajudam a verificar o fluxo; melhoria depende da avaliação.")
+    with st.expander("Ajustes avançados do treinamento"):
+        st.caption("Sementes tornam o estudo reproduzível. Use valores diferentes para treino e avaliação. Os pesos indicam quais objetivos o algoritmo prioriza.")
+        seed = st.number_input("Semente", min_value=0, value=int(base["seeds"][0]), help=config_help("seeds"))
+        evaluation_seeds = st.text_input("Sementes de avaliação (separadas por vírgula)",
+                                         value=", ".join(map(str, base.get("evaluation", {}).get("seeds", [101, 102, 103]))), help=config_help("evaluation.seeds"))
+        algorithm_parameters_text = "{}"
+        if selected_algorithm != "PPO":
+            algorithm_parameters_text = st.text_area("Parâmetros específicos do algoritmo (JSON)", value="{}",
+                help="Objeto com parâmetros aceitos pelo adaptador do algoritmo. Épocas e minibatches abaixo são específicos do PPO.")
+        w_wait = st.number_input("Prioridade: espera", min_value=0.0, value=1.0, step=0.1, help=config_help("objectives.waiting"))
+        w_queue = st.number_input("Prioridade: filas", min_value=0.0, value=1.0, step=0.1, help=config_help("objectives.queues"))
+        w_travel = st.number_input("Prioridade: tempo de viagem (aproximação)", min_value=0.0, value=1.0, step=0.1, help=config_help("objectives.travel"))
+        decision = st.number_input("Intervalo de decisão (s)", min_value=1, value=int(base["ppo"]["decision_seconds"]), help=config_help("decision_seconds"))
+        n_epochs = st.number_input("Épocas por lote", min_value=1, value=int(base["ppo"]["n_epochs"]), help=config_help("n_epochs"), disabled=selected_algorithm != "PPO")
+        n_steps = st.number_input("Passos por coleta", min_value=2, value=int(base["ppo"]["n_steps"]), help=config_help("n_steps"), disabled=selected_algorithm != "PPO")
+        batch_size = st.number_input("Tamanho do minibatch", min_value=2, value=int(base["ppo"]["batch_size"]), help=config_help("batch_size"), disabled=selected_algorithm != "PPO")
+        all_phase_control = st.checkbox("PPO ajusta verde, amarelo e vermelho de limpeza",
+                                        value=base["ppo"].get("action_mode") == "phase_durations", help=config_help("action_mode"), key=f"all_phase_{joint}", disabled=joint)
     with st.expander("Limites das durações semafóricas"):
         limits = base["ppo"].get("duration_limits", {})
         programs = network_programs(network)
@@ -487,20 +562,34 @@ with right:
                                        value=float(base.get("control", base["ppo"]).get("maximum_cycle_seconds", 3600)),
                                        help="A soma dos maiores tempos permitidos de cada controlador deve respeitar este teto. Não reduz automaticamente os pisos de segurança.")
         st.caption("O amarelo e a limpeza não podem ser reduzidos abaixo dos tempos originais. Estes limites são parâmetros experimentais; precisam de validação operacional.")
-    gui = st.checkbox("Mostrar SUMO-GUI (mais lento)", value=False, help=config_help("gui"))
-    gui_delay = st.number_input('Atraso da visualização (ms por passo)', min_value=0, max_value=2000,
-        value=int(base.get('control', base['ppo']).get('gui_delay_milliseconds', 0)), step=10, disabled=not gui,
-        help='Zero executa o mais rápido possível. Um atraso positivo facilita observar veículos e semáforos, mas aumenta o tempo real da execução.')
+    with st.expander("Visualiza\u00e7\u00e3o do SUMO durante a execu\u00e7\u00e3o"):
+        gui = st.checkbox("Mostrar SUMO-GUI (mais lento)", value=False, help=config_help("gui"))
+        gui_delay = st.number_input('Atraso da visualização (ms por passo)', min_value=0, max_value=2000,
+            value=int(base.get('control', base['ppo']).get('gui_delay_milliseconds', 0)), step=10, disabled=not gui,
+            help='Zero executa o mais rápido possível. Um atraso positivo facilita observar veículos e semáforos, mas aumenta o tempo real da execução.')
     with st.expander("Métricas opcionais"):
         collect_lane = st.checkbox("Velocidade e ocupação das faixas", value=True, help=config_help("collect_lane_details"))
         collect_emissions = st.checkbox("CO₂, CO, HC, NOx, partículas, combustível e eletricidade", value=False, help=config_help("collect_emissions"))
         collect_events = st.checkbox("Teletransportes e colisões", value=True, help=config_help("collect_events"))
         collect_resources = st.checkbox("CPU e memória", value=True, help=config_help("collect_resources"))
+        collect_extended = st.checkbox('Faixas, movimentos, filas em metros e bloqueios', value=base.get('metrics', {}).get('collect_extended', True))
+        collect_dynamics = st.checkbox('Frenagens, paradas, velocidade e TTC exploratório', value=base.get('metrics', {}).get('collect_vehicle_dynamics', True), disabled=not collect_extended)
+        collect_classes = st.checkbox('Separar indicadores por classe de veículo', value=base.get('metrics', {}).get('collect_vehicle_classes', True), disabled=not collect_extended)
+        thresholds = dict(base.get('metrics', {}).get('thresholds', {}))
+        thresholds['spillback_occupancy_percent'] = st.number_input('Ocupação para indicar transbordamento (%)', min_value=1.0, max_value=100.0, value=float(thresholds.get('spillback_occupancy_percent', 80)))
+        thresholds['downstream_occupancy_percent'] = st.number_input('Ocupação da saída para indicar bloqueio (%)', min_value=1.0, max_value=100.0, value=float(thresholds.get('downstream_occupancy_percent', 80)))
+        thresholds['long_wait_seconds'] = st.number_input('Espera considerada longa (s)', min_value=1.0, value=float(thresholds.get('long_wait_seconds', 120)))
+        thresholds['hard_braking_meters_per_second_squared'] = st.number_input('Desaceleração para frenagem forte (m/s²)', min_value=0.1, value=float(thresholds.get('hard_braking_meters_per_second_squared', 4)))
+        thresholds['ttc_seconds'] = st.number_input('Limiar de TTC longitudinal exploratório (s)', min_value=0.1, value=float(thresholds.get('ttc_seconds', 1.5)))
+        st.caption('Detalhes adicionais aumentam o custo de coleta. Bloqueio é um indicador baseado em verde, veículos parados e ocupação da saída; TTC não certifica risco de acidente. Limiares são configuráveis e ficam registrados.')
 
-st.button("Atualizar lista de modelos treinados", help="Após o treino, atualiza os modelos disponíveis para avaliação.")
-models = sorted(RESULTS.glob("**/*_model.zip"), key=lambda p: p.stat().st_mtime, reverse=True) if RESULTS.exists() else []
-selected_model = st.selectbox("Selecionar modelo treinado", [""] + [str(p) for p in models], format_func=lambda p: str(Path(p).relative_to(RESULTS)) if p else "Escolher depois do treinamento")
-model_path = selected_model
+with training_tab:
+    with st.expander("Selecionar modelo para avaliação"):
+        st.caption("Depois do treinamento, atualize a lista e escolha o modelo que será comparado com a referência.")
+        st.button("Atualizar lista de modelos treinados", help="Após o treino, atualiza os modelos disponíveis para avaliação.")
+        models = sorted(RESULTS.glob("**/*_model.zip"), key=lambda p: p.stat().st_mtime, reverse=True) if RESULTS.exists() else []
+        selected_model = st.selectbox("Selecionar modelo treinado", [""] + [str(p) for p in models], format_func=lambda p: str(Path(p).relative_to(RESULTS)) if p else "Escolher depois do treinamento")
+        model_path = selected_model
 
 def configured():
     if joint and "experimental_config" not in st.session_state:
@@ -542,6 +631,9 @@ def configured():
         config["demand"] = {"mode": "observed_counts" if observed_mode else "edge_volumes", "edge_volumes": entries}
         if observed_mode:
             config["demand"]["calibration_tolerance"] = float(calibration_tolerance) / 100
+            source = st.session_state.get(f'counts_source_{network}', base['demand'].get('measurement_source'))
+            if source:
+                config['demand']['measurement_source'] = source
         if profile:
             config["demand"]["time_profile"] = profile
         if vehicle_types:
@@ -556,6 +648,7 @@ def configured():
         raise ValueError("Escolha ao menos uma prioridade positiva")
     config["objectives"] = {"waiting": float(w_wait), "queues": float(w_queue), "travel": float(w_travel)}
     config["duration_seconds"] = int(duration)
+    config['measurement'] = {'warmup_seconds': float(warmup_seconds), 'start_seconds': float(measurement_start), 'end_seconds': float(measurement_end)}
     if pedestrian_enabled:
         if pedestrian_table is None:
             raise ValueError('Prepare uma rede com travessias antes de ativar pedestres')
@@ -569,10 +662,13 @@ def configured():
     config["step_seconds"] = float(step_seconds)
     config["seeds"] = [int(seed)]
     parsed_seeds = [int(item.strip()) for item in evaluation_seeds.split(",") if item.strip()]
-    if not parsed_seeds or int(seed) in parsed_seeds:
-        raise ValueError("Informe sementes de avaliação diferentes da semente do treino")
+    if not parsed_seeds or len(set(parsed_seeds)) != len(parsed_seeds) or int(seed) in parsed_seeds:
+        raise ValueError("Informe sementes de avaliação distintas e diferentes da semente do treino")
     config["evaluation"] = {"seeds": parsed_seeds}
     config["metrics"] = {"collect_lane_details": collect_lane,
+                         'collect_extended': collect_extended, 'collect_vehicle_dynamics': collect_dynamics,
+                         'collect_vehicle_classes': collect_classes,
+                         'thresholds': thresholds,
                          "collect_emissions": collect_emissions,
                          "collect_events": collect_events,
                          "collect_resources": collect_resources,
@@ -608,6 +704,7 @@ def configured():
         config[key] = {**base.get(key, {}), **parameters, "total_timesteps": int(total_steps)}
     if joint:
         validate_experimental(config)
+    measurement_window(config)
     phase_action_spec(config, programs)
     if demand_mode == "Volume por via":
         from semaforos.cenario.demanda import validate_time_profile, validate_vehicle_types
@@ -616,14 +713,17 @@ def configured():
     return config
 
 
-st.subheader("Configurações, execução e métricas")
-tab_options, tab_parameters, tab_metrics = st.tabs([
-    "2 · Todas as opções SUMO", "3 · Parâmetros e 10 épocas", "4 · Métricas e relatórios"])
+with advanced_tab:
+    st.subheader("Referência técnica")
+    st.caption("Consulta opcional. Você não precisa alterar estes catálogos para iniciar um treino.")
+    tab_options, tab_parameters, tab_metrics = st.tabs(["Opções SUMO", "Parâmetros de treinamento", "Dicionário de métricas"])
+configuration_error = None
+
 try:
     current_config = configured()
 except (ValueError, TypeError, KeyError) as error:
     current_config = None
-    st.error(f"Corrija a configuração: {error}")
+    configuration_error = str(error)
 
 with tab_options:
     version, options, queries = installed_catalogs()
@@ -674,52 +774,113 @@ with tab_metrics:
         st.download_button("Baixar catálogo completo TraCI", pd.DataFrame(queries).to_csv(index=False).encode("utf-8-sig"),
                            "traci_queries.csv", "text/csv")
 
+with training_tab:
+    configuration_summary(current_config, configuration_error)
+
 active = any(job_state(job)['status'] in ('starting', 'running') for job in saved_jobs(RESULTS))
-if st.button("Executar simulação sem treinamento", disabled=active or current_config is None, type="primary"):
-    try:
-        start_job("run-reference", configured())
-        st.rerun()
-    except Exception as error:
-        st.error(str(error))
-if observed_mode and current_config is not None and st.button("Calibrar demanda e conferir contagens", disabled=active):
-    try:
-        with st.spinner("Ajustando rotas de borda às contagens…"):
-            report = calibration_report(current_config)
-        table = pd.DataFrame(report["measurements"])
-        table["via"] = table["from_edge"].map(labels)
-        st.dataframe(table, hide_index=True)
+with demand_tab:
+    if st.button("Executar simulação sem treinamento", disabled=active or current_config is None, type="primary"):
+        try:
+            start_job("run-reference", configured())
+            st.rerun()
+        except Exception as error:
+            st.error(str(error))
+    calibration_key = None
+    if observed_mode and current_config is not None:
+        calibration_key = hashlib.sha256(json.dumps({'network': str(current_config['network']),
+            'network_version': Path(current_config['network']).stat().st_mtime_ns,
+            'demand': current_config['demand']}, sort_keys=True, default=str).encode('utf-8')).hexdigest()
+    if observed_mode and current_config is not None and st.button("Calibrar demanda e conferir contagens", disabled=active):
+        try:
+            with st.spinner("Ajustando rotas de borda às contagens…"):
+                report = calibration_report(current_config)
+            st.session_state.calibration_preview = {'key': calibration_key, 'report': report}
+        except Exception as error:
+            st.error(str(error))
+    preview_report = st.session_state.get('calibration_preview', {})
+    if calibration_key and preview_report.get('key') == calibration_key:
+        report = preview_report['report']
+        table = pd.DataFrame(report['measurements'])
+        table['via'] = table['from_edge'].map(labels)
+        table['error_percent'] = table['relative_error'] * 100
+        st.write('**Ajuste das rotas às contagens selecionadas**')
+        st.dataframe(table[['via', 'from_edge', 'measured_vehicles_per_hour', 'fitted_vehicles_per_hour', 'error_percent']].rename(columns={
+            'via': 'Via e sentido', 'from_edge': 'Trecho', 'measured_vehicles_per_hour': 'Medido (veículos/h)',
+            'fitted_vehicles_per_hour': 'Ajustado nas rotas (veículos/h)', 'error_percent': 'Erro do ajuste (%)'}), hide_index=True)
         st.metric("Novos veículos gerados nas bordas por hora", round(report["total_generated_vehicles_per_hour"]))
         if any(row["relative_error"] > current_config["demand"]["calibration_tolerance"] for row in report["measurements"]):
             st.error("As contagens não foram reproduzidas na tolerância escolhida. Revise-as antes de executar.")
+        else:
+            st.success('Rotas ajustadas dentro da tolerância. Falta conferir o fluxo realizado no SUMO.')
         st.download_button("Baixar relatório de calibração (.csv)", table.to_csv(index=False).encode("utf-8-sig"), file_name="calibracao.csv")
-    except Exception as error:
-        st.error(str(error))
-if joint and st.button("Testar cenário no SUMO por 30 segundos", disabled=active or current_config is None):
-    try:
-        with st.spinner("Executando teste curto no SUMO…"):
-            preview = preview_experimental(configured(), RESULTS / f"preview_nove_{uuid.uuid4().hex[:12]}")
-        st.success("SUMO executou o cenário conjunto. O teste curto verifica funcionamento; não demonstra desempenho nem percorre todos os ciclos.")
-        st.json({key: value for key, value in preview.items() if key != "signals"})
-    except Exception as error:
-        st.error(str(error))
-train_col, eval_col = st.columns(2)
-with train_col:
-    if st.button(f"Iniciar treinamento {selected_algorithm}", disabled=active or current_config is None, type="primary"):
+        st.caption('Esse ajuste confere as rotas previstas. Use a validação no SUMO para conferir as passagens realmente realizadas.')
+    if observed_mode and st.button('Validar demanda calibrada no SUMO', disabled=active or current_config is None):
         try:
-            start_job("rl-train", configured())
+            start_job('validate-demand', configured())
             st.rerun()
         except Exception as error:
             st.error(str(error))
-with eval_col:
-    if st.button(f"Avaliar {selected_algorithm} e referência", disabled=active):
+    if st.button('Comparar referência e controle por filas sem treinamento', disabled=active or current_config is None):
         try:
-            model = Path(model_path).resolve()
-            if not model.is_file():
-                raise ValueError("Informe um arquivo ppo_model.zip existente")
-            start_job("rl-eval", configured(), model)
+            start_job('compare-baselines', configured())
             st.rerun()
         except Exception as error:
             st.error(str(error))
+    st.caption('As comparações usam as sementes de avaliação, verificam viagens e horários idênticos e mostram percentuais, intervalos e perdas de atendimento. A avaliação do modelo inclui também essa comparação.')
+    if joint and st.button("Testar cenário no SUMO por 30 segundos", disabled=active or current_config is None):
+        try:
+            with st.spinner("Executando teste curto no SUMO…"):
+                preview = preview_experimental(configured(), RESULTS / f"preview_nove_{uuid.uuid4().hex[:12]}")
+            st.success("SUMO executou o cenário conjunto. O teste curto verifica funcionamento; não demonstra desempenho nem percorre todos os ciclos.")
+            st.json({key: value for key, value in preview.items() if key != "signals"})
+        except Exception as error:
+            st.error(str(error))
+
+with demand_tab:
+    st.divider()
+    st.button('Continuar: preparar o treinamento', on_click=select_workflow_tab, args=('3 · Treinamento',))
+
+with training_tab:
+    train_col, eval_col = st.columns(2)
+    with train_col:
+        if st.button(f"Iniciar treinamento {selected_algorithm}", disabled=active or current_config is None, type="primary"):
+            try:
+                start_job("rl-train", configured())
+                st.rerun()
+            except Exception as error:
+                st.error(str(error))
+    with eval_col:
+        if not model_path:
+            st.caption('Para avaliar, abra “Selecionar modelo para avaliação” acima e escolha um modelo treinado.')
+        if st.button(f"Avaliar {selected_algorithm} e referência", disabled=active or current_config is None or not model_path):
+            try:
+                model = Path(model_path).resolve()
+                if not model.is_file():
+                    raise ValueError("Informe um arquivo ppo_model.zip existente")
+                start_job("rl-eval", configured(), model)
+                st.rerun()
+            except Exception as error:
+                st.error(str(error))
+
+
+    with st.expander('Treinamentos independentes e avaliações automáticas'):
+        training_seed_text = st.text_input('Sementes dos treinamentos independentes (separadas por vírgula)',
+            value=', '.join(map(str, base.get('study', {}).get('training_seeds', [11, 22, 33]))))
+        planned_study = None
+        try:
+            study_config = configured()
+            study_config['study'] = {'training_seeds': [int(s.strip()) for s in training_seed_text.split(',') if s.strip()]}
+            planned_study = study_plan(study_config)
+            st.write(f"{planned_study['repetitions']} treinos independentes; {planned_study['evaluation_episodes']} episódios de avaliação; {planned_study['requested_training_timesteps']} passos de treino solicitados no total.")
+            st.caption('Cada modelo é treinado com uma semente diferente e avaliado nas sementes reservadas acima. O agregado separa variação entre treinamentos de variação entre sementes de avaliação. Só começa ao clicar no botão.')
+        except (ValueError, TypeError) as error:
+            st.caption(f'Plano de repetições indisponível: {error}')
+        if st.button('Executar treinos e avaliações repetidos', disabled=active or planned_study is None):
+            try:
+                start_job('run-study', study_config)
+                st.rerun()
+            except Exception as error:
+                st.error(str(error))
 
 
 @st.fragment(run_every="2s")
@@ -739,7 +900,13 @@ def progress_panel():
     if running and st.button("Interromper execução"):
         (job["folder"] / "cancel.flag").touch()
         st.info("Cancelamento solicitado; a execução será encerrada ao concluir o passo atual.")
-    live = read_json(job['output'] / 'live.json')
+    progress = read_json(job['output'] / 'progress.json') or {}
+    live_output = job['output']
+    if progress.get('active_output'):
+        live_output = Path(progress['active_output'])
+        stages = {'training': 'treinamento', 'evaluation': 'avaliação'}
+        st.caption(f"Repetição {progress['repetition']} / {progress['total_repetitions']} — {stages.get(progress['stage'], progress['stage'])}; semente de treino {progress['training_seed']}.")
+    live = read_json(live_output / 'live.json')
     if live:
         a, b, c, d = st.columns(4)
         a.metric('Tempo simulado no episódio (s)', round(live['simulated_seconds'], 1))
@@ -773,12 +940,16 @@ def progress_panel():
     if progress.is_file():
         value = read_json(progress)
         if value is not None:
-            st.json(value)
+            with st.expander('Detalhes técnicos do progresso'):
+                st.json(value)
     summary = job["output"] / "summary.json"
     if summary.is_file():
         value = read_json(summary)
         if value is not None:
-            st.json(value)
+            render_diagnostics(job['output'], 'result_diagnostics')
+            render_study(job['output'], value, 'result_study')
+            with st.expander('Detalhes completos da execução'):
+                st.json(value)
     csv = job["output"] / "runs.csv"
     if csv.is_file():
         render_result_metrics(csv, "result_runs")
@@ -796,11 +967,11 @@ def progress_panel():
                 st.line_chart(complete_training.rename(columns={'episode': 'Episódio', 'reward': 'Recompensa total'}), x='Episódio', y='Recompensa total')
         except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError):
             st.caption('Aguardando a atualização da tabela de episódios.')
-    for name in ("training_episodes.csv", "signals.csv", "intersections.csv", "pedestrian_crossings.csv", "flow_counts.csv", "aggregate.csv", "report.md", "summary.json", "partial_episode.json",
+    for name in ("training_episodes.csv", "signals.csv", "intersections.csv", "pedestrian_crossings.csv", "flow_counts.csv", 'lanes.csv', 'movements.csv', 'vehicle_classes.csv', 'gargalos.csv', "aggregate.csv", "report.md", "summary.json", "partial_episode.json",
                  "manifest.json", "sumo_options.csv", "effective_parameters.csv", "metrics_catalog.csv", "traci_queries.csv"):
         file = job["output"] / name
         if file.is_file():
-            if name in ("training_episodes.csv", "signals.csv", "intersections.csv", "pedestrian_crossings.csv", "flow_counts.csv"):
+            if name in ("training_episodes.csv", "signals.csv", "intersections.csv", "pedestrian_crossings.csv", "flow_counts.csv", "lanes.csv", "movements.csv", "vehicle_classes.csv", "gargalos.csv"):
                 render_result_metrics(file, f"result_{file.stem}")
             st.download_button(f"Baixar {name}", file.read_bytes(), file_name=name, key=f"result_{name}")
     plot = job["output"] / "comparison.png"
@@ -810,22 +981,30 @@ def progress_panel():
         st.code(job["log"].read_text(encoding="utf-8", errors="replace")[-8000:])
 
 
-progress_panel()
+with results_tab:
+    st.subheader("Acompanhe seu estudo")
+    if not st.session_state.get("job"):
+        st.info("Nenhuma execução selecionada. Inicie na aba Treinamento ou escolha uma execução na barra lateral.")
+    progress_panel()
 
-with st.expander("Abrir relatórios de execuções anteriores"):
-    summaries = sorted(RESULTS.glob("**/summary.json"), key=lambda path: path.stat().st_mtime, reverse=True) if RESULTS.exists() else []
-    if summaries:
-        chosen = st.selectbox("Resultado salvo", [str(path.parent.relative_to(RESULTS)) for path in summaries])
-        folder = RESULTS / chosen
-        st.json(json.loads((folder / "summary.json").read_text(encoding="utf-8")))
-        for name in ("runs.csv", "signals.csv", "intersections.csv", "pedestrian_crossings.csv", "flow_counts.csv", "aggregate.csv", "training_episodes.csv", "report.md", "summary.json", "partial_episode.json",
-                     "manifest.json", "sumo_options.csv", "effective_parameters.csv", "metrics_catalog.csv", "traci_queries.csv"):
-            path = folder / name
-            if path.is_file():
-                if name in ("runs.csv", "aggregate.csv", "training_episodes.csv", "signals.csv", "intersections.csv", "pedestrian_crossings.csv", "flow_counts.csv"):
-                    render_result_metrics(path, f"saved_{path.stem}")
-                st.download_button(f"Exportar resultado salvo: {name}", path.read_bytes(), file_name=name, key=f"saved_{name}")
-        if (folder / "comparison.png").is_file():
-            st.image(str(folder / "comparison.png"))
-    else:
-        st.caption("Nenhuma execução concluída encontrada.")
+with results_tab:
+    with st.expander("Abrir relatórios de execuções anteriores"):
+        summaries = sorted(RESULTS.glob("**/summary.json"), key=lambda path: path.stat().st_mtime, reverse=True) if RESULTS.exists() else []
+        if summaries:
+            chosen = st.selectbox("Resultado salvo", [str(path.parent.relative_to(RESULTS)) for path in summaries])
+            folder = RESULTS / chosen
+            render_diagnostics(folder, 'saved_diagnostics')
+            render_study(folder, read_json(folder / 'summary.json') or {}, 'saved_study')
+            with st.expander('Detalhes completos do resultado salvo'):
+                st.json(json.loads((folder / "summary.json").read_text(encoding="utf-8")))
+            for name in ("runs.csv", "signals.csv", "intersections.csv", "pedestrian_crossings.csv", "flow_counts.csv", 'lanes.csv', 'movements.csv', 'vehicle_classes.csv', 'gargalos.csv', "aggregate.csv", "training_episodes.csv", "report.md", "summary.json", "partial_episode.json",
+                         "manifest.json", "sumo_options.csv", "effective_parameters.csv", "metrics_catalog.csv", "traci_queries.csv"):
+                path = folder / name
+                if path.is_file():
+                    if name in ("runs.csv", "aggregate.csv", "training_episodes.csv", "signals.csv", "intersections.csv", "pedestrian_crossings.csv", "flow_counts.csv", "lanes.csv", "movements.csv", "vehicle_classes.csv", "gargalos.csv"):
+                        render_result_metrics(path, f"saved_{path.stem}")
+                    st.download_button(f"Exportar resultado salvo: {name}", path.read_bytes(), file_name=name, key=f"saved_{name}")
+            if (folder / "comparison.png").is_file():
+                st.image(str(folder / "comparison.png"))
+        else:
+            st.caption("Nenhuma execução concluída encontrada.")

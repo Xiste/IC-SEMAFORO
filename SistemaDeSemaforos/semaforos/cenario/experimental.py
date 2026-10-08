@@ -103,6 +103,8 @@ def preview_experimental(config, output):
     preview = copy.deepcopy(config)
     horizon = min(30, float(config["duration_seconds"]))
     preview["duration_seconds"] = horizon
+    # Preview de infraestrutura não executa um aquecimento longo nem a janela do estudo.
+    preview['measurement'] = {'warmup_seconds': 0, 'start_seconds': 0, 'end_seconds': horizon}
     control = preview.get("control", preview.get("ppo", {}))
     # Gerar a demanda completa preserva taxas e janelas sem tráfego no início.
     # Somente a execução é interrompida aos 30 s; não redistribuir viagens.

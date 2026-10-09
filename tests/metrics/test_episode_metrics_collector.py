@@ -80,6 +80,20 @@ class CollectorTests(unittest.TestCase):
         self.assertNotIn("trip_duration", vehicles["c"])
         self.assertEqual(vehicles["b"]["trip_vaporized"], "end")
         self.assertEqual(vehicles["a"]["emission_co2_abs"], 30)
+        aggregated_only = {}
+        c._trips(path, aggregated_only)
+        self.assertEqual(aggregated_only, metrics)
+
+    def test_missing_completed_population_reports_samples_without_inventing_means(self):
+        path = self.xml("trips.xml.gz", '''<tripinfos>
+          <tripinfo id="a" depart="0" arrival="-1" duration="10" waitingTime="2" />
+        </tripinfos>''')
+        metrics = {}
+        c._trips(path, metrics)
+        for field in ("duration", "waiting_time", "time_loss", "depart_delay"):
+            self.assertEqual(metrics[f"completed_trip_{field}_samples"], 0)
+            self.assertNotIn(f"completed_trip_{field}_mean", metrics)
+        self.assertEqual(metrics["trip_records_unfinished"], 1)
 
     def test_tls_counts_phase_changes_and_includes_last_partial_phase(self):
         path = self.xml("tls.xml.gz", '''<tlsStates>
@@ -105,10 +119,29 @@ class CollectorTests(unittest.TestCase):
         </queue-export>''')
         group = ("intersections", "tls")
         entities = {"lanes": {}, "intersections": {}}
+        metrics = {}
         c._queues(path, {"a", "b"}, {group: {"a", "b"}},
-                  defaultdict(list, {"a": [group], "b": [group]}), entities, {})
+                  defaultdict(list, {"a": [group], "b": [group]}), entities, metrics)
         self.assertEqual(entities["lanes"]["a"]["queueing_length_mean"], 2)
         self.assertEqual(entities["intersections"]["tls"]["queueing_length_lane_sum_mean"], 5)
+        self.assertEqual(metrics["network_queueing_length_lane_sum_mean"], 5)
+        self.assertEqual(metrics["network_queueing_length_lane_sum_max"], 10)
+        self.assertEqual(metrics["network_queueing_length_lane_sum_samples"], 2)
+        aggregated_only = {}
+        c._queues(path, set(), {}, {}, None, aggregated_only)
+        self.assertEqual(aggregated_only, metrics)
+
+    def test_invalid_queue_length_excludes_step_instead_of_becoming_zero(self):
+        path = self.xml("queues.xml.gz", '''<queue-export>
+          <data timestep="0"><lane id="a" queueing_length="10" /></data>
+          <data timestep="1"><lane id="a" queueing_length="-1" /></data>
+          <data timestep="2"><lanes /></data>
+        </queue-export>''')
+        metrics = {}
+        c._queues(path, set(), {}, {}, None, metrics)
+        self.assertEqual(metrics["network_queueing_length_lane_sum_mean"], 5)
+        self.assertEqual(metrics["network_queueing_length_lane_sum_samples"], 2)
+        self.assertEqual(metrics["network_queueing_length_lane_sum_excluded_samples"], 1)
 
     def test_tls_observes_phase_changes_even_when_lights_do_not_change(self):
         path = self.xml("tls.xml.gz", '''<tlsStates>
@@ -155,38 +188,91 @@ class CollectorTests(unittest.TestCase):
         net = self.xml("net.xml", '<net><edge id="a"><lane id="a_0" /></edge></net>')
         self.xml("summary.xml.gz", '<summary><step time="0" running="0" arrived="0" /></summary>')
         for name, root in (("trips.xml.gz", "tripinfos"), ("statistics.xml", "statistics"),
-                           ("tls.xml.gz", "tlsStates"), ("queues.xml.gz", "queue-export"),
-                           ("lanechanges.xml.gz", "lanechanges"), ("collisions.xml.gz", "collisions")):
+                           ("queues.xml.gz", "queue-export")):
             self.xml(name, f"<{root} />")
         result = c.collect_episode(self.directory, net)
         self.assertEqual(result["metrics"]["metrics_profile"], "core")
         self.assertNotIn("fcd_observation_steps", result["metrics"])
         self.assertIn("collection_trips_time_seconds", result["metrics"])
-        self.assertNotIn("edge_id", result["entities"]["lanes"]["a_0"])
+        self.assertTrue(all(not scope for scope in result["entities"].values()))
         with self.assertRaises(FileNotFoundError):
             c.collect_episode(self.directory, net, profile="full")
         for name, root in (("lanes.xml.gz", "meandata"), ("edges.xml.gz", "meandata"),
-                           ("fcd.xml.gz", "fcd-export"), ("emissions.xml.gz", "emission-export")):
+                           ("fcd.xml.gz", "fcd-export"), ("emissions.xml.gz", "emission-export"),
+                           ("tls.xml.gz", "tlsStates"), ("lanechanges.xml.gz", "lanechanges"),
+                           ("collisions.xml.gz", "collisions")):
             self.xml(name, f"<{root} />")
         result = c.collect_episode(self.directory, net, profile="full")
         self.assertEqual(result["metrics"]["metrics_profile"], "full")
         self.assertEqual(result["metrics"]["fcd_observation_steps"], 0)
 
-    def test_profiles_preserve_trip_emissions_and_only_full_requests_dense_series(self):
+    def test_profiles_only_change_observation_and_core_requests_four_sources(self):
         (self.directory / "inputs").mkdir()
         core = prepare_outputs(self.directory)
-        self.assertIn("--device.emissions.probability", core)
-        self.assertNotIn("--fcd-output", core)
-        self.assertNotIn("--emission-output", core)
-        self.assertNotIn("edgeData", (self.directory / "inputs/observations.add.xml").read_text())
+        self.assertEqual({option for option in core if option.endswith("-output")}, {
+            "--summary-output", "--tripinfo-output", "--statistic-output", "--queue-output",
+        })
+        self.assertNotIn("--device.emissions.probability", core)
+        self.assertNotIn("--additional-files", core)
+        self.assertFalse((self.directory / "inputs/observations.add.xml").exists())
         full = prepare_outputs(self.directory, "full")
-        self.assertIn("--fcd-output", full)
-        self.assertIn("--emission-output", full)
-        self.assertIn("edgeData", (self.directory / "inputs/observations.add.xml").read_text())
+        self.assertEqual({option for option in full if option.endswith("-output")}, {
+            "--summary-output", "--tripinfo-output", "--statistic-output", "--queue-output",
+            "--lanechange-output", "--collision-output", "--vehroute-output",
+            "--fcd-output", "--emission-output",
+        })
+        self.assertIn("--device.emissions.probability", full)
+        additional = (self.directory / "inputs/observations.add.xml").read_text()
+        for source in ("edgeData", "laneData", "SaveTLSStates"):
+            self.assertIn(source, additional)
+        for options in (core, full):
+            for physical in ("--begin", "--end", "--step-length", "--seed", "--route-files",
+                             "--time-to-teleport", "--collision.action"):
+                self.assertNotIn(physical, options)
+            self.assertIn("--tripinfo-output.write-unfinished", options)
+            self.assertIn("--tripinfo-output.write-undeparted", options)
         with self.assertRaises(ValueError):
             prepare_outputs(self.directory, "unknown")
         with self.assertRaises(ValueError):
             c.collect_episode(self.directory, self.directory / "net.xml", "unknown")
+
+    def test_core_and_full_share_global_results_and_core_keeps_safety(self):
+        net = self.xml("net.xml", '<net><edge id="a"><lane id="a_0" /></edge></net>')
+        self.xml("summary.xml.gz", '''<summary>
+          <step time="0" running="1" halting="1" waiting="0" inserted="1" arrived="0" teleports="0" collisions="0" meanSpeed="0" />
+          <step time="1" running="0" halting="0" waiting="0" inserted="1" arrived="1" teleports="1" collisions="2" meanSpeed="-1" />
+        </summary>''')
+        self.xml("trips.xml.gz", '''<tripinfos>
+          <tripinfo id="a" depart="0" arrival="1" duration="1" waitingTime="1" timeLoss="0.5" departDelay="0" routeLength="10" />
+        </tripinfos>''')
+        self.xml("statistics.xml", '''<statistics>
+          <teleports total="1" jam="1" yield="0" wrongLane="0" />
+          <safety collisions="2" emergencyStops="1" emergencyBraking="3" />
+        </statistics>''')
+        self.xml("queues.xml.gz", '''<queue-export>
+          <data timestep="0"><lane id="a_0" queueing_length="7" /></data>
+          <data timestep="1"><lanes /></data>
+        </queue-export>''')
+        for name, root in (("tls.xml.gz", "tlsStates"), ("lanechanges.xml.gz", "lanechanges"),
+                           ("collisions.xml.gz", "collisions"), ("lanes.xml.gz", "meandata"),
+                           ("edges.xml.gz", "meandata"), ("fcd.xml.gz", "fcd-export"),
+                           ("emissions.xml.gz", "emission-export")):
+            self.xml(name, f"<{root} />")
+        core = c.collect_episode(self.directory, net, "core")
+        full = c.collect_episode(self.directory, net, "full")
+        for name, value in core["metrics"].items():
+            if name != "metrics_profile" and not name.startswith("collection_"):
+                self.assertEqual(value, full["metrics"][name], name)
+        self.assertEqual(core["metrics"]["teleports"], 1)
+        self.assertEqual(core["metrics"]["collisions"], 2)
+        self.assertEqual(core["metrics"]["sumo_teleports_jam"], 1)
+        self.assertEqual(core["metrics"]["sumo_safety_emergency_braking"], 3)
+        self.assertEqual(core["metrics"]["simulation_duration_seconds"], 2)
+        self.assertEqual(core["metrics"]["network_queueing_length_lane_sum_mean"], 3.5)
+        self.assertEqual(full["metrics"]["completed_trip_route_length_mean"], 10)
+        self.assertNotIn("completed_trip_route_length_mean", core["metrics"])
+        self.assertTrue(all(not scope for scope in core["entities"].values()))
+        self.assertIn("a", full["entities"]["vehicles"])
 
     def test_network_includes_internal_lanes_but_groups_only_external_approaches(self):
         path = self.xml("net.xml", '''<net>

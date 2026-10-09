@@ -61,6 +61,23 @@ class MetricPresentationTests(unittest.TestCase):
                       describe_metric("vehicles_halting_mean")["description_pt"])
         self.assertIn("toda a duração simulada",
                       describe_metric("completed_throughput_vehicles_per_hour")["description_pt"])
+        queue = describe_metric("network_queueing_length_lane_sum_mean")
+        self.assertEqual(queue["unit"], "m")
+        self.assertIn("soma dos comprimentos", queue["description_pt"])
+        self.assertIn("cada passo válido tem o mesmo peso", queue["description_pt"])
+        self.assertIn("não representa uma fila física única", queue["description_pt"])
+        self.assertEqual(describe_metric("network_queueing_length_lane_sum_samples")["unit"], "amostras")
+        self.assertEqual(describe_metric("network_queueing_length_lane_sum_excluded_samples")["category"], "integrity")
+
+    def test_demand_window_simulated_duration_and_wall_time_are_distinct(self):
+        demand = describe_metric("demand_duration_seconds")
+        simulation = describe_metric("simulation_duration_seconds")
+        execution = describe_metric("execution_time_seconds")
+        self.assertIn("partidas são solicitadas", demand["description_pt"])
+        self.assertIn("Tempo simulado", simulation["description_pt"])
+        self.assertIn("Tempo real", execution["description_pt"])
+        self.assertIn("exclui a escrita final", execution["description_pt"])
+        self.assertTrue(all(item["unit"] == "s" for item in (demand, simulation, execution)))
 
     def test_conditional_full_fields_and_hex_event_categories(self):
         for scope in ("edge", "lane"):

@@ -6,7 +6,6 @@ devem preservar uma demanda anterior. Executado pelo comando ``make test``.
 """
 
 from datetime import datetime, timezone
-import hashlib
 from pathlib import Path
 import subprocess
 import sys
@@ -173,10 +172,7 @@ class RandomDemandTests(unittest.TestCase):
         self.assertEqual(metadata["trips_file"], str(self.output_dir / "random.trips.xml"))
         self.assertEqual(metadata["routes_file"], str(route_file))
         self.assertEqual(metadata["random_trips_file"], str(self.random_trips))
-        self.assertEqual(
-            metadata["random_trips_sha256"],
-            hashlib.sha256(self.random_trips.read_bytes()).hexdigest(),
-        )
+        self.assertNotIn("random_trips_sha256", metadata)
         self.assertEqual(metadata["command"], run.call_args.args[0])
         self.assertEqual(metadata["duration_seconds"], 2.5)
         start = datetime.fromisoformat(metadata["started_at_utc"])

@@ -2,6 +2,8 @@
 
 Os campos da planilha permanecem separados dos suplementos operacionais.
 Agenda e relógio diário não participam de um teste explicitamente selecionado.
+Confere vínculos, permissões, fases e defasagens antes de gerar o XML adicional.
+Dados operacionais incompletos impedem a aplicação do plano selecionado.
 """
 
 from copy import deepcopy
@@ -347,7 +349,7 @@ def prepare_selection(document, plan_id, net_file, intersections=None):
             errors.append(f"{label}: {error}")
     if errors:
         raise ValueError("SETTRAN recusado antes da simulação. " + " | ".join(errors)
-                         + " Agenda ausente não impede plano fixo. Consulte docs/guias/GUIA_DE_FUNCIONAMENTO.md.")
+                         + " Agenda ausente não impede plano fixo. Consulte docs/GUIA_DE_FUNCIONAMENTO.md.")
     return {"plan_id": plan_id, "intersections": [p["intersection"] for p in selected],
             "tls_ids": sorted(selected_tls), "current_tls_ids": sorted(set(topology[0]) - selected_tls),
             "programs": deepcopy(selected), "offsets": offsets,

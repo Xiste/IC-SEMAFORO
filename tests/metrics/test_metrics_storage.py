@@ -11,11 +11,28 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from SistemaDeSemaforos.metrics.metrics_storage import metric_records, save_entities, save_episode, write_json
-from scripts.audit_metrics_catalog import episode_records_valid, records_valid
+from SistemaDeSemaforos.metrics.metrics_storage import (
+    metric_records, save_entities, save_episode, write_json,
+)
+from scripts.audit_results import episode_records_valid, records_valid
 
 
 class StorageTests(unittest.TestCase):
+    def test_core_keeps_context_in_one_json_without_archived_inputs(self):
+        with TemporaryDirectory() as temp:
+            directory = Path(temp)
+            execution = {"status": "completed", "collection": {"profile": "core"},
+                         "simulation": {"seed": 23423, "step_length": 1.0}}
+            original = deepcopy(execution)
+            save_episode(directory, {"vehicles_completed": 3}, execution, include_entities=False)
+            document = json.loads((directory / "metrics.json").read_text())
+            self.assertEqual(document["schema_version"], 3)
+            self.assertEqual(document["execution"], execution)
+            self.assertEqual(execution, original)
+            self.assertNotIn("batch_configuration_file", document)
+            self.assertIsNone(document["entity_metrics_file"])
+            self.assertEqual([path.name for path in directory.iterdir()], ["metrics.json"])
+
     def test_types_are_preserved_and_invalid_values_rejected(self):
         records = metric_records({"enabled": True, "seed": 7, "speed": 2.5, "name": "random"})
         self.assertEqual({r["metric_name"]: r["data_type"] for r in records},
@@ -36,7 +53,7 @@ class StorageTests(unittest.TestCase):
             summary = json.loads((directory / "metrics.json").read_text())
             self.assertEqual(summary["entity_metrics_file"], "entities.json.gz")
             self.assertEqual(len(summary["metrics"]), 1)
-            self.assertEqual(summary["schema_version"], 2)
+            self.assertEqual(summary["schema_version"], 3)
             self.assertEqual(result["schema_version"], 1)
             self.assertEqual(set(result["entities"]["lanes"]["-via_ação_0"][0]),
                              {"metric_name", "data_type", "value"})
@@ -79,11 +96,11 @@ class StorageTests(unittest.TestCase):
         self.assertEqual(by_name["completed_trip_waiting_time_mean"]["unit"], "s")
         # O leitor anterior continua aceitando os campos extras e a nova ordem.
         observed = set()
-        self.assertEqual(records_valid(records, [], observed), len(values))
+        self.assertEqual(records_valid(records, observed), len(values))
         self.assertEqual(observed, set(values))
-        self.assertEqual(episode_records_valid(document, [], set()), len(values))
+        self.assertEqual(episode_records_valid(document, set()), len(values))
         self.assertEqual(episode_records_valid(
-            {"schema_version": 1, "metrics": legacy}, [], set()), len(values))
+            {"schema_version": 1, "metrics": legacy}, set()), len(values))
 
     def test_initial_and_failed_episodes_do_not_invent_absent_measurements(self):
         with TemporaryDirectory() as temp:
@@ -97,7 +114,8 @@ class StorageTests(unittest.TestCase):
                 records = {r["metric_name"]: r for r in document["metrics"]}
                 self.assertEqual(set(records), set(values))
                 self.assertEqual(records["status"]["value"], status)
-                self.assertEqual(episode_records_valid(document, [], set()), len(values))
+                self.assertEqual(document["execution"]["status"], status)
+                self.assertEqual(episode_records_valid(document, set()), len(values))
 
     def test_auditor_rejects_incomplete_semantics_and_wrong_priority_order(self):
         with TemporaryDirectory() as temp:
@@ -111,10 +129,10 @@ class StorageTests(unittest.TestCase):
                 broken = deepcopy(document)
                 broken["metrics"][0][field] = invalid
                 with self.assertRaises(ValueError):
-                    episode_records_valid(broken, [], set())
+                    episode_records_valid(broken, set())
         document["metrics"].reverse()
         with self.assertRaises(ValueError):
-            episode_records_valid(document, [], set())
+            episode_records_valid(document, set())
 
     def test_invalid_json_preserves_previous_file_and_removes_temporary(self):
         with TemporaryDirectory() as temp:

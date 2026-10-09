@@ -361,7 +361,7 @@ class SettranConfigurationTests(unittest.TestCase):
 
     def test_real_dataset_still_refuses_each_official_plan(self):
         project = Path(__file__).resolve().parents[2]
-        document = json.loads((project / "docs/settran/settran_programs.json").read_text())
+        document = json.loads((project / "docs/settran_programs.json").read_text())
         network = project / "SistemaDeSemaforos/network/uberlandia.vehicular.families.16_2_4.net.xml"
         self.assertEqual(document["schema_version"], 2)
         for plan_id in ("2", "4", "16", "24"):

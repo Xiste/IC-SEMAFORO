@@ -1,8 +1,9 @@
 """Apresentação curta dos escalares globais, sem calcular ou modificar valores.
 
-O catálogo de métricas continua sendo a referência técnica completa. Aqui ficam
-apenas nomes humanos, unidades, populações e prioridades de leitura. Novos campos
+Aqui ficam nomes humanos, unidades, populações e prioridades de leitura. Novos campos
 do coletor precisam receber uma descrição explícita antes de serem publicados.
+As legendas ajudam a interpretar cada indicador no metrics.json.
+A ordem de apresentação destaca resultados de tráfego antes dos diagnósticos.
 """
 
 import re
@@ -26,7 +27,7 @@ _CONTEXT = {
     "episode_index": ("Posição do episódio no lote", "Número deste episódio dentro do lote solicitado.", "episódios"),
     "batch_episodes": ("Episódios solicitados no lote", "Quantidade de episódios solicitada para este lote.", "episódios"),
     "demand_model": ("Modelo de demanda", "Modelo usado para gerar as viagens deste episódio.", None),
-    "seed": ("Semente da demanda", "Semente aleatória usada para reproduzir a geração da demanda.", None),
+    "seed": ("Semente da demanda", "Semente aleatória usada no sorteio das viagens deste episódio.", None),
     "simulation_seed": ("Semente do SUMO", "Semente aleatória efetivamente usada pelo SUMO, distinta da semente da demanda.", None),
     "metrics_profile": ("Perfil de coleta", "Perfil core ou full que determina quais fontes de observação são coletadas.", None),
     "gui": ("Execução com interface gráfica", "Indica se a simulação foi executada com a interface gráfica do SUMO.", None),
@@ -78,14 +79,12 @@ _DIRECT = {
 }
 
 _TIMERS = {
-    "execution": ("Tempo total de execução", "Tempo real do pipeline, incluindo coleta e inventário; exclui a escrita final de metrics.json e manifest.json."),
-    "baseline_preparation": ("Tempo de preparação do baseline", "Tempo real gasto preparando ou reutilizando o baseline deste episódio."),
+    "execution": ("Tempo total de execução", "Tempo real de preparação, geração, simulação, coleta e exportação de entidades; exclui a escrita final de metrics.json/CSV e a limpeza de temporários."),
     "generation": ("Tempo de geração da demanda", "Tempo real gasto na geração e validação da demanda."),
     "simulation_execution": ("Tempo de execução do processo SUMO", "Tempo real gasto executando o processo SUMO com as saídas de observação habilitadas."),
     "sumo_configuration": ("Tempo de preparação da configuração SUMO", "Tempo real gasto preparando e registrando a configuração efetiva do SUMO."),
     "aggregation": ("Tempo de agregação das métricas", "Tempo real gasto consolidando as saídas nativas em métricas globais e por entidade."),
     "entity_persistence": ("Tempo de gravação das entidades", "Tempo real gasto serializando, comprimindo e gravando as métricas por entidade."),
-    "file_inventory": ("Tempo de inventário dos arquivos", "Tempo real gasto inventariando arquivos e calculando tamanhos e hashes."),
 }
 
 _SOURCES = {
@@ -100,6 +99,7 @@ _SOURCES = {
 # Cada conceito descreve o valor de uma observação; _aggregate explicita como
 # os valores observados foram combinados e mantém amostras separadas do resultado.
 _TEMPORAL = {
+    "network_queueing_length_lane_sum": ("Soma dos comprimentos das filas por faixa", "soma dos comprimentos das filas por faixa em cada passo, incluindo zero quando não há fila; não representa uma fila física única", "m", 1),
     "vehicles_halting": ("Veículos parados no trânsito", "número de veículos abaixo de 0,1 m/s, excluindo paradas programadas; não mede comprimento de fila", "veículos", 1),
     "vehicles_waiting_insertion": ("Veículos aguardando entrada na rede", "número de veículos cuja partida está atrasada por ainda não terem sido inseridos", "veículos", 1),
     "network_mean_speed_m_s": ("Velocidade média da rede", "velocidade média por passo, excluindo veículos em parada programada e passos sem veículos", "m/s", 2),
@@ -367,9 +367,9 @@ _THEMES = (
     "trip_records_", "unfinished_", "undeparted_", "vaporized_", "vehicles_discarded",
     "teleports", "sumo_teleports_", "collisions", "collision_", "sumo_safety_",
     "sumo_person_teleports_", "sumo_persons_", "status", "error", "lane_change_",
-    "execution_time_", "simulation_execution_", "generation_time_", "baseline_preparation_",
+    "execution_time_", "simulation_execution_", "generation_time_",
     "sumo_configuration_", "aggregation_time_", "collection_", "entity_persistence_",
-    "file_inventory_", "sumo_performance_", "sumo_step_computation_",
+    "sumo_performance_", "sumo_step_computation_",
 )
 
 

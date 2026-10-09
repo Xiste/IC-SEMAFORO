@@ -26,6 +26,16 @@ def option_value(command, option):
     return command[command.index(option) + 1]
 
 
+def configuration_result(command, xml="<configuration />"):
+    """Simula a saída de configuração SUMO em stdout ou arquivo temporário."""
+    if "--save-configuration" in command:
+        destination = option_value(command, "--save-configuration")
+        if destination != "-":
+            Path(destination).write_text(xml, encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout=xml)
+    return subprocess.CompletedProcess(command, 0, stdout="")
+
+
 def synthetic_cesario_document():
     """Suplemento deliberadamente sintético; não aprova o plano real da SETTRAN."""
     document = json.loads(simulation.SETTRAN_PROGRAMS_FILE.read_text(encoding="utf-8"))
@@ -163,6 +173,28 @@ class RunSimulationTests(unittest.TestCase):
         which.assert_called_once_with("sumo")
         run.assert_not_called()
 
+    def test_native_configuration_is_read_without_creating_snapshot_files(self):
+        commands = []
+
+        def fake_sumo(command, **kwargs):
+            commands.append(command)
+            output = ('<configuration><time><begin value="0"/><end value="-1"/>'
+                      '<step-length value="1"/></time><random_number>'
+                      '<seed value="23423"/></random_number></configuration>'
+                      if "--save-template" in command else "SUMO test version\n")
+            return subprocess.CompletedProcess(command, 0, stdout=output)
+
+        before = sorted(self.directory.iterdir())
+        with patch.object(simulation.subprocess, "run", side_effect=fake_sumo):
+            configuration = simulation.read_sumo_configuration("/usr/bin/sumo")
+        self.assertIn("SUMO test version", configuration["sumo_version"])
+        self.assertEqual(configuration["sumo_defaults"], {
+            "begin": "0", "end": "-1", "step-length": "1", "seed": "23423"})
+        self.assertEqual(sorted(self.directory.iterdir()), before)
+        template_commands = [command for command in commands if "--save-template" in command]
+        self.assertEqual(len(template_commands), 1)
+        self.assertEqual(option_value(template_commands[0], "--save-template"), "-")
+
     def test_recording_preserves_run_options_and_stores_sumo_configuration(self):
         binary = self.directory / "sumo-gui"
         binary.write_text("SUMO simulado", encoding="utf-8")
@@ -173,25 +205,15 @@ class RunSimulationTests(unittest.TestCase):
 
         def fake_sumo(command, **kwargs):
             commands.append(command)
-            if "--save-template" in command:
-                Path(option_value(command, "--save-template")).write_text(
-                    '<configuration><random_number><seed value="23423" />'
-                    '</random_number><time><step-length value="1" />'
-                    '</time></configuration>', encoding="utf-8",
-                )
-            if "--save-configuration" in command:
-                Path(option_value(command, "--save-configuration")).write_text(
-                    '<configuration><output><precision value="8" /></output></configuration>',
-                    encoding="utf-8",
-                )
-            return subprocess.CompletedProcess(command, 0, stdout="SUMO test version\n")
+            return configuration_result(command,
+                '<configuration><output><precision value="8" /></output></configuration>')
 
         with patch.object(simulation.shutil, "which", return_value=str(binary)):
             with patch.object(simulation.subprocess, "run", side_effect=fake_sumo):
                 simulation.run_simulation(
                     net_file=self.net_file, demand_file=self.demand_file,
                     gui=True, end=60, recording_dir=recording, metadata=metadata,
-                    baseline={"manifest": {"sumo_defaults": {"seed": "23423", "step-length": "1"}}},
+                    sumo_defaults={"seed": "23423", "step-length": "1"},
                 )
 
         command = metadata["command"]
@@ -209,8 +231,35 @@ class RunSimulationTests(unittest.TestCase):
         self.assertGreaterEqual(metadata["duration_seconds"], 0)
         self.assertGreaterEqual(metadata["configuration_time_seconds"], 0)
         self.assertNotIn("--fcd-output", command)
-        self.assertTrue((recording / "inputs" / "observations.add.xml").is_file())
+        self.assertFalse((recording / "inputs" / "observations.add.xml").exists())
+        self.assertNotIn("--additional-files", command)
         self.assertTrue((recording / "sumo.log").is_file())
+
+    def test_metrics_profile_preserves_native_timing_and_termination(self):
+        def fake_sumo(command, **kwargs):
+            return configuration_result(command)
+
+        for profile in ("core", "full"):
+            with self.subTest(profile=profile):
+                recording = self.directory / profile
+                (recording / "inputs").mkdir(parents=True)
+                metadata = {}
+                with patch.object(simulation.shutil, "which", return_value="/usr/bin/sumo"):
+                    with patch.object(simulation.subprocess, "run", side_effect=fake_sumo):
+                        simulation.run_simulation(
+                            net_file=self.net_file, demand_file=self.demand_file,
+                            recording_dir=recording, metrics_profile=profile, metadata=metadata,
+                            sumo_defaults={"seed": "23423", "step-length": "1", "end": "-1"})
+                command = metadata["command"]
+                self.assertEqual(option_value(command, "--begin"), "0")
+                self.assertEqual(option_value(command, "--route-files"), str(self.demand_file))
+                self.assertNotIn("--end", command)
+                self.assertNotIn("--step-length", command)
+                self.assertNotIn("--time-to-teleport", command)
+                self.assertNotIn("--collision.action", command)
+                self.assertNotIn("--seed", command)
+                self.assertEqual(metadata["step_length"], 1.0)
+                self.assertEqual(metadata["seed"], 23423)
 
     def test_ready_local_fixture_preserves_observations_and_records_exact_scope(self):
         document, intersection = synthetic_cesario_document()
@@ -223,11 +272,8 @@ class RunSimulationTests(unittest.TestCase):
 
         def fake_sumo(command, **kwargs):
             commands.append(command)
-            if "--save-configuration" in command:
-                Path(option_value(command, "--save-configuration")).write_text(
-                    '<configuration><output><precision value="8" /></output></configuration>',
-                    encoding="utf-8")
-            return subprocess.CompletedProcess(command, 0)
+            return configuration_result(command,
+                '<configuration><output><precision value="8" /></output></configuration>')
 
         with patch.object(simulation, "SETTRAN_PROGRAMS_FILE", source):
             with patch.object(simulation.shutil, "which", return_value="/usr/bin/sumo"):
@@ -235,9 +281,8 @@ class RunSimulationTests(unittest.TestCase):
                     simulation.run_simulation(
                         net_file=simulation.DEFAULT_NET_FILE, demand_file=self.demand_file,
                         end=60, recording_dir=recording, metadata=metadata,
-                        signal_profile="settran", settran_plan="2",
-                        settran_intersections=[intersection], baseline={"manifest": {
-                            "sumo_defaults": {"seed": "23423", "step-length": "1"}}})
+                        signal_profile="settran", settran_plan="2", metrics_profile="full",
+                        settran_intersections=[intersection], sumo_defaults={"seed": "23423", "step-length": "1"})
         for command in commands:
             self.assertEqual(command.count("--additional-files"), 1)
             additions = option_value(command, "--additional-files").split(",")
@@ -249,11 +294,41 @@ class RunSimulationTests(unittest.TestCase):
         self.assertEqual(scope["intersections"], [intersection])
         self.assertEqual(scope["tls_ids"], ["FAM_CESARIO_PARANA"])
         self.assertEqual(len(scope["current_tls_ids"]), 35)
-        self.assertEqual(json.loads((recording / "inputs/settran_programs.json").read_text()), document)
+        self.assertFalse((recording / "inputs/settran_programs.json").exists())
         logics = ET.parse(recording / "inputs/settran.add.xml").getroot().findall("tlLogic")
         self.assertEqual([logic.get("id") for logic in logics], ["FAM_CESARIO_PARANA"])
         self.assertEqual(logics[0].get("programID"), "settran_2")
         self.assertEqual(sum(float(p.get("duration")) for p in logics[0]), 70)
+        self.assertEqual(scope["programs"], [{
+            **logic.attrib, "phases": [phase.attrib for phase in logic.findall("phase")],
+            "parameters": [param.attrib for param in logic.findall("param")]} for logic in logics])
+        self.assertNotIn("source", scope)
+        self.assertNotIn("additional", scope)
+
+    def test_ready_local_core_fixture_adds_only_settran_programs(self):
+        document, intersection = synthetic_cesario_document()
+        recording = self.directory / "episode"
+        recording.mkdir()
+        commands = []
+
+        def fake_sumo(command, **kwargs):
+            commands.append(command)
+            return configuration_result(command)
+
+        with patch.object(simulation.shutil, "which", return_value="/usr/bin/sumo"):
+            with patch.object(simulation.subprocess, "run", side_effect=fake_sumo):
+                simulation.run_simulation(
+                    net_file=simulation.DEFAULT_NET_FILE, demand_file=self.demand_file,
+                    recording_dir=recording, metrics_profile="core", signal_profile="settran",
+                    settran_plan="2", settran_intersections=[intersection],
+                    _settran_document=document, sumo_defaults={"seed": "23423", "step-length": "1"})
+        self.assertEqual(len(commands), 2)
+        for command in commands:
+            self.assertEqual(command.count("--additional-files"), 1)
+            self.assertEqual(option_value(command, "--additional-files"),
+                             str(recording / "inputs/settran.add.xml"))
+            self.assertNotIn("--end", command)
+        self.assertFalse((recording / "inputs/observations.add.xml").exists())
 
     def test_ready_fixture_without_recording_uses_temporary_program_then_removes_it(self):
         document, intersection = synthetic_cesario_document()
@@ -289,13 +364,11 @@ class RandomEpisodeTests(unittest.TestCase):
         self.collector.collect_episode = Mock(side_effect=self.collect)
         self.start_patch(patch.dict(sys.modules, {self.collector.__name__: self.collector}))
         self.start_patch(patch.object(simulation, "OUTPUT_ROOT", self.output_root))
-        baseline_dir = self.output_root / "baselines" / "fixture"
-        baseline_dir.mkdir(parents=True)
-        (baseline_dir / "network.net.xml").write_bytes(self.net_file.read_bytes())
-        (baseline_dir / "baseline.json").write_text('{"baseline_id": "fixture"}')
-        self.baseline_mock = self.start_patch(patch.object(
-            simulation, "prepare_baseline", return_value={
-                "directory": baseline_dir, "manifest": {"baseline_id": "fixture"}}))
+        self.configuration_mock = self.start_patch(patch.object(
+            simulation, "read_sumo_configuration", return_value={
+                "sumo_version": "SUMO test version",
+                "sumo_defaults": {"seed": "23423", "step-length": "1", "end": "-1"}}))
+        self.start_patch(patch.object(simulation.shutil, "which", return_value="/usr/bin/sumo"))
         self.generate_mock = self.start_patch(
             patch.object(simulation, "generate_random_demand", side_effect=self.generate)
         )
@@ -324,25 +397,35 @@ class RandomEpisodeTests(unittest.TestCase):
         self.workflow.append("run")
         metadata.update(duration_seconds=0.2, seed=23423, step_length=1.0,
                         configuration_time_seconds=0.01)
+        raw = parameters["recording_dir"] / "raw"
+        raw.mkdir()
+        for name in ("summary.xml.gz", "trips.xml.gz", "statistics.xml", "queues.xml.gz"):
+            (raw / name).write_bytes(b"<output />")
 
     def collect(self, raw, net_file, profile="core"):
         self.workflow.append("collect")
         return {
-            "metrics": {"vehicles_completed": 2, "network_mean_speed_m_s_mean": 8.25},
-            "entities": {"lanes": {"via_ação_0": {"queue_length_max": 1}}},
+            "metrics": {"vehicles_completed": 2, "network_mean_speed_m_s_mean": 8.25,
+                        "simulation_duration_seconds": 7462.0},
+            "entities": {"lanes": {"via_ação_0": {"queue_length_max": 1}}}
+                        if profile == "full" else {},
         }
+
+    def episode_directories(self):
+        return sorted(path.parent for path in self.output_dir.rglob("metrics.json"))
 
     def episode_results(self, directory):
         document = json.loads((directory / "metrics.json").read_text(encoding="utf-8"))
-        manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+        execution = document["execution"]
         records = {item["metric_name"]: item for item in document["metrics"]}
-        return records, manifest
+        return records, execution
 
     def run_episodes(self, **parameters):
         arguments = {"net_file": self.net_file, "output_dir": self.output_dir}
         arguments.update(parameters)
-        with redirect_stdout(io.StringIO()):
+        with redirect_stdout(io.StringIO()) as output:
             simulation.run_random_episodes(**arguments)
+        return output.getvalue()
 
     def test_each_episode_generates_runs_and_collects_in_order(self):
         with patch.object(simulation.random, "randint", side_effect=[17, 42]) as randint:
@@ -350,8 +433,11 @@ class RandomEpisodeTests(unittest.TestCase):
 
         self.assertEqual(self.workflow, ["generate", "run", "collect"] * 2)
         self.assertEqual(randint.call_count, 2)
-        self.baseline_mock.assert_called_once()
-        self.assertEqual(len(list(self.output_dir.iterdir())), 2)
+        self.configuration_mock.assert_called_once()
+        self.assertEqual(len(list(self.output_dir.iterdir())), 1)
+        self.assertEqual(len(self.episode_directories()), 2)
+        self.assertEqual(list(self.output_dir.rglob("configuracao.json")), [])
+        self.assertFalse((self.output_root / "baselines").exists())
         for index, (generation, run) in enumerate(zip(
             self.generate_mock.call_args_list, self.run_mock.call_args_list
         )):
@@ -363,12 +449,14 @@ class RandomEpisodeTests(unittest.TestCase):
             self.assertEqual(generated["period"], 2)
             self.assertEqual(executed["gui"], True)
             self.assertEqual(executed["end"], 60)
+            self.assertEqual(executed["sumo_defaults"], {
+                "seed": "23423", "step-length": "1", "end": "-1"})
             self.assertEqual(executed["net_file"], generated["net_file"])
             self.assertEqual(executed["demand_file"], generated["output_dir"] / "random.rou.xml")
             self.assertEqual(executed["recording_dir"], episode_dir)
             self.assertTrue(episode_dir.is_relative_to(self.output_dir))
             self.assertEqual(generated["net_file"].read_bytes(), self.net_file.read_bytes())
-            records, manifest = self.episode_results(episode_dir)
+            records, execution = self.episode_results(episode_dir)
             for name, expected_type, value in (
                 ("seed", "int", (17, 42)[index]), ("demand_model", "string", "random"),
                 ("gui", "bool", True), ("demand_duration_seconds", "float", 120.0),
@@ -382,15 +470,134 @@ class RandomEpisodeTests(unittest.TestCase):
                     "metric_name": name, "data_type": expected_type, "value": value,
                 })
             self.assertGreater(records["execution_time_seconds"]["value"], 0)
-            self.assertEqual(manifest["seed"], (17, 42)[index])
-            self.assertEqual(manifest["signal_profile"], "current")
-            self.assertEqual(manifest["status"], "completed")
-            self.assertIn("started_at_utc", manifest)
-            self.assertIn("finished_at_utc", manifest)
-            self.assertNotIn("inputs/network.net.xml", manifest["files"])
-            self.assertEqual(manifest["baseline"]["id"], "fixture")
-            self.assertEqual(manifest["collection"]["profile"], "core")
-            self.assertIn("inputs/random.rou.xml", manifest["files"])
+            self.assertEqual(execution["generation"]["seed"], (17, 42)[index])
+            self.assertEqual(execution["signal_profile"], "current")
+            self.assertEqual(execution["sumo_version"], "SUMO test version")
+            self.assertEqual(execution["status"], "completed")
+            self.assertIn("started_at_utc", records)
+            self.assertIn("finished_at_utc", records)
+            self.assertFalse((episode_dir / "manifest.json").exists())
+            self.assertFalse((episode_dir / "inputs").exists())
+            self.assertEqual(execution["collection"]["profile"], "core")
+
+    def test_both_profiles_keep_original_demand_window_and_simulation_defaults(self):
+        for profile in ("core", "full"):
+            with self.subTest(profile=profile):
+                self.run_episodes(metrics_profile=profile)
+                generated = self.generate_mock.call_args.kwargs
+                executed = self.run_mock.call_args.kwargs
+                self.assertEqual(generated["duration"], 7200.0)
+                self.assertEqual(generated["period"], 1.5)
+                self.assertIsNone(executed["end"])
+                records, _ = self.episode_results(generated["output_dir"].parent)
+                self.assertEqual(records["demand_duration_seconds"]["value"], 7200.0)
+                self.assertEqual(records["demand_period_seconds"]["value"], 1.5)
+                self.assertEqual(records["simulation_duration_seconds"]["value"], 7462.0)
+                self.assertEqual(records["simulation_step_length_seconds"]["value"], 1.0)
+                self.assertEqual(records["simulation_end_limited"]["value"], False)
+                self.assertNotIn("simulation_end_requested_seconds", records)
+                self.assertGreater(records["execution_time_seconds"]["value"], 0)
+                self.assertLess(records["execution_time_seconds"]["value"], 7200.0)
+
+    def test_core_removes_generated_inputs_and_observations_after_publishing_metrics(self):
+        self.run_episodes()
+        directory = self.episode_directories()[0]
+        document = json.loads((directory / "metrics.json").read_text())
+        _, execution = self.episode_results(directory)
+        self.assertIsNone(document["entity_metrics_file"])
+        self.assertFalse((directory / "entities.json.gz").exists())
+        self.assertEqual(list((directory / "raw").glob("*")), [])
+        self.assertFalse((directory / "inputs").exists())
+        self.assertFalse((directory / "manifest.json").exists())
+        self.assertNotIn("files", execution)
+        self.assertNotIn("baseline", execution)
+
+    def test_core_cleanup_preserves_unrecognized_file(self):
+        def simulate_with_note(**parameters):
+            self.simulate(**parameters)
+            (parameters["recording_dir"] / "raw/nota.txt").write_text("observação manual")
+
+        self.run_mock.side_effect = simulate_with_note
+        self.run_episodes()
+        directory = self.episode_directories()[0]
+        _, execution = self.episode_results(directory)
+        self.assertEqual([path.name for path in (directory / "raw").iterdir()], ["nota.txt"])
+        self.assertEqual((directory / "raw/nota.txt").read_text(), "observação manual")
+
+    def test_full_retains_entities_and_native_observations(self):
+        self.run_episodes(metrics_profile="full")
+        directory = self.episode_directories()[0]
+        document = json.loads((directory / "metrics.json").read_text())
+        _, execution = self.episode_results(directory)
+        self.assertEqual(document["entity_metrics_file"], "entities.json.gz")
+        self.assertTrue((directory / "entities.json.gz").is_file())
+        self.assertEqual(len(list((directory / "raw").iterdir())), 4)
+        self.assertFalse((directory / "inputs").exists())
+        self.assertFalse((directory / "manifest.json").exists())
+
+    def test_core_collection_failure_preserves_native_observations(self):
+        self.collector.collect_episode.side_effect = ValueError("observação incompleta")
+        with self.assertRaisesRegex(ValueError, "observação incompleta"):
+            self.run_episodes()
+        directory = self.episode_directories()[0]
+        records, execution = self.episode_results(directory)
+        self.assertEqual(records["status"]["value"], "failed")
+        self.assertEqual(len(list((directory / "raw").iterdir())), 4)
+        self.assertTrue((directory / "inputs/random.rou.xml").is_file())
+
+    def test_core_export_failure_preserves_native_observations(self):
+        save_episode = simulation.save_episode
+
+        def failing_save(directory, metrics, execution, **options):
+            if metrics["status"] == "completed":
+                raise OSError("disco indisponível")
+            return save_episode(directory, metrics, execution, **options)
+
+        with patch.object(simulation, "save_episode", side_effect=failing_save):
+            with self.assertRaisesRegex(OSError, "disco indisponível"):
+                self.run_episodes()
+        directory = self.episode_directories()[0]
+        self.assertEqual(len(list((directory / "raw").iterdir())), 4)
+
+    def test_core_cleanup_failure_keeps_published_result_consistent(self):
+        unlink = Path.unlink
+
+        def fail_during_cleanup(path, *args, **kwargs):
+            if path.parent.name == "raw" and path.name == "trips.xml.gz":
+                raise OSError("limpeza interrompida")
+            return unlink(path, *args, **kwargs)
+
+        with patch.object(Path, "unlink", autospec=True, side_effect=fail_during_cleanup):
+            with self.assertRaisesRegex(OSError, "limpeza interrompida"):
+                self.run_episodes()
+        directory = self.episode_directories()[0]
+        records, execution = self.episode_results(directory)
+        self.assertEqual(records["status"]["value"], "completed")
+        self.assertEqual(execution["status"], "completed")
+        self.assertEqual(records["vehicles_completed"]["value"], 2)
+        self.assertFalse((directory / "raw/summary.xml.gz").exists())
+        self.assertTrue((directory / "raw/trips.xml.gz").is_file())
+
+    def test_episode_files_preserve_seeds_and_three_times_without_summary_csv(self):
+        with patch.object(simulation.random, "randint", side_effect=[17, 42]):
+            output = self.run_episodes(episodes=2)
+        directories = self.episode_directories()
+        self.assertEqual(len(directories), 2)
+        self.assertEqual(list(self.output_dir.rglob("resumo.csv")), [])
+        for index, directory in enumerate(directories, start=1):
+            records, execution = self.episode_results(directory)
+            self.assertEqual(records["episode_index"]["value"], index)
+            self.assertEqual(records["seed"]["value"], (17, 42)[index - 1])
+            self.assertEqual(records["simulation_seed"]["value"], 23423)
+            self.assertEqual(records["demand_duration_seconds"]["value"], 7200.0)
+            self.assertEqual(records["demand_period_seconds"]["value"], 1.5)
+            self.assertEqual(records["simulation_duration_seconds"]["value"], 7462.0)
+            self.assertGreater(records["execution_time_seconds"]["value"], 0)
+            self.assertEqual(records["vehicles_completed"]["value"], 2)
+            self.assertNotIn("completed_trip_waiting_time_mean", records)
+            self.assertEqual(execution["status"], "completed")
+            self.assertEqual(execution["collection"]["profile"], "core")
+        self.assertEqual(output, "")
 
     def test_same_seed_and_timestamp_never_overwrite_previous_episode(self):
         fixed_time = datetime(2026, 9, 25, 20, 0, tzinfo=timezone.utc)
@@ -400,16 +607,16 @@ class RandomEpisodeTests(unittest.TestCase):
                 with patch.object(simulation, "uuid4", side_effect=[
                     SimpleNamespace(hex="11111111aaaaaaaa"),
                     SimpleNamespace(hex="22222222bbbbbbbb"),
+                    SimpleNamespace(hex="33333333cccccccc"),
+                    SimpleNamespace(hex="44444444dddddddd"),
                 ]):
                     self.run_episodes()
-                    first = next(self.output_dir.iterdir())
+                    first = self.episode_directories()[0]
                     previous_metrics = (first / "metrics.json").read_bytes()
-                    previous_manifest = (first / "manifest.json").read_bytes()
                     self.run_episodes()
 
         self.assertEqual(len(list(self.output_dir.iterdir())), 2)
         self.assertEqual((first / "metrics.json").read_bytes(), previous_metrics)
-        self.assertEqual((first / "manifest.json").read_bytes(), previous_manifest)
 
     def test_invalid_batch_parameters_stop_before_generation(self):
         invalid_values = {
@@ -430,7 +637,7 @@ class RandomEpisodeTests(unittest.TestCase):
         self.generate_mock.assert_not_called()
         self.run_mock.assert_not_called()
 
-    def test_settran_fails_before_seed_baseline_or_episode_creation(self):
+    def test_settran_fails_before_seed_configuration_or_episode_creation(self):
         with patch.object(simulation.random, "randint") as seed:
             for options, message in (
                 ({"signal_profile": "settran"}, "Escolha explicitamente --settran-plan"),
@@ -441,7 +648,7 @@ class RandomEpisodeTests(unittest.TestCase):
                 with self.subTest(options=options), self.assertRaisesRegex(ValueError, message):
                     self.run_episodes(net_file=simulation.DEFAULT_NET_FILE, **options)
         seed.assert_not_called()
-        self.baseline_mock.assert_not_called()
+        self.configuration_mock.assert_not_called()
         self.generate_mock.assert_not_called()
         self.run_mock.assert_not_called()
         self.assertFalse(self.output_dir.exists())
@@ -462,7 +669,7 @@ class RandomEpisodeTests(unittest.TestCase):
             for cell in ("R115", "R116", "R117"):
                 self.assertNotIn(cell, message)
             self.assertNotIn("conversor", message)
-        self.baseline_mock.assert_not_called()
+        self.configuration_mock.assert_not_called()
         self.generate_mock.assert_not_called()
         self.run_mock.assert_not_called()
         self.assertFalse(self.output_dir.exists())
@@ -489,7 +696,7 @@ class RandomEpisodeTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "fonte|origem|extração|originais"):
                     self.run_episodes(signal_profile="settran", settran_plan="2")
         seed.assert_not_called()
-        self.baseline_mock.assert_not_called()
+        self.configuration_mock.assert_not_called()
         self.generate_mock.assert_not_called()
         self.run_mock.assert_not_called()
         self.assertFalse(self.output_dir.exists())
@@ -507,7 +714,7 @@ class RandomEpisodeTests(unittest.TestCase):
         self.assertFalse(self.output_dir.exists())
         self.generate_mock.assert_not_called()
 
-    def test_ready_local_selection_keeps_random_arguments_and_freezes_configuration(self):
+    def test_ready_local_selection_keeps_random_arguments_and_records_signal_scope(self):
         document, intersection = synthetic_cesario_document()
         source = Mock()
         source.read_text.return_value = json.dumps(document)
@@ -523,16 +730,16 @@ class RandomEpisodeTests(unittest.TestCase):
         executed = self.run_mock.call_args.kwargs
         self.assertEqual(executed["_settran_document"], document)
         self.assertEqual(executed["settran_intersections"], [intersection])
-        _, manifest = self.episode_results(next(self.output_dir.iterdir()))
-        self.assertEqual(manifest["signal_configuration"]["tls_ids"], ["FAM_CESARIO_PARANA"])
-        self.assertEqual(len(manifest["signal_configuration"]["current_tls_ids"]), 35)
+        _, execution = self.episode_results(self.episode_directories()[0])
+        self.assertEqual(execution["signal_configuration"]["tls_ids"], ["FAM_CESARIO_PARANA"])
+        self.assertEqual(len(execution["signal_configuration"]["current_tls_ids"]), 35)
 
     def test_cli_settran_returns_actionable_error_without_fallback(self):
         error = io.StringIO()
         with redirect_stderr(error), redirect_stdout(io.StringIO()):
             result = simulation.main(["--signal-profile", "settran"])
         self.assertEqual(result, 1)
-        self.assertIn("docs/guias/GUIA_DE_FUNCIONAMENTO.md", error.getvalue())
+        self.assertIn("docs/GUIA_DE_FUNCIONAMENTO.md", error.getvalue())
         self.generate_mock.assert_not_called()
         self.run_mock.assert_not_called()
 
@@ -568,15 +775,18 @@ class RandomEpisodeTests(unittest.TestCase):
         self.generate_mock.assert_called_once()
         self.run_mock.assert_not_called()
         self.collector.collect_episode.assert_not_called()
-        directory = next(self.output_dir.iterdir())
-        records, manifest = self.episode_results(directory)
+        directory = self.episode_directories()[0]
+        records, execution = self.episode_results(directory)
         self.assertEqual(records["status"]["value"], "failed")
         self.assertEqual(records["seed"]["value"], 42)
         self.assertEqual(records["demand_model"]["value"], "random")
         self.assertGreater(records["execution_time_seconds"]["value"], 0)
         self.assertIn("CalledProcessError", records["error"]["value"])
-        self.assertEqual(manifest["status"], "failed")
-        self.assertEqual(manifest["baseline"]["id"], "fixture")
+        self.assertEqual(execution["status"], "failed")
+        self.assertFalse((self.output_root / "baselines").exists())
+        self.assertEqual(list(self.output_dir.rglob("resumo.csv")), [])
+        self.assertNotIn("simulation_duration_seconds", records)
+        self.assertNotIn("vehicles_completed", records)
 
     def test_simulation_failure_preserves_generation_and_stops_batch(self):
         self.run_mock.side_effect = subprocess.CalledProcessError(1, ["sumo"])
@@ -587,19 +797,19 @@ class RandomEpisodeTests(unittest.TestCase):
         self.generate_mock.assert_called_once()
         self.run_mock.assert_called_once()
         self.collector.collect_episode.assert_not_called()
-        records, manifest = self.episode_results(next(self.output_dir.iterdir()))
+        records, execution = self.episode_results(self.episode_directories()[0])
         self.assertEqual(records["status"]["value"], "failed")
         self.assertEqual(records["vehicles_generated"]["value"], 2)
-        self.assertEqual(manifest["generation"]["vehicles_generated"], 2)
-        self.assertIn("inputs/random.rou.xml", manifest["files"])
+        self.assertEqual(execution["generation"]["vehicles_generated"], 2)
+        self.assertTrue((self.episode_directories()[0] / "inputs/random.rou.xml").is_file())
 
     def test_keyboard_interrupt_preserves_interrupted_status(self):
         self.run_mock.side_effect = KeyboardInterrupt()
         with self.assertRaises(KeyboardInterrupt):
             self.run_episodes(episodes=2)
-        records, manifest = self.episode_results(next(self.output_dir.iterdir()))
+        records, execution = self.episode_results(self.episode_directories()[0])
         self.assertEqual(records["status"]["value"], "interrupted")
-        self.assertEqual(manifest["status"], "interrupted")
+        self.assertEqual(execution["status"], "interrupted")
         self.generate_mock.assert_called_once()
 
     @patch.object(simulation, "run_random_episodes")

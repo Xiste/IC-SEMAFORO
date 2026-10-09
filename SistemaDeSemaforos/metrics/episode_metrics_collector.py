@@ -2,6 +2,8 @@
 
 Entrada: diretório de saídas e rede; saída: métricas globais e por entidade.
 O runner normalmente chama ``collect_episode`` depois que o SUMO encerra.
+Separa viagens concluídas, incompletas e removidas para respeitar cada população.
+Os agregados usam amostras válidas; dados ausentes não são tratados como zero.
 """
 
 from collections import Counter, defaultdict
@@ -13,6 +15,28 @@ from pathlib import Path
 import re
 import time
 import xml.etree.ElementTree as ET
+
+
+# O core seleciona resultados do mesmo cálculo usado pelo full. As séries e
+# os registros individuais nunca são retidos nesse perfil.
+CORE_METRICS = {
+    "metrics_profile", "simulation_begin_seconds", "simulation_end_seconds",
+    "simulation_duration_seconds", "simulation_steps", "observation_step_seconds",
+    "vehicles_loaded", "vehicles_inserted", "vehicles_removed", "vehicles_completed",
+    "vehicles_discarded", "trip_records_unfinished", "trip_records_undeparted",
+    "trip_records_vaporized", "completed_throughput_vehicles_per_hour",
+    "teleports", "collisions", "queue_observation_steps",
+    *(f"completed_trip_{field}_{aggregation}"
+      for field in ("duration", "waiting_time", "time_loss", "depart_delay")
+      for aggregation in ("mean", "samples")),
+    *(f"{field}_{aggregation}"
+      for field in ("vehicles_halting", "vehicles_waiting_insertion",
+                    "network_queueing_length_lane_sum")
+      for aggregation in ("mean", "max", "samples")),
+    *(f"network_mean_speed_m_s_{aggregation}"
+      for aggregation in ("mean", "samples", "excluded_samples")),
+    "network_queueing_length_lane_sum_excluded_samples",
+}
 
 
 @lru_cache(maxsize=1024)
@@ -177,8 +201,8 @@ def _network(net_file):
     return lanes, edges, lane_edge, groups, membership
 
 
-def _trips(path, metrics, vehicles):
-    """Agrega viagens por situação, sem misturar finais e viagens truncadas."""
+def _trips(path, metrics, vehicles=None):
+    """Agrega por situação; ``vehicles=None`` dispensa a retenção individual."""
     distributions = defaultdict(lambda: defaultdict(RunningStats))
     statuses = Counter()
     for trip in _elements(path, "tripinfo"):
@@ -195,7 +219,7 @@ def _trips(path, metrics, vehicles):
         else:
             status = "completed"
         statuses[status] += 1
-        record = vehicles.setdefault(attributes["id"], {})
+        record = vehicles.setdefault(attributes["id"], {}) if vehicles is not None else {}
         record["trip_status"] = status
         for key, raw in attributes.items():
             if key == "id":
@@ -223,6 +247,10 @@ def _trips(path, metrics, vehicles):
             include_sum = name.startswith("emission_") or name in {
                 "trip_duration", "trip_route_length", "trip_waiting_time", "trip_time_loss", "trip_depart_delay"}
             metrics.update(stat.values(f"{status}_{name}", include_sum=include_sum))
+    # Zero amostras é conhecido mesmo quando não há média válida. A ausência
+    # de viagens concluídas nunca se transforma em tempo médio igual a zero.
+    for name in ("duration", "waiting_time", "time_loss", "depart_delay"):
+        metrics.setdefault(f"completed_trip_{name}_samples", 0)
 
 
 def _statistics(path, metrics):
@@ -371,16 +399,31 @@ def _tls(path, begin, end, lights):
 
 
 def _queues(path, lanes, groups, membership, entities, metrics):
-    """Filas em metros e espera por faixa; soma das faixas por aproximação/TLS."""
+    """Soma filas por passo; ``entities=None`` guarda somente o agregado global.
+
+    O comprimento global soma os comprimentos das filas por faixa. Não é uma
+    fila física única. Faixas omitidas pelo SUMO não têm fila naquele passo.
+    """
     observations = defaultdict(lambda: defaultdict(RunningStats))
     group_stats = defaultdict(lambda: defaultdict(RunningStats))
+    network_length = RunningStats()
+    excluded = 0
     count = 0
     attributes = {"queueing_time", "queueing_length", "queueing_length_experimental"}
     for timestep in _elements(path, "data"):
         count += 1
         totals = defaultdict(Counter)
+        length = 0.0
+        valid_length = True
         for lane in timestep.iter("lane"):
             identifier = lane.attrib["id"]
+            value = _number(lane.attrib.get("queueing_length"))
+            if value is None or value < 0:
+                valid_length = False
+            else:
+                length += value
+            if entities is None:
+                continue
             for attribute in attributes:
                 value = _number(lane.attrib.get(attribute, "0"))
                 if value is None or value < 0:
@@ -388,10 +431,18 @@ def _queues(path, lanes, groups, membership, entities, metrics):
                 observations[identifier][attribute].add(value)
                 for group in membership[identifier]:
                     totals[group][attribute] += value
+        if valid_length:
+            network_length.add(length)
+        else:
+            excluded += 1
         for group, values in totals.items():
             for attribute, value in values.items():
                 group_stats[group][attribute].add(value)
     metrics["queue_observation_steps"] = count
+    metrics.update(network_length.values("network_queueing_length_lane_sum"))
+    metrics["network_queueing_length_lane_sum_excluded_samples"] = excluded
+    if entities is None:
+        return
     for identifier in lanes | set(observations):
         record = entities["lanes"].setdefault(identifier, {})
         for attribute in attributes:
@@ -555,8 +606,9 @@ def collect_episode(raw_dir: Path, net_file: Path, profile: str = "core") -> dic
 
     ``metrics`` contém escalares globais. ``entities`` organiza escalares por
     escopo e ID; nomes e tipos são normalizados pela camada de persistência.
-    Os XMLs brutos continuam sendo a fonte para reanálises detalhadas. Core
-    exige viagens/eventos/filas/TLS; full também exige tráfego/FCD/emissões.
+    Core exige resumo/viagens/estatísticas/filas e mantém entidades vazias.
+    Full conserva detalhes e fontes para reanálise. Timers de coleta retornam
+    com os resultados para o runner registrar o custo separado das medições.
     """
     if profile not in {"core", "full"}:
         raise ValueError("O perfil de métricas deve ser core ou full.")
@@ -566,19 +618,21 @@ def collect_episode(raw_dir: Path, net_file: Path, profile: str = "core") -> dic
     metrics["collection_summary_time_seconds"] = time.perf_counter() - started
     metrics["metrics_profile"] = profile
     entities = {scope: {} for scope in ("vehicles", "lanes", "edges", "traffic_lights", "approaches", "intersections")}
-    started = time.perf_counter()
-    lanes, edges, lane_edge, groups, membership = _network(net_file)
-    metrics["collection_network_time_seconds"] = time.perf_counter() - started
+    lanes, groups, membership = set(), {}, {}
+    if profile == "full":
+        started = time.perf_counter()
+        lanes, edges, _, groups, membership = _network(net_file)
+        metrics["collection_network_time_seconds"] = time.perf_counter() - started
     parsers = [
-        ("trips", _trips, (raw_dir / "trips.xml.gz", metrics, entities["vehicles"])),
+        ("trips", _trips, (raw_dir / "trips.xml.gz", metrics, entities["vehicles"] if profile == "full" else None)),
         ("statistics", _statistics, (raw_dir / "statistics.xml", metrics)),
-        ("tls", _tls, (raw_dir / "tls.xml.gz", metrics["simulation_begin_seconds"], metrics["simulation_end_seconds"], entities["traffic_lights"])),
-        ("queues", _queues, (raw_dir / "queues.xml.gz", lanes, groups, membership, entities, metrics)),
-        ("lanechanges", _events, (raw_dir / "lanechanges.xml.gz", "change", "lane_change", entities, metrics)),
-        ("collisions", _events, (raw_dir / "collisions.xml.gz", "collision", "collision", entities, metrics)),
+        ("queues", _queues, (raw_dir / "queues.xml.gz", lanes, groups, membership, entities if profile == "full" else None, metrics)),
     ]
     if profile == "full":
         parsers.extend([
+            ("tls", _tls, (raw_dir / "tls.xml.gz", metrics["simulation_begin_seconds"], metrics["simulation_end_seconds"], entities["traffic_lights"])),
+            ("lanechanges", _events, (raw_dir / "lanechanges.xml.gz", "change", "lane_change", entities, metrics)),
+            ("collisions", _events, (raw_dir / "collisions.xml.gz", "collision", "collision", entities, metrics)),
             ("lanes", _traffic, (raw_dir / "lanes.xml.gz", "lane", lanes, entities["lanes"], metrics)),
             ("edges", _traffic, (raw_dir / "edges.xml.gz", "edge", edges, entities["edges"], metrics)),
             ("fcd", _trajectories, (raw_dir / "fcd.xml.gz", lanes, membership, groups, entities, metrics)),
@@ -588,6 +642,9 @@ def collect_episode(raw_dir: Path, net_file: Path, profile: str = "core") -> dic
         started = time.perf_counter()
         parser(*arguments)
         metrics[f"collection_{source}_time_seconds"] = time.perf_counter() - started
-    # A associação faixa→via já pertence à rede do baseline; não duplicá-la
+    if profile == "core":
+        metrics = {name: value for name, value in metrics.items()
+                   if name in CORE_METRICS or name.startswith(("sumo_teleports_", "sumo_safety_", "collection_"))}
+    # A associação faixa→via já pertence à rede utilizada; não duplicá-la
     # em cada episódio. Métricas continuam identificadas pelo ID original.
     return {"metrics": metrics, "entities": entities}

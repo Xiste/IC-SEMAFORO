@@ -3,11 +3,12 @@
 Entrada principal: rede, duração, período, diretório e seed opcional.
 Saída principal: random.trips.xml e random.rou.xml; metadados opcionais em memória.
 Uso normal: ``make demand-random`` ou uma chamada do runner de simulação.
+randomTrips escolhe origens, destinos e partidas; duarouter calcula e valida as rotas.
+A seed registra o sorteio, enquanto duração e período definem a demanda solicitada.
 """
 
 import argparse
 from datetime import datetime, timezone
-import hashlib
 import math
 import os
 from pathlib import Path
@@ -113,10 +114,7 @@ def generate_random_demand(
     try:
         random_trips = _find_random_trips()
         if metadata is not None:
-            metadata.update(
-                random_trips_file=str(random_trips),
-                random_trips_sha256=hashlib.sha256(random_trips.read_bytes()).hexdigest(),
-            )
+            metadata["random_trips_file"] = str(random_trips)
 
         # A pasta temporária preserva a demanda anterior se a geração falhar.
         with TemporaryDirectory(prefix=".random-", dir=output_dir) as temporary:
@@ -175,18 +173,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        routes_file = generate_random_demand(**vars(args))
-        vehicle_count = _validate_xml_output(routes_file, "vehicle")
+        generate_random_demand(**vars(args), log_file=Path(args.output_dir) / "generation.log")
     except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
         print(f"Erro ao gerar demanda random: {exc}", file=sys.stderr)
         return 1
 
-    requested = args.duration / args.period
-    print(
-        f"Geração concluída: aproximadamente {requested:g} viagens solicitadas; "
-        f"{vehicle_count} veículos com rota."
-    )
-    print(f"Demanda para o SUMO: {routes_file}")
     return 0
 
 

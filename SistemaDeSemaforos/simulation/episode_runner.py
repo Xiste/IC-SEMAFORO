@@ -3,6 +3,8 @@
 Entrada principal: rede, demanda pronta e opções de execução.
 Saída principal: episódios concluídos e seus resultados em outputs/.
 Uso normal: ``make run-random``, que gera uma demanda nova por episódio.
+Coordena validação, geração da demanda, execução, coleta e gravação dos resultados.
+Cada episódio recebe uma seed de demanda; entradas temporárias são removidas após sucesso.
 """
 
 import argparse
@@ -25,19 +27,32 @@ from ..demand.random_demand_generator import (
     DEFAULT_PERIOD,
     generate_random_demand,
 )
-from ..metrics.metrics_storage import file_info, save_entities, save_episode
+from ..metrics.metrics_storage import save_entities, save_episode
 from ..metrics.sumo_output_configuration import prepare_outputs
-from .experiment_baseline import prepare_baseline
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 DEFAULT_EPISODE_DIR = OUTPUT_ROOT / "outputs-random"
-SETTRAN_PROGRAMS_FILE = PROJECT_ROOT / "docs" / "settran" / "settran_programs.json"
+SETTRAN_PROGRAMS_FILE = PROJECT_ROOT / "docs" / "settran_programs.json"
 
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def read_sumo_configuration(binary: str) -> dict:
+    """Consulta versão e defaults como dados, sem copiar ferramentas ou entradas."""
+    version = subprocess.run([binary, "--version"], check=True,
+                             capture_output=True, text=True).stdout.strip()
+    template = subprocess.run([binary, "--save-template", "-"], check=True,
+                              capture_output=True, text=True).stdout
+    return {
+        "sumo_version": version,
+        "sumo_defaults": {item.tag: item.get("value")
+                          for group in ET.fromstring(template) for item in group
+                          if item.get("value") is not None},
+    }
 
 
 def _validate_signal_profile(signal_profile: str, settran_plan: str | None = None,
@@ -53,7 +68,7 @@ def _validate_signal_profile(signal_profile: str, settran_plan: str | None = Non
     if settran_plan is None:
         raise ValueError(
             "Escolha explicitamente --settran-plan para testar um plano SETTRAN fixo; "
-            "nenhum plano foi presumido. Consulte docs/guias/GUIA_DE_FUNCIONAMENTO.md."
+            "nenhum plano foi presumido. Consulte docs/GUIA_DE_FUNCIONAMENTO.md."
         )
 
     from scripts.audit_settran import validate_source_document
@@ -74,7 +89,7 @@ def run_simulation(
     recording_dir: Path | None = None,
     metadata: dict | None = None,
     metrics_profile: str = "core",
-    baseline: dict | None = None,
+    sumo_defaults: dict | None = None,
     signal_profile: str = "current",
     settran_plan: str | None = None,
     settran_intersections: list[str] | None = None,
@@ -122,9 +137,6 @@ def run_simulation(
         inputs = recording_dir / "inputs"
         inputs.mkdir(parents=True, exist_ok=True)
         additional = compile_selection(selection, inputs / "settran.add.xml")
-        source = inputs / "settran_programs.json"
-        source.write_text(json.dumps(selection["document_snapshot"], ensure_ascii=False,
-                                    indent=2) + "\n", encoding="utf-8")
     elif recording_dir is None:
         subprocess.run(command, check=True)
         return
@@ -134,8 +146,11 @@ def run_simulation(
     if selection is not None:
         # Uma única opção mantém programas e observações; repetir a flag pode
         # substituir o arquivo de coleta já usado pelo pipeline.
-        index = output_options.index("--additional-files") + 1
-        output_options[index] = f"{additional},{output_options[index]}"
+        if "--additional-files" in output_options:
+            index = output_options.index("--additional-files") + 1
+            output_options[index] = f"{additional},{output_options[index]}"
+        else:
+            output_options.extend(["--additional-files", str(additional)])
     command.extend(output_options)
     if metadata is None:
         metadata = {}
@@ -144,15 +159,18 @@ def run_simulation(
             "mode": "explicit_fixed_plan", "plan_id": selection["plan_id"],
             "intersections": selection["intersections"], "tls_ids": selection["tls_ids"],
             "current_tls_ids": selection["current_tls_ids"],
-            "source": {"path": str(source), **file_info(source)},
-            "additional": {"path": str(additional), **file_info(additional)},
+            "programs": [
+                {**logic.attrib, "phases": [phase.attrib for phase in logic.findall("phase")],
+                 "parameters": [param.attrib for param in logic.findall("param")]}
+                for logic in ET.parse(additional).getroot().findall("tlLogic")
+            ],
         }
-    if baseline is None:
-        baseline = prepare_baseline(net_file, binary, OUTPUT_ROOT)
+    if sumo_defaults is None:
+        sumo_defaults = read_sumo_configuration(binary)["sumo_defaults"]
     metadata["command"] = command
     with (recording_dir / "sumo.log").open("w", encoding="utf-8") as log:
-        # Apenas diferenças explícitas são salvas por episódio. Defaults e
-        # versão estão no baseline compartilhado, verificado pelo conteúdo.
+        # Guarda os valores aplicados. O arquivo SUMO é apenas uma entrada
+        # temporária; defaults são consultados em memória e a versão fica no resultado.
         subprocess.run(command + ["--save-configuration",
                                  str(recording_dir / "inputs" / "sumo_config.sumocfg")],
                        check=True, stdout=log, stderr=subprocess.STDOUT)
@@ -161,7 +179,7 @@ def run_simulation(
             item.tag: item.get("value") for group in configured for item in group
             if item.get("value") is not None
         }
-        effective = baseline["manifest"]["sumo_defaults"] | metadata["configured_options"]
+        effective = sumo_defaults | metadata["configured_options"]
         metadata["seed"] = int(effective["seed"])
         metadata["step_length"] = float(effective["step-length"])
         metadata["configuration_time_seconds"] = perf_counter() - preparation_started
@@ -185,8 +203,8 @@ def run_random_episodes(
     signal_profile: str = "current",
     settran_plan: str | None = None,
     settran_intersections: list[str] | None = None,
-) -> None:
-    """Gera, simula e consolida cada episódio em uma pasta que nunca se repete."""
+) -> Path:
+    """Gera episódios em um lote exclusivo e grava os resultados de cada um."""
     # Validar antes de sortear seed, gerar demanda ou criar qualquer episódio.
     selection = _validate_signal_profile(signal_profile, settran_plan, net_file,
                                          settran_intersections)
@@ -206,10 +224,14 @@ def run_random_episodes(
     net_file = Path(net_file).expanduser().resolve()
     if not net_file.is_file():
         raise FileNotFoundError(f"Rede SUMO não encontrada: {net_file}")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    batch_dir = output_dir / f"{timestamp}_{uuid4().hex[:8]}"
+    batch_dir.mkdir(parents=True, exist_ok=False)
     context = {}
     for episode in range(1, episodes + 1):
-        _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, period,
+        _run_random_episode(net_file, batch_dir, episode, episodes, gui, duration, period,
                             end, metrics_profile, context, signal_profile, selection)
+    return batch_dir
 
 
 def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, period,
@@ -236,43 +258,34 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
     }
     if end is not None:
         metrics["simulation_end_requested_seconds"] = float(end)
-    manifest = {
-        "schema_version": 2, "episode_id": episode_id, "demand_model": "random",
+    execution = {
         "signal_profile": signal_profile,
-        "seed": seed, "started_at_utc": started_at,
         "source_network": str(net_file), "generation": {}, "simulation": {},
-        "files": {}, "status": "running",
+        "status": "running", "timings_seconds": {},
         "collection": {"profile": metrics_profile},
     }
     entities = {}
     if selection is not None:
-        manifest["signal_configuration"] = {
+        execution["signal_configuration"] = {
             "mode": "explicit_fixed_plan", "plan_id": selection["plan_id"],
             "intersections": selection["intersections"], "tls_ids": selection["tls_ids"],
             "current_tls_ids": selection["current_tls_ids"],
         }
-        print(f"SETTRAN: plano {selection['plan_id']} fixo em {selection['intersections']}; "
-              f"{len(selection['current_tls_ids'])} TLS permanecem em current.", flush=True)
-    save_episode(directory, metrics, manifest)
-    print(f"Episódio {episode}/{episodes}: seed {seed}; resultados em {directory}", flush=True)
+    save_episode(directory, metrics, execution, include_entities=metrics_profile == "full")
     try:
-        baseline_started = perf_counter()
-        if "baseline" not in context:
+        configuration_started = perf_counter()
+        if "configuration" not in context:
             binary = shutil.which("sumo-gui" if gui else "sumo")
             if binary is None:
                 raise FileNotFoundError("Executável SUMO não encontrado no PATH.")
-            context["baseline"] = prepare_baseline(net_file, binary, OUTPUT_ROOT)
-        baseline = context["baseline"]
-        metrics["baseline_preparation_time_seconds"] = perf_counter() - baseline_started
-        snapshot = baseline["directory"] / "network.net.xml"
-        manifest["baseline"] = {
-            "id": baseline["manifest"]["baseline_id"],
-            "manifest": str(baseline["directory"] / "baseline.json"),
-            **file_info(baseline["directory"] / "baseline.json"),
-        }
-        generation = manifest["generation"]
+            context["configuration"] = read_sumo_configuration(binary)
+        configuration = context["configuration"]
+        execution["sumo_version"] = configuration["sumo_version"].splitlines()[0]
+        execution["timings_seconds"]["configuration_preparation_time_seconds"] = (
+            perf_counter() - configuration_started)
+        generation = execution["generation"]
         demand_file = generate_random_demand(
-            net_file=snapshot, output_dir=inputs, duration=duration, period=period,
+            net_file=net_file, output_dir=inputs, duration=duration, period=period,
             seed=seed, metadata=generation, log_file=directory / "generation.log",
         )
         for name in ("vehicles_generated", "trips_generated"):
@@ -284,26 +297,24 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
             metrics["demand_last_departure_seconds"] = max(departures)
             metrics["demand_departure_mean_seconds"] = sum(departures) / len(departures)
         metrics["generation_time_seconds"] = generation["duration_seconds"]
-        print(f"Episódio {episode}/{episodes}: executando SUMO e registrando observações.", flush=True)
         signal_options = {} if selection is None else {
             "settran_plan": selection["plan_id"],
             "settran_intersections": selection["intersections"],
             "_settran_document": selection["document_snapshot"],
         }
-        run_simulation(net_file=snapshot, demand_file=demand_file, gui=gui, end=end,
-                       recording_dir=directory, metadata=manifest["simulation"],
-                       metrics_profile=metrics_profile, baseline=baseline,
+        run_simulation(net_file=net_file, demand_file=demand_file, gui=gui, end=end,
+                       recording_dir=directory, metadata=execution["simulation"],
+                       metrics_profile=metrics_profile, sumo_defaults=configuration["sumo_defaults"],
                        signal_profile=signal_profile, **signal_options)
-        simulation = manifest["simulation"]
+        simulation = execution["simulation"]
         metrics["simulation_execution_time_seconds"] = simulation["duration_seconds"]
         metrics["simulation_seed"] = simulation["seed"]
         metrics["simulation_step_length_seconds"] = simulation["step_length"]
         metrics["sumo_configuration_time_seconds"] = simulation["configuration_time_seconds"]
-        print(f"Episódio {episode}/{episodes}: consolidando métricas.", flush=True)
         # Importação local mantém o executor simples utilizável sem pós-processamento.
         from ..metrics.episode_metrics_collector import collect_episode
         aggregation_started = perf_counter()
-        collected = collect_episode(directory / "raw", snapshot, profile=metrics_profile)
+        collected = collect_episode(directory / "raw", net_file, profile=metrics_profile)
         metrics.update(collected["metrics"])
         entities = collected["entities"]
         metrics["aggregation_time_seconds"] = perf_counter() - aggregation_started
@@ -315,26 +326,46 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
     finally:
         # Resultados e diagnósticos são preservados também em uma falha parcial.
         persistence_started = perf_counter()
-        save_entities(directory, entities)
+        if metrics_profile == "full":
+            save_entities(directory, entities)
         metrics["entity_persistence_time_seconds"] = perf_counter() - persistence_started
-        inventory_started = perf_counter()
-        manifest["files"] = {
-            str(path.relative_to(directory)): file_info(path)
-            for path in sorted(directory.rglob("*"))
-            if path.is_file() and path.name not in {"metrics.json", "manifest.json"}
-        }
-        metrics["file_inventory_time_seconds"] = perf_counter() - inventory_started
-        manifest["collection"]["native_outputs"] = sorted(
+        execution["collection"]["native_outputs"] = sorted(
             path.name for path in (directory / "raw").glob("*") if path.is_file())
-        manifest["collection"]["entity_counts"] = {
+        execution["collection"]["entity_counts"] = {
             scope: len(values) for scope, values in entities.items()}
+        execution["timings_seconds"].update({
+            name: value for name, value in metrics.items()
+            if name.endswith("_time_seconds") or name.startswith("collection_")
+        })
+        if metrics_profile == "core":
+            for name in execution["timings_seconds"]:
+                metrics.pop(name, None)
         metrics["finished_at_utc"] = _utc_now()
         metrics["execution_time_seconds"] = perf_counter() - started
-        manifest.update({name: metrics[name] for name in (
+        execution.update({name: metrics[name] for name in (
             "status", "finished_at_utc", "execution_time_seconds")})
-        # A duração inclui a exportação volumosa. Só estes dois JSONs pequenos
-        # ficam fora da medida, pois precisam conter o próprio tempo final.
-        save_episode(directory, metrics, manifest)
+        temporary_sources = []
+        if metrics_profile == "core" and metrics["status"] == "completed":
+            for name in ("summary.xml.gz", "trips.xml.gz", "statistics.xml", "queues.xml.gz"):
+                path = directory / "raw" / name
+                if path.is_file():
+                    temporary_sources.append(path)
+        execution["collection"]["retention"] = (
+            "aggregates" if metrics_profile == "core" and metrics["status"] == "completed"
+            else "raw_and_aggregates")
+        # A medida vai do início do episódio até a publicação final; exclui apenas
+        # escrita de metrics.json e remoção de entradas/observações temporárias.
+        save_episode(directory, metrics, execution, include_entities=metrics_profile == "full")
+        # Dados consolidados não dependem das entradas geradas. Falhas anteriores
+        # preservam esses arquivos; full conserva somente suas observações úteis.
+        if metrics["status"] == "completed":
+            shutil.rmtree(inputs)
+        for path in temporary_sources:
+            path.unlink()
+        if temporary_sources:
+            raw = directory / "raw"
+            if raw.is_dir() and not any(raw.iterdir()):
+                raw.rmdir()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -372,7 +403,6 @@ def main(argv: list[str] | None = None) -> int:
         print("Execução interrompida pelo usuário.", file=sys.stderr)
         return 130
 
-    print(f"Execução concluída: {args.episodes} episódio(s).")
     return 0
 
 

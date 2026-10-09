@@ -2,6 +2,8 @@
 
 Uso: python3 scripts/audit_settran.py [--check]. A fonte tem layout e hash
 conhecidos: uma revisão do XLSX exige nova auditoria antes de alterar este leitor.
+Conserva os dados originais da planilha ao gerar o JSON usado pelo conversor.
+Com --check, compara o arquivo existente com a fonte sem regravá-lo.
 """
 
 import argparse
@@ -15,7 +17,7 @@ from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "RondonNorte.xlsx"
-OUTPUT = ROOT / "docs" / "settran" / "settran_programs.json"
+OUTPUT = ROOT / "docs" / "settran_programs.json"
 SOURCE_SHA256 = "5d6014fb9978e55513beda8db8793dbec67c94b5555ea7989a7862cf56882d2a"
 NS = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 # Cabeçalho, primeira linha de plano, primeira descrição de estágio, quantidade.

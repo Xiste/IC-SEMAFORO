@@ -1,10 +1,11 @@
 """Normaliza métricas e grava os resultados de um episódio.
 
 Entrada: dicionários de valores escalares, entidades e contexto da execução.
-Saída: JSON tipado e manifesto de arquivos; usado pelo runner após a coleta.
+Saída: JSON tipado com o contexto da execução; usado pelo runner após a coleta.
+metrics.json reúne indicadores e dados da execução; full também grava entidades.
+A gravação é atômica para evitar arquivos parcialmente escritos em uma interrupção.
 """
 
-import hashlib
 import gzip
 import json
 import math
@@ -31,15 +32,6 @@ def write_json(path: Path, contents: dict) -> None:
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
-
-
-def file_info(path: Path) -> dict:
-    """Identifica o conteúdo de uma entrada ou saída sem carregá-lo todo na RAM."""
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return {"bytes": path.stat().st_size, "sha256": digest.hexdigest()}
 
 
 def metric_records(values: dict) -> list[dict]:
@@ -69,14 +61,14 @@ def save_entities(directory: Path, entities: dict) -> None:
     })
 
 
-def save_episode(directory: Path, metrics: dict, manifest: dict) -> None:
-    """Publica o resumo v2, preservando os nomes, tipos e valores do contrato v1."""
+def save_episode(directory: Path, metrics: dict, execution: dict, *, include_entities: bool = True) -> None:
+    """Publica métricas e contexto juntos, sem arquivar as entradas da execução."""
     records = [{**record, **describe_metric(record["metric_name"])}
                for record in metric_records(metrics)]
     records.sort(key=presentation_sort_key)
     write_json(directory / "metrics.json", {
-        "schema_version": 2,
+        "schema_version": 3,
         "metrics": records,
-        "entity_metrics_file": "entities.json.gz",
+        "execution": execution,
+        "entity_metrics_file": "entities.json.gz" if include_entities else None,
     })
-    write_json(directory / "manifest.json", manifest)

@@ -3,6 +3,8 @@
 Uso: python3 scripts/correct_signal_infrastructure.py [--check].
 Aproximações, faixas, retenções e conflitos são recalculados pelo netconvert 1.27.1.
 Somente o delta local é incorporado. Nenhum plano SETTRAN é criado aqui.
+Ajusta vínculos físicos de sinais e travessias com base nas evidências disponíveis.
+Com --check, verifica a rede existente sem aplicar alterações ao arquivo.
 """
 
 import argparse

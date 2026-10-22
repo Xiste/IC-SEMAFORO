@@ -38,7 +38,7 @@ _CONTEXT = {
     "demand_first_departure_seconds": ("Primeira partida planejada", "Menor instante de partida entre os veículos das rotas geradas.", "s"),
     "demand_last_departure_seconds": ("Última partida planejada", "Maior instante de partida entre os veículos das rotas geradas.", "s"),
     "demand_departure_mean_seconds": ("Instante médio das partidas planejadas", "Média dos instantes de partida dos veículos das rotas geradas.", "s"),
-    "vehicles_requested": ("Veículos solicitados ao gerador", "Quantidade prevista de solicitações pela duração e pelo intervalo de geração.", "veículos"),
+    "vehicles_requested": ("Veículos solicitados ao gerador", "Quantidade de solicitações: duração/período em random; realização da curva de intensidade em MetaSettran.", "veículos"),
     "vehicles_generated": ("Veículos com rotas geradas", "Quantidade de veículos presentes no arquivo de rotas validado.", "veículos"),
     "trips_generated": ("Viagens geradas e validadas", "Quantidade de viagens origem-destino presente no arquivo validado pelo gerador.", "viagens"),
     "simulation_begin_seconds": ("Início do tempo simulado", "Instante inicial da janela simulada, em segundos da simulação.", "s"),
@@ -51,6 +51,13 @@ _CONTEXT = {
 }
 
 _DIRECT = {
+    "vehicles_completed_without_teleport": ("Conclusões naturais verificadas", "Viagens MetaSettran com chegada ao destino, sem remoção excepcional e sem evento de teleporte identificado no log completo.", "veículos", 1),
+    "vehicles_completed_after_teleport": ("Chegadas após teleporte", "Viagens MetaSettran com chegada registrada após ao menos um teleporte; não são conclusões naturais.", "veículos", 3),
+    "vehicles_with_teleport": ("Veículos que sofreram teleporte", "IDs distintos da demanda MetaSettran envolvidos em eventos de teleporte; podem ter chegado ou permanecido incompletos.", "veículos", 3),
+    "vehicles_not_inserted": ("Veículos não inseridos", "Viagens MetaSettran programadas na janela da demanda que não iniciaram circulação até o horizonte final.", "veículos", 3),
+    "vehicles_incomplete_at_end": ("Veículos com viagem incompleta", "Viagens MetaSettran iniciadas, sem chegada e sem remoção excepcional até o encerramento; podem incluir veículos com teleporte.", "veículos", 3),
+    "vehicles_removed_without_completion": ("Remoções sem conclusão", "Viagens MetaSettran iniciadas e removidas excepcionalmente, sem conclusão natural.", "veículos", 3),
+    "vehicles_inserted_after_demand_window": ("Inserções após a janela de partidas", "Viagens MetaSettran cuja inserção efetiva ocorreu após o fim da janela programada devido ao atraso de inserção.", "veículos", 3),
     "completed_throughput_vehicles_per_hour": ("Vazão de viagens concluídas", "Veículos que chegaram ao destino por hora, calculados sobre toda a duração simulada observada.", "veículos/h", 1),
     "vehicles_completed": ("Veículos que chegaram ao destino", "Total acumulado de chegadas ao destino registrado no resumo do SUMO.", "veículos", 1),
     "cumulative_insertion_delay_mean_seconds": ("Atraso médio para entrar na rede", "Última média acumulada da espera antes da inserção na rede; não é espera no trânsito.", "s", 1),

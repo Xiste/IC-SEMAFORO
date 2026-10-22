@@ -16,7 +16,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "RondonNorte.xlsx"
+SOURCE = ROOT / "docs" / "RondonNorte.xlsx"
 OUTPUT = ROOT / "docs" / "settran_programs.json"
 SOURCE_SHA256 = "5d6014fb9978e55513beda8db8793dbec67c94b5555ea7989a7862cf56882d2a"
 NS = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
@@ -230,7 +230,7 @@ def normalize_source(path=SOURCE):
         "status": "partial_external_data",
         "representation": "normalized_source_with_optional_operational_supplements",
         "source": {
-            "path": "RondonNorte.xlsx",
+            "path": "docs/RondonNorte.xlsx",
             "sha256": SOURCE_SHA256,
             "sheet": "Plan1",
             "range": "A1:S158",

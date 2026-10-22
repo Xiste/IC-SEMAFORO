@@ -10,7 +10,8 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 
-def prepare_outputs(directory: Path, profile: str = "core") -> list[str]:
+def prepare_outputs(directory: Path, profile: str = "core", *,
+                    demand_observation_edges: tuple[str, ...] = ()) -> list[str]:
     """Core observa resultados globais; full também preserva detalhes individuais.
 
     Ambos observam a dinâmica existente. Nenhum perfil muda passos, sementes,
@@ -21,10 +22,11 @@ def prepare_outputs(directory: Path, profile: str = "core") -> list[str]:
     raw = directory / "raw"
     raw.mkdir(exist_ok=True)
     options = ["--precision", "8"]
-    if profile == "full":
+    if profile == "full" or demand_observation_edges:
         configuration = directory / "inputs" / "observations.add.xml"
         additional = ET.Element("additional")
-        for tag, filename in (("edgeData", "edges"), ("laneData", "lanes")):
+        for tag, filename in ((("edgeData", "edges"), ("laneData", "lanes"))
+                              if profile == "full" else ()):
             ET.SubElement(additional, tag, {
                 "id": f"observations_{filename}", "period": "1",
                 "file": str(raw / f"{filename}.xml.gz"), "excludeEmpty": "true",
@@ -32,9 +34,16 @@ def prepare_outputs(directory: Path, profile: str = "core") -> list[str]:
             })
         # Duas fases podem ter o mesmo estado de luzes. Observar cada passo
         # preserva essas transições, que SaveTLSSwitchStates não registra.
-        ET.SubElement(additional, "timedEvent", {
-            "type": "SaveTLSStates", "dest": str(raw / "tls.xml.gz"),
-        })
+        if profile == "full":
+            ET.SubElement(additional, "timedEvent", {
+                "type": "SaveTLSStates", "dest": str(raw / "tls.xml.gz"),
+            })
+        if demand_observation_edges:
+            ET.SubElement(additional, "edgeData", {
+                "id": "metasettran_counts", "period": "900", "begin": "0",
+                "edges": " ".join(sorted(set(demand_observation_edges))),
+                "file": str(raw / "metasettran_counts.xml.gz"), "excludeEmpty": "false",
+            })
         ET.indent(additional)
         ET.ElementTree(additional).write(configuration, encoding="utf-8", xml_declaration=True)
         options.extend(["--additional-files", str(configuration)])
@@ -45,6 +54,10 @@ def prepare_outputs(directory: Path, profile: str = "core") -> list[str]:
         "statistic-output": "statistics.xml",
         "queue-output": "queues.xml.gz",
     }
+    if demand_observation_edges:
+        # A trajetória por edge permite medir o tempo até os sensores sem
+        # FCD por timestep. O core agrega e remove este XML como os demais.
+        files["vehroute-output"] = "vehicle_routes.xml.gz"
     if profile == "full":
         files.update({
             "lanechange-output": "lanechanges.xml.gz",
@@ -61,6 +74,11 @@ def prepare_outputs(directory: Path, profile: str = "core") -> list[str]:
         flags.extend(["vehroute-output.exit-times", "vehroute-output.write-unfinished",
                       "vehroute-output.route-length", "fcd-output.acceleration", "fcd-output.signals",
                       "fcd-output.distance", "fcd-output.speed-relative"])
+    if demand_observation_edges:
+        for flag in ("vehroute-output.exit-times", "vehroute-output.write-unfinished",
+                     "vehroute-output.internal"):
+            if flag not in flags:
+                flags.append(flag)
     for option in flags:
         options.extend([f"--{option}", "true"])
     if profile == "full":

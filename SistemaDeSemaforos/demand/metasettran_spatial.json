@@ -1,0 +1,5149 @@
+{
+  "schema_version": 4,
+  "version": "boundary-regional-integrated-v4.2",
+  "status": "experimental_integrated_OD_not_empirically_calibrated",
+  "network_sha256": "f30b0807fa46e3d4fb65c573be68f6544d75a64e44a2c32fee71389fd4106d56",
+  "vehicle_class": "passenger",
+  "count_column": "car",
+  "scope": "População regional única entre portais cartograficamente qualificados. Percursos determinam incidências sobre observações possivelmente compartilhadas. Extremos internos e classes distintas de passenger permanecem excluídos.",
+  "sensor_mapping_status": "unconfirmed",
+  "experimental_assumption": {
+    "status": "sensor_mapping_authorized_hypothesis_not_empirically_confirmed",
+    "decision": "Sensor 6 é associado provisoriamente à Rondon rumo centro e 5 à transversal Niterói. A incidência de cada percurso é calculada sobre esses edges, sem presumir populações independentes.",
+    "volume_policy": "A escala regional de referência é hipótese herdada apenas para comparação controlada. Sensores restringem incidências; VMD externos informam participação relativa, nunca orçamentos somados nem divisão por cobertura."
+  },
+  "sources": {
+    "counts": "docs/Medicoes_5_6.csv",
+    "physical_network": "SistemaDeSemaforos/network/uberlandia.vehicular.families.16_2_4.net.xml",
+    "intersection": "docs/settran_programs.json: Av. Rondon Pacheco x Rua Niterói; Plan1!A110, B122:B124",
+    "geographic_cross_check_date": "2026-10-17",
+    "geographic_cross_check": "Auditoria dos 44 acessos de entrada e 37 de saída contra nós/vias OSM versionados. Inclui recortes irregulares no sudeste; a envoltória retangular não define o perímetro de circulação.",
+    "method_references": [
+      "https://sumo.dlr.de/docs/Tools/Trip.html#edge-probabilities",
+      "https://sumo.dlr.de/docs/Tools/Turns.html#quality-control",
+      "https://www.fhwa.dot.gov/publications/research/operations/22055/22055.pdf",
+      "https://ops.fhwa.dot.gov/trafficanalysistools/tat_vol3/sect6.htm"
+    ],
+    "regional_counts": {
+      "joao_naves": {
+        "url": "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2025/07/Avenida-Joao-Naves-de-Avila-com-Avenida-Segismundo-Pereira_SBC_ET_2025.pdf",
+        "document_page": 1,
+        "vmd": 13415,
+        "monitored_lanes": 3,
+        "direction": "bairro-centro",
+        "scope": "Todas as classes na pista fiscalizada, não portal desta rede. Data/amostra da contagem e composição não informadas; transferência ao recorte é estimativa."
+      },
+      "monsenhor": {
+        "url": "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2025/07/Avenida-Monsenhor-Eduardo-com-Avenida-Marciano-de-Avila_SBC_ET_2025.pdf",
+        "document_page": 1,
+        "vmd": 9929,
+        "monitored_lanes": 3,
+        "direction": "bairro-centro",
+        "scope": "Todas as classes na pista fiscalizada, não portal desta rede. Data/amostra da contagem e composição não informadas; transferência ao recorte é estimativa."
+      },
+      "afonso": {
+        "url": "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2025/07/Avenida-Afonso-Pena-com-Rua-Prata_SCB_ET_2025.pdf",
+        "document_page": 1,
+        "vmd": 10084,
+        "monitored_lanes": 2,
+        "direction": "centro-bairro",
+        "scope": "Todas as classes na pista fiscalizada, não portal desta rede. Data/amostra da contagem e composição não informadas; transferência ao recorte é estimativa."
+      },
+      "segismundo": {
+        "url": "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2025/07/Avenida-Segismundo-Pereira-com-Rua-Joao-Balbino_SCB_ET_2025.pdf",
+        "document_page": 1,
+        "vmd": 18626,
+        "monitored_lanes": 2,
+        "direction": "centro-bairro",
+        "scope": "Todas as classes na pista fiscalizada, não portal desta rede. Data/amostra da contagem e composição não informadas; transferência ao recorte é estimativa."
+      }
+    },
+    "historical_turns": {
+      "url": "https://repositorio.ufu.br/handle/123456789/14111",
+      "pdf_url": "https://repositorio.ufu.br/bitstream/123456789/14111/1/ShoppingCenterImpactos.pdf",
+      "printed_pages": "230-233",
+      "pdf_pages": "250-253",
+      "car_counts_15_18_2002": {
+        "joao_naves_bairro": 3421,
+        "joao_naves_centro": 3530,
+        "rondon_br050": 1353,
+        "rondon_rio": 2962
+      },
+      "use": "Referência histórica descritiva; não convertida em preferência por destino nem aplicada como restrição de movimento."
+    }
+  },
+  "portals": {
+    "entries": [
+      {
+        "edge": "-647043774#1",
+        "role": "entry",
+        "name": "Rua Nordau Gonçalves de Melo",
+        "boundary_group": "node_338955633",
+        "corridor": "rua_nordau_goncalves_de_melo",
+        "boundary_node": "338955633",
+        "boundary_longitude_latitude": [
+          -48.246408663,
+          -18.911446521
+        ],
+        "boundary_xy_m": [
+          4911.42,
+          2240.92
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 11.11,
+        "edge_length_m": 199.68,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/647043774/3",
+          "https://api.openstreetmap.org/api/0.6/way/30649165/14"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+      },
+      {
+        "edge": "-659117933#east",
+        "role": "entry",
+        "name": "Avenida Belarmino Cotta Pacheco",
+        "boundary_group": "node_2042693128",
+        "corridor": "avenida_belarmino_cotta_pacheco",
+        "boundary_node": "2042693128",
+        "boundary_longitude_latitude": [
+          -48.251280252,
+          -18.91587032
+        ],
+        "boundary_xy_m": [
+          4390.32,
+          1758.99
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 69.95,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/659117933/5",
+          "https://api.openstreetmap.org/api/0.6/way/261422562/11"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.tertiary",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "1171563461",
+        "role": "entry",
+        "name": "Avenida Governador Rondon Pacheco",
+        "boundary_group": "rondon_sudoeste",
+        "corridor": "avenida_governador_rondon_pacheco",
+        "boundary_node": "2550747353",
+        "boundary_longitude_latitude": [
+          -48.265409829,
+          -18.917562819
+        ],
+        "boundary_xy_m": [
+          2898.18,
+          1594.67
+        ],
+        "road_type": "highway.primary",
+        "passenger_lanes": 4,
+        "speed_limit_m_s": 16.67,
+        "edge_length_m": 511.76,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/1171563461/1",
+          "https://api.openstreetmap.org/api/0.6/way/30665281/15",
+          "https://api.openstreetmap.org/api/0.6/way/248261383/10",
+          "https://api.openstreetmap.org/api/0.6/way/617806431/8"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "142719720#0",
+        "role": "entry",
+        "name": "Rua Rio de Janeiro",
+        "boundary_group": "node_1561878952",
+        "corridor": "rua_rio_de_janeiro",
+        "boundary_node": "1561878952",
+        "boundary_longitude_latitude": [
+          -48.269929319,
+          -18.890045684
+        ],
+        "boundary_xy_m": [
+          2468.92,
+          4649.47
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 307.87,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/142719720/5",
+          "https://api.openstreetmap.org/api/0.6/way/135718476/22"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "152937004#0",
+        "role": "entry",
+        "name": "Avenida Floriano Peixoto",
+        "boundary_group": "node_1561879188",
+        "corridor": "avenida_floriano_peixoto",
+        "boundary_node": "1561879188",
+        "boundary_longitude_latitude": [
+          -48.256342052,
+          -18.891998078
+        ],
+        "boundary_xy_m": [
+          3897.86,
+          4411.08
+        ],
+        "road_type": "highway.tertiary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 22.22,
+        "edge_length_m": 86.38,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/152937004/20",
+          "https://api.openstreetmap.org/api/0.6/way/30621942/9",
+          "https://api.openstreetmap.org/api/0.6/way/665842422/1",
+          "https://api.openstreetmap.org/api/0.6/way/665842423/4"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "152937010#0",
+        "role": "entry",
+        "name": "Rua Ciganos do Brasil",
+        "boundary_group": "node_3368458611",
+        "corridor": "rua_ciganos_do_brasil",
+        "boundary_node": "3368458611",
+        "boundary_longitude_latitude": [
+          -48.255615842,
+          -18.891173427
+        ],
+        "boundary_xy_m": [
+          3975.83,
+          4501.22
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 131.66,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/152937010/20",
+          "https://api.openstreetmap.org/api/0.6/way/152937003/11",
+          "https://api.openstreetmap.org/api/0.6/way/329902765/11"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "152937136#0",
+        "role": "entry",
+        "name": "Avenida Governador Rondon Pacheco",
+        "boundary_group": "rondon_nordeste",
+        "corridor": "avenida_governador_rondon_pacheco",
+        "boundary_node": "258368105",
+        "boundary_longitude_latitude": [
+          -48.252685407,
+          -18.894683412
+        ],
+        "boundary_xy_m": [
+          4278.7,
+          4107.7
+        ],
+        "road_type": "highway.primary",
+        "passenger_lanes": 3,
+        "speed_limit_m_s": 27.78,
+        "edge_length_m": 12.56,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/152937136/31",
+          "https://api.openstreetmap.org/api/0.6/way/46711472/10",
+          "https://api.openstreetmap.org/api/0.6/way/329905685/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "154562663#north",
+        "role": "entry",
+        "name": "Rua Maria das Dores Dias",
+        "boundary_group": "node_6051154708",
+        "corridor": "rua_maria_das_dores_dias",
+        "boundary_node": "6051154708",
+        "boundary_longitude_latitude": [
+          -48.252760676,
+          -18.918316666
+        ],
+        "boundary_xy_m": [
+          4230.07,
+          1490.49
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 82.93,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/154562663/19",
+          "https://api.openstreetmap.org/api/0.6/way/642884962/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "248261375#0",
+        "role": "entry",
+        "name": "Rio Branco",
+        "boundary_group": "node_2042692980",
+        "corridor": "rio_branco",
+        "boundary_node": "2042692980",
+        "boundary_longitude_latitude": [
+          -48.266442398,
+          -18.914792044
+        ],
+        "boundary_xy_m": [
+          2794.1,
+          1903.21
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 83.55,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/248261375/5",
+          "https://api.openstreetmap.org/api/0.6/way/248261379/2",
+          "https://api.openstreetmap.org/api/0.6/way/330067166/2",
+          "https://api.openstreetmap.org/api/0.6/way/352885252/2"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "248261379#0",
+        "role": "entry",
+        "name": "Rua Geraldo Morais",
+        "boundary_group": "node_2042692980",
+        "corridor": "rua_geraldo_morais",
+        "boundary_node": "2042692980",
+        "boundary_longitude_latitude": [
+          -48.266442398,
+          -18.914792044
+        ],
+        "boundary_xy_m": [
+          2794.1,
+          1903.21
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 32.42,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/248261379/2",
+          "https://api.openstreetmap.org/api/0.6/way/248261375/5",
+          "https://api.openstreetmap.org/api/0.6/way/330067166/2",
+          "https://api.openstreetmap.org/api/0.6/way/352885252/2"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "261301884#0",
+        "role": "entry",
+        "name": "Avenida Brasil",
+        "boundary_group": "node_2669335033",
+        "corridor": "avenida_brasil",
+        "boundary_node": "2669335033",
+        "boundary_longitude_latitude": [
+          -48.274745558,
+          -18.910291529
+        ],
+        "boundary_xy_m": [
+          1926.65,
+          2415.15
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 95.68,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/261301884/13",
+          "https://api.openstreetmap.org/api/0.6/way/260502472/10",
+          "https://api.openstreetmap.org/api/0.6/way/261301883/8"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "261533405#0",
+        "role": "entry",
+        "name": "Avenida Monsenhor Eduardo",
+        "boundary_group": "monsenhor_roosevelt",
+        "corridor": "avenida_monsenhor_eduardo",
+        "boundary_node": "1727920451",
+        "boundary_longitude_latitude": [
+          -48.27534601,
+          -18.909859336
+        ],
+        "boundary_xy_m": [
+          1864.1,
+          2463.99
+        ],
+        "road_type": "highway.tertiary",
+        "passenger_lanes": 2,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 193.31,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/261533405/10",
+          "https://api.openstreetmap.org/api/0.6/way/260502472/10",
+          "https://api.openstreetmap.org/api/0.6/way/661885006/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "261533408",
+        "role": "entry",
+        "name": "Acesso 261533408",
+        "boundary_group": "node_2671364996",
+        "corridor": "acesso_261533408",
+        "boundary_node": "2671364996",
+        "boundary_longitude_latitude": [
+          -48.27143052,
+          -18.896208344
+        ],
+        "boundary_xy_m": [
+          2300.14,
+          3969.42
+        ],
+        "road_type": "highway.primary_link",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 22.22,
+        "edge_length_m": 149.29,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/261533408/7",
+          "https://api.openstreetmap.org/api/0.6/way/353049386/11"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "269160814#west",
+        "role": "entry",
+        "name": "Praça das Nações",
+        "boundary_group": "australia_praca_nacoes",
+        "corridor": "praca_das_nacoes",
+        "boundary_node": "1671075991",
+        "boundary_longitude_latitude": [
+          -48.247791667,
+          -18.904356675
+        ],
+        "boundary_xy_m": [
+          4777.88,
+          3028.38
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 83.06,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/269160814/7",
+          "https://api.openstreetmap.org/api/0.6/way/154568296/8"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+      },
+      {
+        "edge": "30620737#0",
+        "role": "entry",
+        "name": "Avenida Maranhão",
+        "boundary_group": "node_338642811",
+        "corridor": "avenida_maranhao",
+        "boundary_node": "338642811",
+        "boundary_longitude_latitude": [
+          -48.262563858,
+          -18.886805029
+        ],
+        "boundary_xy_m": [
+          3250.9,
+          4996.36
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 180.85,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30620737/14",
+          "https://api.openstreetmap.org/api/0.6/way/261302821/8"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30620978#0",
+        "role": "entry",
+        "name": "Rua Alagoas",
+        "boundary_group": "node_338648516",
+        "corridor": "rua_alagoas",
+        "boundary_node": "338648516",
+        "boundary_longitude_latitude": [
+          -48.270850618,
+          -18.885377443
+        ],
+        "boundary_xy_m": [
+          2379.78,
+          5167.96
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 684.38,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30620978/8",
+          "https://api.openstreetmap.org/api/0.6/way/661885010/5",
+          "https://api.openstreetmap.org/api/0.6/way/852650711/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30621187",
+        "role": "entry",
+        "name": "Avenida João Naves de Ávila",
+        "boundary_group": "joao_naves_leste",
+        "corridor": "avenida_joao_naves_de_avila",
+        "boundary_node": "338653822",
+        "boundary_longitude_latitude": [
+          -48.258656002,
+          -18.915454179
+        ],
+        "boundary_xy_m": [
+          3613.64,
+          1817.16
+        ],
+        "road_type": "highway.primary",
+        "passenger_lanes": 2,
+        "speed_limit_m_s": 16.67,
+        "edge_length_m": 154.54,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30621187/28",
+          "https://api.openstreetmap.org/api/0.6/way/858135499/5",
+          "https://api.openstreetmap.org/api/0.6/way/1548118843/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30621472#0",
+        "role": "entry",
+        "name": "Praça Senador Camilo Chaves",
+        "boundary_group": "camilo_chaves",
+        "corridor": "praca_senador_camilo_chaves",
+        "boundary_node": "1665088769",
+        "boundary_longitude_latitude": [
+          -48.250729569,
+          -18.901632298
+        ],
+        "boundary_xy_m": [
+          4472.9,
+          3334.92
+        ],
+        "road_type": "highway.secondary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 27.78,
+        "edge_length_m": 142.3,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30621472/11",
+          "https://api.openstreetmap.org/api/0.6/way/602306725/1",
+          "https://api.openstreetmap.org/api/0.6/way/665897529/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30621478#east",
+        "role": "entry",
+        "name": "Avenida Benjamin Magalhães",
+        "boundary_group": "benjamin_viena",
+        "corridor": "avenida_benjamin_magalhaes",
+        "boundary_node": "1561880196",
+        "boundary_longitude_latitude": [
+          -48.249288357,
+          -18.903631033
+        ],
+        "boundary_xy_m": [
+          4621.37,
+          3111.2
+        ],
+        "road_type": "",
+        "passenger_lanes": 2,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 73.59,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30621478/25",
+          "https://api.openstreetmap.org/api/0.6/way/30648048/10"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.secondary",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "30621940#0",
+        "role": "entry",
+        "name": "Rua José Rezende dos Santos",
+        "boundary_group": "node_338663797",
+        "corridor": "rua_jose_rezende_dos_santos",
+        "boundary_node": "338663797",
+        "boundary_longitude_latitude": [
+          -48.266903845,
+          -18.885954217
+        ],
+        "boundary_xy_m": [
+          2794.85,
+          5097.66
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 309.95,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30621940/16",
+          "https://api.openstreetmap.org/api/0.6/way/135718476/22",
+          "https://api.openstreetmap.org/api/0.6/way/261302822/5",
+          "https://api.openstreetmap.org/api/0.6/way/1124782067/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30621947#0",
+        "role": "entry",
+        "name": "Rua Bahia",
+        "boundary_group": "node_1490094414",
+        "corridor": "rua_bahia",
+        "boundary_node": "1490094414",
+        "boundary_longitude_latitude": [
+          -48.268914084,
+          -18.888665844
+        ],
+        "boundary_xy_m": [
+          2578.3,
+          4800.63
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 310.9,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30621947/8",
+          "https://api.openstreetmap.org/api/0.6/way/135718476/22"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30621954#0",
+        "role": "entry",
+        "name": "Avenida Professor José Inácio de Souza",
+        "boundary_group": "node_338664040",
+        "corridor": "avenida_professor_jose_inacio_de_souza",
+        "boundary_node": "338664040",
+        "boundary_longitude_latitude": [
+          -48.260846199,
+          -18.887988415
+        ],
+        "boundary_xy_m": [
+          3429.94,
+          4862.5
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 184.49,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30621954/16",
+          "https://api.openstreetmap.org/api/0.6/way/261302821/8"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30628244#0",
+        "role": "entry",
+        "name": "Rua Belém",
+        "boundary_group": "node_338757795",
+        "corridor": "rua_belem",
+        "boundary_node": "338757795",
+        "boundary_longitude_latitude": [
+          -48.271424628,
+          -18.897185986
+        ],
+        "boundary_xy_m": [
+          2299.09,
+          3861.14
+        ],
+        "road_type": "highway.tertiary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 22.22,
+        "edge_length_m": 60.49,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30628244/11",
+          "https://api.openstreetmap.org/api/0.6/way/353049386/11"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30664522#0",
+        "role": "entry",
+        "name": "Rua Paraná",
+        "boundary_group": "node_1490094446",
+        "corridor": "rua_parana",
+        "boundary_node": "1490094446",
+        "boundary_longitude_latitude": [
+          -48.270931818,
+          -18.891410434
+        ],
+        "boundary_xy_m": [
+          2360.91,
+          4499.96
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 308.23,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30664522/17",
+          "https://api.openstreetmap.org/api/0.6/way/135718476/22"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30664642#0",
+        "role": "entry",
+        "name": "Rua Benjamim Constant",
+        "boundary_group": "node_339115480",
+        "corridor": "rua_benjamim_constant",
+        "boundary_node": "339115480",
+        "boundary_longitude_latitude": [
+          -48.27230712,
+          -18.916047315
+        ],
+        "boundary_xy_m": [
+          2173.82,
+          1773.75
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 384.38,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30664642/19",
+          "https://api.openstreetmap.org/api/0.6/way/602306713/4",
+          "https://api.openstreetmap.org/api/0.6/way/1300902454/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30665257#0",
+        "role": "entry",
+        "name": "Rua Jerônimo Martins do Nacimento",
+        "boundary_group": "node_339121028",
+        "corridor": "rua_jeronimo_martins_do_nacimento",
+        "boundary_node": "339121028",
+        "boundary_longitude_latitude": [
+          -48.274985505,
+          -18.900934736
+        ],
+        "boundary_xy_m": [
+          1917.34,
+          3451.77
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 371.95,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30665257/13",
+          "https://api.openstreetmap.org/api/0.6/way/353049386/11"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30665265#0",
+        "role": "entry",
+        "name": "Rua Tupaciguara",
+        "boundary_group": "node_339121259",
+        "corridor": "rua_tupaciguara",
+        "boundary_node": "339121259",
+        "boundary_longitude_latitude": [
+          -48.2752354,
+          -18.906854903
+        ],
+        "boundary_xy_m": [
+          1880.89,
+          2796.54
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 96.98,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30665265/8",
+          "https://api.openstreetmap.org/api/0.6/way/30620736/16"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "307156125#0",
+        "role": "entry",
+        "name": "Avenida Monsenhor Eduardo",
+        "boundary_group": "node_3122205657",
+        "corridor": "avenida_monsenhor_eduardo",
+        "boundary_node": "3122205657",
+        "boundary_longitude_latitude": [
+          -48.271289955,
+          -18.89562161
+        ],
+        "boundary_xy_m": [
+          2315.96,
+          4034.17
+        ],
+        "road_type": "highway.tertiary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 22.22,
+        "edge_length_m": 131.87,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/307156125/14",
+          "https://api.openstreetmap.org/api/0.6/way/332052777/1",
+          "https://api.openstreetmap.org/api/0.6/way/332052778/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "398537158#east",
+        "role": "entry",
+        "name": "Avenida Segismundo Pereira",
+        "boundary_group": "node_3370282693",
+        "corridor": "avenida_segismundo_pereira",
+        "boundary_node": "3370282693",
+        "boundary_longitude_latitude": [
+          -48.253189761,
+          -18.917356229
+        ],
+        "boundary_xy_m": [
+          4186.5,
+          1597.56
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 16.67,
+        "edge_length_m": 56.3,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/398537158/9"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+      },
+      {
+        "edge": "402968122#0",
+        "role": "entry",
+        "name": "Avenida África",
+        "boundary_group": "node_2744514570",
+        "corridor": "avenida_africa",
+        "boundary_node": "2744514570",
+        "boundary_longitude_latitude": [
+          -48.247903328,
+          -18.905406112
+        ],
+        "boundary_xy_m": [
+          4764.3,
+          2912.34
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 392.19,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/402968122/4",
+          "https://api.openstreetmap.org/api/0.6/way/402968125/4",
+          "https://api.openstreetmap.org/api/0.6/way/402968126/1",
+          "https://api.openstreetmap.org/api/0.6/way/602306745/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "402968127#west",
+        "role": "entry",
+        "name": "Avenida Benjamin Magalhães",
+        "boundary_group": "benjamin_conexao_norte",
+        "corridor": "avenida_benjamin_magalhaes",
+        "boundary_node": "7961952649",
+        "boundary_longitude_latitude": [
+          -48.248394678,
+          -18.904616814
+        ],
+        "boundary_xy_m": [
+          4713.87,
+          3000.56
+        ],
+        "road_type": "",
+        "passenger_lanes": 2,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 37.59,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/402968127/4",
+          "https://api.openstreetmap.org/api/0.6/way/853617388/2"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.secondary",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "402968128#0",
+        "role": "entry",
+        "name": "Rua Holanda",
+        "boundary_group": "holanda_nicaragua",
+        "corridor": "rua_holanda",
+        "boundary_node": "4125318257",
+        "boundary_longitude_latitude": [
+          -48.250364461,
+          -18.90827369
+        ],
+        "boundary_xy_m": [
+          4499.94,
+          2598.8
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 85.38,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/402968128/5",
+          "https://api.openstreetmap.org/api/0.6/way/665897541/2",
+          "https://api.openstreetmap.org/api/0.6/way/665897543/1",
+          "https://api.openstreetmap.org/api/0.6/way/665897595/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "402968133#west",
+        "role": "entry",
+        "name": "Avenida Europa",
+        "boundary_group": "europa_oeste",
+        "corridor": "avenida_europa",
+        "boundary_node": "4125318230",
+        "boundary_longitude_latitude": [
+          -48.24704067,
+          -18.902919244
+        ],
+        "boundary_xy_m": [
+          4859.52,
+          3186.34
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 27.78,
+        "edge_length_m": 220.11,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/402968133/4",
+          "https://api.openstreetmap.org/api/0.6/way/402968116/5"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "421572935",
+        "role": "entry",
+        "name": "Rua Salvador",
+        "boundary_group": "node_338685754",
+        "corridor": "rua_salvador",
+        "boundary_node": "338685754",
+        "boundary_longitude_latitude": [
+          -48.272193734,
+          -18.898700899
+        ],
+        "boundary_xy_m": [
+          2215.43,
+          3694.62
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 220.95,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/421572935/1",
+          "https://api.openstreetmap.org/api/0.6/way/353049386/11"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "602306707",
+        "role": "entry",
+        "name": "Avenida João Naves de Ávila",
+        "boundary_group": "node_2042693231",
+        "corridor": "avenida_joao_naves_de_avila",
+        "boundary_node": "2042693231",
+        "boundary_longitude_latitude": [
+          -48.272577148,
+          -18.916403801
+        ],
+        "boundary_xy_m": [
+          2144.75,
+          1734.71
+        ],
+        "road_type": "highway.secondary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 16.67,
+        "edge_length_m": 607.31,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/602306707/9",
+          "https://api.openstreetmap.org/api/0.6/way/160391623/7",
+          "https://api.openstreetmap.org/api/0.6/way/602306722/4",
+          "https://api.openstreetmap.org/api/0.6/way/1472452247/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "602306713#0",
+        "role": "entry",
+        "name": "Avenida Cesário Alvim",
+        "boundary_group": "node_339115480",
+        "corridor": "avenida_cesario_alvim",
+        "boundary_node": "339115480",
+        "boundary_longitude_latitude": [
+          -48.27230712,
+          -18.916047315
+        ],
+        "boundary_xy_m": [
+          2173.82,
+          1773.75
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 360.41,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/602306713/4",
+          "https://api.openstreetmap.org/api/0.6/way/30664642/19",
+          "https://api.openstreetmap.org/api/0.6/way/1300902454/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "616180216",
+        "role": "entry",
+        "name": "Rua Nordau Gonçalves de Melo",
+        "boundary_group": "node_2963614077",
+        "corridor": "rua_nordau_goncalves_de_melo",
+        "boundary_node": "2963614077",
+        "boundary_longitude_latitude": [
+          -48.247931862,
+          -18.916738086
+        ],
+        "boundary_xy_m": [
+          4741.74,
+          1657.39
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 11.11,
+        "edge_length_m": 191.97,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/616180216/3",
+          "https://api.openstreetmap.org/api/0.6/way/659117933/5",
+          "https://api.openstreetmap.org/api/0.6/way/669181691/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+      },
+      {
+        "edge": "658279138#0",
+        "role": "entry",
+        "name": "Avenida Afonso Pena",
+        "boundary_group": "node_2659975029",
+        "corridor": "avenida_afonso_pena",
+        "boundary_node": "2659975029",
+        "boundary_longitude_latitude": [
+          -48.272796417,
+          -18.911567412
+        ],
+        "boundary_xy_m": [
+          2129.91,
+          2270.68
+        ],
+        "road_type": "highway.tertiary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 22.22,
+        "edge_length_m": 91.46,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/658279138/4",
+          "https://api.openstreetmap.org/api/0.6/way/260502472/10",
+          "https://api.openstreetmap.org/api/0.6/way/658279137/6"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "659117881",
+        "role": "entry",
+        "name": "Avenida Ortízio Borges",
+        "boundary_group": "node_2042693062",
+        "corridor": "avenida_ortizio_borges",
+        "boundary_node": "2042693062",
+        "boundary_longitude_latitude": [
+          -48.246076376,
+          -18.915357762
+        ],
+        "boundary_xy_m": [
+          4939.69,
+          1807.21
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 11.11,
+        "edge_length_m": 140.89,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/659117881/2",
+          "https://api.openstreetmap.org/api/0.6/way/30621469/17",
+          "https://api.openstreetmap.org/api/0.6/way/659117879/2",
+          "https://api.openstreetmap.org/api/0.6/way/659117900/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "659117933#west",
+        "role": "entry",
+        "name": "Avenida Belarmino Cotta Pacheco",
+        "boundary_group": "node_2042693080",
+        "corridor": "avenida_belarmino_cotta_pacheco",
+        "boundary_node": "2042693080",
+        "boundary_longitude_latitude": [
+          -48.252682079,
+          -18.915515542
+        ],
+        "boundary_xy_m": [
+          4243.18,
+          1800.58
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 68.43,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/659117933/5",
+          "https://api.openstreetmap.org/api/0.6/way/30649096/16"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.tertiary",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "665897565#0",
+        "role": "entry",
+        "name": "Avenida João Pinheiro",
+        "boundary_group": "node_1561879004",
+        "corridor": "avenida_joao_pinheiro",
+        "boundary_node": "1561879004",
+        "boundary_longitude_latitude": [
+          -48.258815888,
+          -18.890293699
+        ],
+        "boundary_xy_m": [
+          3640.01,
+          4603.88
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 90.88,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/665897565/1",
+          "https://api.openstreetmap.org/api/0.6/way/665842420/2",
+          "https://api.openstreetmap.org/api/0.6/way/665842421/2",
+          "https://api.openstreetmap.org/api/0.6/way/665842422/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "789705871#0",
+        "role": "entry",
+        "name": "Rua Rio Grande do Sul",
+        "boundary_group": "node_1561879371",
+        "corridor": "rua_rio_grande_do_sul",
+        "boundary_node": "1561879371",
+        "boundary_longitude_latitude": [
+          -48.270412097,
+          -18.893811724
+        ],
+        "boundary_xy_m": [
+          2411.59,
+          4233.18
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 110.88,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/789705871/1",
+          "https://api.openstreetmap.org/api/0.6/way/30621949/14",
+          "https://api.openstreetmap.org/api/0.6/way/30621951/13",
+          "https://api.openstreetmap.org/api/0.6/way/1238773873/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "853676885",
+        "role": "entry",
+        "name": "Avenida Portugal",
+        "boundary_group": "portugal_espanha",
+        "corridor": "avenida_portugal",
+        "boundary_node": "4055449780",
+        "boundary_longitude_latitude": [
+          -48.251666734,
+          -18.894509604
+        ],
+        "boundary_xy_m": [
+          4386.38,
+          4125.28
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 256.59,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/853676885/4",
+          "https://api.openstreetmap.org/api/0.6/way/403166929/6",
+          "https://api.openstreetmap.org/api/0.6/way/403166931/9"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "931172668#west",
+        "role": "entry",
+        "name": "Avenida Segismundo Pereira",
+        "boundary_group": "segismundo_oeste",
+        "corridor": "avenida_segismundo_pereira",
+        "boundary_node": "2042693399",
+        "boundary_longitude_latitude": [
+          -48.251787297,
+          -18.917557588
+        ],
+        "boundary_xy_m": [
+          4333.97,
+          1572.96
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 16.67,
+        "edge_length_m": 60.72,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/931172668/1",
+          "https://api.openstreetmap.org/api/0.6/way/261422562/11"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+      }
+    ],
+    "exits": [
+      {
+        "edge": "-154562663#north",
+        "role": "exit",
+        "name": "Rua Maria das Dores Dias",
+        "boundary_group": "node_6051154708",
+        "corridor": "rua_maria_das_dores_dias",
+        "boundary_node": "6051154708",
+        "boundary_longitude_latitude": [
+          -48.252760676,
+          -18.918316666
+        ],
+        "boundary_xy_m": [
+          4230.07,
+          1490.49
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 83.58,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/154562663/19",
+          "https://api.openstreetmap.org/api/0.6/way/642884962/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "-616180216",
+        "role": "exit",
+        "name": "Rua Nordau Gonçalves de Melo",
+        "boundary_group": "node_2963614077",
+        "corridor": "rua_nordau_goncalves_de_melo",
+        "boundary_node": "2963614077",
+        "boundary_longitude_latitude": [
+          -48.247931862,
+          -18.916738086
+        ],
+        "boundary_xy_m": [
+          4741.74,
+          1657.39
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 11.11,
+        "edge_length_m": 191.97,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/616180216/3",
+          "https://api.openstreetmap.org/api/0.6/way/659117933/5",
+          "https://api.openstreetmap.org/api/0.6/way/669181691/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+      },
+      {
+        "edge": "-659117881",
+        "role": "exit",
+        "name": "Avenida Ortízio Borges",
+        "boundary_group": "node_2042693062",
+        "corridor": "avenida_ortizio_borges",
+        "boundary_node": "2042693062",
+        "boundary_longitude_latitude": [
+          -48.246076376,
+          -18.915357762
+        ],
+        "boundary_xy_m": [
+          4939.69,
+          1807.21
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 11.11,
+        "edge_length_m": 140.84,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/659117881/2",
+          "https://api.openstreetmap.org/api/0.6/way/30621469/17",
+          "https://api.openstreetmap.org/api/0.6/way/659117879/2",
+          "https://api.openstreetmap.org/api/0.6/way/659117900/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "-659117933#west",
+        "role": "exit",
+        "name": "Avenida Belarmino Cotta Pacheco",
+        "boundary_group": "node_2042693080",
+        "corridor": "avenida_belarmino_cotta_pacheco",
+        "boundary_node": "2042693080",
+        "boundary_longitude_latitude": [
+          -48.252682079,
+          -18.915515542
+        ],
+        "boundary_xy_m": [
+          4243.18,
+          1800.58
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 68.43,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/659117933/5",
+          "https://api.openstreetmap.org/api/0.6/way/30649096/16"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.tertiary",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "1156272391#3",
+        "role": "exit",
+        "name": "Avenida Governador Rondon Pacheco",
+        "boundary_group": "rondon_nordeste",
+        "corridor": "avenida_governador_rondon_pacheco",
+        "boundary_node": "597213702",
+        "boundary_longitude_latitude": [
+          -48.251975894,
+          -18.894446095
+        ],
+        "boundary_xy_m": [
+          4353.9,
+          4132.82
+        ],
+        "road_type": "highway.primary",
+        "passenger_lanes": 4,
+        "speed_limit_m_s": 16.67,
+        "edge_length_m": 85.54,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/1156272391/1",
+          "https://api.openstreetmap.org/api/0.6/way/46711532/13"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "1163825151",
+        "role": "exit",
+        "name": "Rua Ipiranga",
+        "boundary_group": "node_2042693090",
+        "corridor": "rua_ipiranga",
+        "boundary_node": "2042693090",
+        "boundary_longitude_latitude": [
+          -48.268624561,
+          -18.915564512
+        ],
+        "boundary_xy_m": [
+          2562.78,
+          1821.22
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 201.6,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/1163825151/3",
+          "https://api.openstreetmap.org/api/0.6/way/30665282/4",
+          "https://api.openstreetmap.org/api/0.6/way/1173860042/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "1171661493#1",
+        "role": "exit",
+        "name": "Avenida João Naves de Ávila",
+        "boundary_group": "node_2651934350",
+        "corridor": "avenida_joao_naves_de_avila",
+        "boundary_node": "2651934350",
+        "boundary_longitude_latitude": [
+          -48.269032938,
+          -18.915061072
+        ],
+        "boundary_xy_m": [
+          2520.6,
+          1877.64
+        ],
+        "road_type": "highway.secondary",
+        "passenger_lanes": 3,
+        "speed_limit_m_s": 16.67,
+        "edge_length_m": 80.91,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/1171661493/3",
+          "https://api.openstreetmap.org/api/0.6/way/708111988/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "152937004#32",
+        "role": "exit",
+        "name": "Avenida Floriano Peixoto",
+        "boundary_group": "node_338663778",
+        "corridor": "avenida_floriano_peixoto",
+        "boundary_node": "338663778",
+        "boundary_longitude_latitude": [
+          -48.274285361,
+          -18.916122434
+        ],
+        "boundary_xy_m": [
+          1965.19,
+          1768.65
+        ],
+        "road_type": "highway.tertiary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 22.22,
+        "edge_length_m": 496.2,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/152937004/20",
+          "https://api.openstreetmap.org/api/0.6/way/188805996/10",
+          "https://api.openstreetmap.org/api/0.6/way/188805997/14",
+          "https://api.openstreetmap.org/api/0.6/way/602306710/5"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "1542864329",
+        "role": "exit",
+        "name": "Avenida Portugal",
+        "boundary_group": "portugal_espanha",
+        "corridor": "avenida_portugal",
+        "boundary_node": "14038997879",
+        "boundary_longitude_latitude": [
+          -48.251589669,
+          -18.894610407
+        ],
+        "boundary_xy_m": [
+          4394.33,
+          4113.99
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 237.52,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/1542864329/1",
+          "https://api.openstreetmap.org/api/0.6/way/403166931/9"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "261301880#6",
+        "role": "exit",
+        "name": "Avenida João Pinheiro",
+        "boundary_group": "node_2669335025",
+        "corridor": "avenida_joao_pinheiro",
+        "boundary_node": "2669335025",
+        "boundary_longitude_latitude": [
+          -48.275422719,
+          -18.912730717
+        ],
+        "boundary_xy_m": [
+          1851.11,
+          2146.12
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 358.0,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/261301880/12",
+          "https://api.openstreetmap.org/api/0.6/way/30621483/17",
+          "https://api.openstreetmap.org/api/0.6/way/659117891/5",
+          "https://api.openstreetmap.org/api/0.6/way/659117893/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "261432318",
+        "role": "exit",
+        "name": "Avenida Governador Rondon Pacheco",
+        "boundary_group": "rondon_sudoeste",
+        "corridor": "avenida_governador_rondon_pacheco",
+        "boundary_node": "2783757282",
+        "boundary_longitude_latitude": [
+          -48.265522411,
+          -18.917477795
+        ],
+        "boundary_xy_m": [
+          2886.46,
+          1604.27
+        ],
+        "road_type": "highway.primary",
+        "passenger_lanes": 4,
+        "speed_limit_m_s": 27.78,
+        "edge_length_m": 522.04,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/261432318/27",
+          "https://api.openstreetmap.org/api/0.6/way/248261383/10",
+          "https://api.openstreetmap.org/api/0.6/way/1171563462/1",
+          "https://api.openstreetmap.org/api/0.6/way/1171563463/4"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "303790003#4",
+        "role": "exit",
+        "name": "Rua Pedro Crosara Cherulli",
+        "boundary_group": "node_2042693110",
+        "corridor": "rua_pedro_crosara_cherulli",
+        "boundary_node": "2042693110",
+        "boundary_longitude_latitude": [
+          -48.265433903,
+          -18.915674998
+        ],
+        "boundary_xy_m": [
+          2898.88,
+          1803.78
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 87.07,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/303790003/3",
+          "https://api.openstreetmap.org/api/0.6/way/30621939/23",
+          "https://api.openstreetmap.org/api/0.6/way/330067166/2",
+          "https://api.openstreetmap.org/api/0.6/way/667334389/2"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30621943#13",
+        "role": "exit",
+        "name": "Rua José Alves Garcia",
+        "boundary_group": "node_1490094413",
+        "corridor": "rua_jose_alves_garcia",
+        "boundary_node": "1490094413",
+        "boundary_longitude_latitude": [
+          -48.267413606,
+          -18.886651307
+        ],
+        "boundary_xy_m": [
+          2739.92,
+          5021.29
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 307.78,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30621943/11",
+          "https://api.openstreetmap.org/api/0.6/way/135718476/22"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30621952#12",
+        "role": "exit",
+        "name": "Avenida Pará",
+        "boundary_group": "node_338664030",
+        "corridor": "avenida_para",
+        "boundary_node": "338664030",
+        "boundary_longitude_latitude": [
+          -48.263474702,
+          -18.886234231
+        ],
+        "boundary_xy_m": [
+          3155.86,
+          5061.06
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 176.29,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30621952/9",
+          "https://api.openstreetmap.org/api/0.6/way/261302821/8"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30621953#14",
+        "role": "exit",
+        "name": "Avenida Amazonas",
+        "boundary_group": "node_338664222",
+        "corridor": "avenida_amazonas",
+        "boundary_node": "338664222",
+        "boundary_longitude_latitude": [
+          -48.26166354,
+          -18.887433947
+        ],
+        "boundary_xy_m": [
+          3344.73,
+          4925.24
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 179.72,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30621953/12",
+          "https://api.openstreetmap.org/api/0.6/way/261302821/8"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30621958#12",
+        "role": "exit",
+        "name": "Rua Espiríto Santo",
+        "boundary_group": "node_1490094418",
+        "corridor": "rua_espirito_santo",
+        "boundary_node": "1490094418",
+        "boundary_longitude_latitude": [
+          -48.269431356,
+          -18.889374508
+        ],
+        "boundary_xy_m": [
+          2522.56,
+          4722.99
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 308.74,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30621958/9",
+          "https://api.openstreetmap.org/api/0.6/way/135718476/22"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30628247#1",
+        "role": "exit",
+        "name": "Rua Natal",
+        "boundary_group": "node_338757801",
+        "corridor": "rua_natal",
+        "boundary_node": "338757801",
+        "boundary_longitude_latitude": [
+          -48.271698855,
+          -18.898042412
+        ],
+        "boundary_xy_m": [
+          2268.72,
+          3766.74
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 107.41,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30628247/7",
+          "https://api.openstreetmap.org/api/0.6/way/353049386/11"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30648910#6",
+        "role": "exit",
+        "name": "Avenida Austrália",
+        "boundary_group": "australia_praca_nacoes",
+        "corridor": "avenida_australia",
+        "boundary_node": "338953974",
+        "boundary_longitude_latitude": [
+          -48.248808236,
+          -18.905230628
+        ],
+        "boundary_xy_m": [
+          4669.22,
+          2933.26
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 2,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 327.95,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30648910/12",
+          "https://api.openstreetmap.org/api/0.6/way/1167877348/4",
+          "https://api.openstreetmap.org/api/0.6/way/1359823205/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30648920#5",
+        "role": "exit",
+        "name": "Avenida África",
+        "boundary_group": "node_338954003",
+        "corridor": "avenida_africa",
+        "boundary_node": "338954003",
+        "boundary_longitude_latitude": [
+          -48.240454531,
+          -18.900201491
+        ],
+        "boundary_xy_m": [
+          5558.45,
+          3476.5
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 1366.36,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30648920/17",
+          "https://api.openstreetmap.org/api/0.6/way/1479443804/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30649088#1",
+        "role": "exit",
+        "name": "Rua Miguel Rocha dos Santos",
+        "boundary_group": "node_2651934331",
+        "corridor": "rua_miguel_rocha_dos_santos",
+        "boundary_node": "2651934331",
+        "boundary_longitude_latitude": [
+          -48.257900356,
+          -18.915991649
+        ],
+        "boundary_xy_m": [
+          3692.36,
+          1756.4
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 11.11,
+        "edge_length_m": 185.47,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30649088/9",
+          "https://api.openstreetmap.org/api/0.6/way/616746142/3",
+          "https://api.openstreetmap.org/api/0.6/way/853816905/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30664521#13",
+        "role": "exit",
+        "name": "Rua Santa Catarina",
+        "boundary_group": "node_1561879240",
+        "corridor": "rua_santa_catarina",
+        "boundary_node": "1561879240",
+        "boundary_longitude_latitude": [
+          -48.270790291,
+          -18.892532906
+        ],
+        "boundary_xy_m": [
+          2373.91,
+          4375.42
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 224.46,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30664521/22",
+          "https://api.openstreetmap.org/api/0.6/way/30621950/15",
+          "https://api.openstreetmap.org/api/0.6/way/1049296414/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30664523#6",
+        "role": "exit",
+        "name": "Rua São Paulo",
+        "boundary_group": "node_1561879042",
+        "corridor": "rua_sao_paulo",
+        "boundary_node": "1561879042",
+        "boundary_longitude_latitude": [
+          -48.270433602,
+          -18.890730949
+        ],
+        "boundary_xy_m": [
+          2414.59,
+          4574.4
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 309.28,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30664523/10",
+          "https://api.openstreetmap.org/api/0.6/way/135718476/22"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "30665258#10",
+        "role": "exit",
+        "name": "Rua Ivaldo Alves do Nascimento, 1080",
+        "boundary_group": "node_339121053",
+        "corridor": "rua_ivaldo_alves_do_nascimento_1080",
+        "boundary_node": "339121053",
+        "boundary_longitude_latitude": [
+          -48.275664805,
+          -18.901471946
+        ],
+        "boundary_xy_m": [
+          1844.82,
+          3393.38
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 409.4,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/30665258/12",
+          "https://api.openstreetmap.org/api/0.6/way/353049386/11"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "307156125#15",
+        "role": "exit",
+        "name": "Avenida Monsenhor Eduardo",
+        "boundary_group": "monsenhor_roosevelt",
+        "corridor": "avenida_monsenhor_eduardo",
+        "boundary_node": "3122192682",
+        "boundary_longitude_latitude": [
+          -48.275867122,
+          -18.909557268
+        ],
+        "boundary_xy_m": [
+          1809.69,
+          2498.29
+        ],
+        "road_type": "highway.tertiary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 22.22,
+        "edge_length_m": 194.55,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/307156125/14",
+          "https://api.openstreetmap.org/api/0.6/way/261398550/20",
+          "https://api.openstreetmap.org/api/0.6/way/661885006/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "330066084#14",
+        "role": "exit",
+        "name": "Rua Itumbiara",
+        "boundary_group": "node_338686636",
+        "corridor": "rua_itumbiara",
+        "boundary_node": "338686636",
+        "boundary_longitude_latitude": [
+          -48.276943676,
+          -18.902602346
+        ],
+        "boundary_xy_m": [
+          1708.09,
+          3270.27
+        ],
+        "road_type": "highway.tertiary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 22.22,
+        "edge_length_m": 474.63,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/330066084/5",
+          "https://api.openstreetmap.org/api/0.6/way/30664693/14",
+          "https://api.openstreetmap.org/api/0.6/way/319445172/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "332052778",
+        "role": "exit",
+        "name": "Avenida Monsenhor Eduardo",
+        "boundary_group": "node_3122205657",
+        "corridor": "avenida_monsenhor_eduardo",
+        "boundary_node": "3122205657",
+        "boundary_longitude_latitude": [
+          -48.271289955,
+          -18.89562161
+        ],
+        "boundary_xy_m": [
+          2315.96,
+          4034.17
+        ],
+        "road_type": "highway.tertiary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 77.28,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/332052778/3",
+          "https://api.openstreetmap.org/api/0.6/way/307156125/14",
+          "https://api.openstreetmap.org/api/0.6/way/332052777/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "403166935#12",
+        "role": "exit",
+        "name": "Rua Claudemiro José de Souza",
+        "boundary_group": "node_338642973",
+        "corridor": "rua_claudemiro_jose_de_souza",
+        "boundary_node": "338642973",
+        "boundary_longitude_latitude": [
+          -48.272815344,
+          -18.885063974
+        ],
+        "boundary_xy_m": [
+          2173.2,
+          5205.87
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 875.38,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/403166935/4",
+          "https://api.openstreetmap.org/api/0.6/way/303764789/3",
+          "https://api.openstreetmap.org/api/0.6/way/789707708/2",
+          "https://api.openstreetmap.org/api/0.6/way/853933153/2"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "403166940#4",
+        "role": "exit",
+        "name": "Rua Holanda",
+        "boundary_group": "holanda_nicaragua",
+        "corridor": "rua_holanda",
+        "boundary_node": "338954004",
+        "boundary_longitude_latitude": [
+          -48.250430462,
+          -18.908321982
+        ],
+        "boundary_xy_m": [
+          4492.9,
+          2593.56
+        ],
+        "road_type": "highway.residential",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 85.56,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/403166940/2",
+          "https://api.openstreetmap.org/api/0.6/way/665897595/1",
+          "https://api.openstreetmap.org/api/0.6/way/665897597/2"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "602306725#east",
+        "role": "exit",
+        "name": "Avenida Benjamin Magalhães",
+        "boundary_group": "benjamin_viena",
+        "corridor": "avenida_benjamin_magalhaes",
+        "boundary_node": "2042691708",
+        "boundary_longitude_latitude": [
+          -48.249198544,
+          -18.903571282
+        ],
+        "boundary_xy_m": [
+          4630.94,
+          3117.67
+        ],
+        "road_type": "",
+        "passenger_lanes": 2,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 73.49,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/602306725/1",
+          "https://api.openstreetmap.org/api/0.6/way/30648048/10"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.secondary",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "602306733#west",
+        "role": "exit",
+        "name": "Avenida Europa",
+        "boundary_group": "europa_oeste",
+        "corridor": "avenida_europa",
+        "boundary_node": "4055449701",
+        "boundary_longitude_latitude": [
+          -48.247359233,
+          -18.903250293
+        ],
+        "boundary_xy_m": [
+          4825.37,
+          3150.2
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 27.78,
+        "edge_length_m": 171.27,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/602306733/3",
+          "https://api.openstreetmap.org/api/0.6/way/403166917/6"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "602306745#west",
+        "role": "exit",
+        "name": "Avenida Benjamin Magalhães",
+        "boundary_group": "benjamin_conexao_norte",
+        "corridor": "avenida_benjamin_magalhaes",
+        "boundary_node": "7961952650",
+        "boundary_longitude_latitude": [
+          -48.24848456,
+          -18.904672413
+        ],
+        "boundary_xy_m": [
+          4704.3,
+          2994.55
+        ],
+        "road_type": "",
+        "passenger_lanes": 2,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 36.87,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/602306745/3",
+          "https://api.openstreetmap.org/api/0.6/way/853617388/2"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.secondary",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "616971268#west",
+        "role": "exit",
+        "name": "Avenida Segismundo Pereira",
+        "boundary_group": "segismundo_oeste",
+        "corridor": "avenida_segismundo_pereira",
+        "boundary_node": "2042693444",
+        "boundary_longitude_latitude": [
+          -48.251855947,
+          -18.917699375
+        ],
+        "boundary_xy_m": [
+          4326.49,
+          1557.37
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 16.67,
+        "edge_length_m": 57.79,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/616971268/4",
+          "https://api.openstreetmap.org/api/0.6/way/30649098/14"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+      },
+      {
+        "edge": "647043774#1",
+        "role": "exit",
+        "name": "Rua Nordau Gonçalves de Melo",
+        "boundary_group": "node_338955633",
+        "corridor": "rua_nordau_goncalves_de_melo",
+        "boundary_node": "338955633",
+        "boundary_longitude_latitude": [
+          -48.246408663,
+          -18.911446521
+        ],
+        "boundary_xy_m": [
+          4911.42,
+          2240.92
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 11.11,
+        "edge_length_m": 199.74,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/647043774/3",
+          "https://api.openstreetmap.org/api/0.6/way/30649165/14"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.residential",
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+      },
+      {
+        "edge": "659117933#east",
+        "role": "exit",
+        "name": "Avenida Belarmino Cotta Pacheco",
+        "boundary_group": "node_2042693128",
+        "corridor": "avenida_belarmino_cotta_pacheco",
+        "boundary_node": "2042693128",
+        "boundary_longitude_latitude": [
+          -48.251280252,
+          -18.91587032
+        ],
+        "boundary_xy_m": [
+          4390.32,
+          1758.99
+        ],
+        "road_type": "",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 13.89,
+        "edge_length_m": 69.95,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "A via OSM continua além do nó de corte em segmento omitido da rede; o portal é um limite do recorte, mesmo dentro da envoltória retangular.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/659117933/5",
+          "https://api.openstreetmap.org/api/0.6/way/261422562/11"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        },
+        "prior_road_type": "highway.tertiary",
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+      },
+      {
+        "edge": "665897559#8",
+        "role": "exit",
+        "name": "Avenida Afonso Pena",
+        "boundary_group": "node_338660552",
+        "corridor": "avenida_afonso_pena",
+        "boundary_node": "338660552",
+        "boundary_longitude_latitude": [
+          -48.25698974,
+          -18.890324444
+        ],
+        "boundary_xy_m": [
+          3832.46,
+          4597.49
+        ],
+        "road_type": "highway.tertiary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 22.22,
+        "edge_length_m": 197.49,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/665897559/4",
+          "https://api.openstreetmap.org/api/0.6/way/30646616/14"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "665897609#1",
+        "role": "exit",
+        "name": "Praça Senador Camilo Chaves",
+        "boundary_group": "camilo_chaves",
+        "corridor": "praca_senador_camilo_chaves",
+        "boundary_node": "6237821896",
+        "boundary_longitude_latitude": [
+          -48.250813459,
+          -18.901706228
+        ],
+        "boundary_xy_m": [
+          4463.93,
+          3326.87
+        ],
+        "road_type": "highway.secondary",
+        "passenger_lanes": 1,
+        "speed_limit_m_s": 27.78,
+        "edge_length_m": 39.25,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/665897609/4",
+          "https://api.openstreetmap.org/api/0.6/way/30621478/25",
+          "https://api.openstreetmap.org/api/0.6/way/665897529/3"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      },
+      {
+        "edge": "82009805#1",
+        "role": "exit",
+        "name": "Avenida João Naves de Ávila",
+        "boundary_group": "joao_naves_leste",
+        "corridor": "avenida_joao_naves_de_avila",
+        "boundary_node": "338670732",
+        "boundary_longitude_latitude": [
+          -48.258967083,
+          -18.915286851
+        ],
+        "boundary_xy_m": [
+          3581.14,
+          1836.2
+        ],
+        "road_type": "highway.primary",
+        "passenger_lanes": 2,
+        "speed_limit_m_s": 27.78,
+        "edge_length_m": 43.35,
+        "status": "geographically_audited_boundary",
+        "boundary_evidence": "O nó de extremidade conecta vias OSM que continuam fora do recorte. Referências abaixo preservam as versões consultadas; o sentido executado é o da rede local. A via OSM original foi resegmentada; a correspondência usa o nó e as vias conectadas atuais, sem alterar a geometria local.",
+        "references": [
+          "https://api.openstreetmap.org/api/0.6/way/82009805/16",
+          "https://api.openstreetmap.org/api/0.6/way/30622475/15",
+          "https://api.openstreetmap.org/api/0.6/way/659117922/10",
+          "https://api.openstreetmap.org/api/0.6/way/1568388815/1"
+        ],
+        "qualification": {
+          "topology": "passenger_boundary_verified",
+          "geography": "versioned_OSM_cut_cross_checked",
+          "field_validation": "not_available"
+        }
+      }
+    ]
+  },
+  "sensors": [
+    {
+      "sensor_id": 6,
+      "csv_label": "Rondom-Niteroi->RIO",
+      "status": "unconfirmed",
+      "selected_observation_edge": "931572689",
+      "selection_kind": "hypothesis",
+      "candidates": [
+        {
+          "edge": "931572689",
+          "position": "before_intersection",
+          "passenger_lanes": 4
+        },
+        {
+          "edge": "1156717175#1",
+          "position": "after_intersection",
+          "passenger_lanes": 4
+        }
+      ],
+      "intersection_longitude_latitude": [
+        -48.261674905,
+        -18.907772152
+      ],
+      "physical_direction": "nordeste para sudoeste no corredor, rumo centro",
+      "evidence": "Rótulo do CSV e correspondência física do estágio SETTRAN sentido centro; OSM identifica as duas vias como Rondon Pacheco de mão única.",
+      "missing_evidence": "Coordenadas da linha virtual, imagem com o traçado, posição antes/depois das conversões, faixas observadas e explicação do rótulo RIO.",
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/931572689/3",
+        "https://api.openstreetmap.org/api/0.6/way/1156717175/1"
+      ]
+    },
+    {
+      "sensor_id": 5,
+      "csv_label": "Niterói Shoping",
+      "status": "unconfirmed",
+      "selected_observation_edge": "30622933#11",
+      "selection_kind": "hypothesis",
+      "candidates": [
+        {
+          "edge": "30622933#11",
+          "position": "before_intersection",
+          "passenger_lanes": 1
+        },
+        {
+          "edge": "1156717177#1",
+          "position": "after_intersection",
+          "passenger_lanes": 1
+        }
+      ],
+      "intersection_longitude_latitude": [
+        -48.261674905,
+        -18.907772152
+      ],
+      "physical_direction": "noroeste para sudeste pela Rua Niterói, rumo ao lado do shopping",
+      "evidence": "Rótulo do CSV e Rua Niterói reconhecida na fonte SETTRAN e nas vias OSM; o rótulo não comprova a linha de contagem nem uma direção oposta da Rondon.",
+      "missing_evidence": "Confirmar se mede a transversal, uma conversão, acesso ao shopping ou outro ramo; faltam coordenadas, imagem da linha virtual e faixas observadas.",
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30622933/21",
+        "https://api.openstreetmap.org/api/0.6/way/1156717177/3"
+      ]
+    }
+  ],
+  "route_validation": {
+    "depart_pos": "0",
+    "arrival_pos": "max",
+    "require_boundary_portals": true,
+    "boundary_group_rule": "Mesmo nó ou acesso físico explicitamente pareado identifica retornos, sem excluí-los. Viagens curtas e retornos são permitidos pelo usuário quando há entrada e saída completas e válidas.",
+    "length_note": "Comprimento é soma de edges normais e menor conexão interna passenger por transição: limite inferior de percurso por faixa. A distância efetiva vem de tripinfo.routeLength. Não há mínimo global arbitrário em metros.",
+    "corridor_mapping": "Rondon mapeada como duas sequências contínuas verificadas. Demais corredores são ruas com portal ou Niterói, identificadas por nome OSM e orientação no eixo predominante de sua geometria; probes são seções individuais próximas do centro, não toda a via somada.",
+    "allow_short_trips": true,
+    "allow_returns": true,
+    "require_connected_passenger_route": true,
+    "template_rule": "Alternativas de atravessamento via corredores não podem revisitar junções; evita circuitos criados somente por via obrigatório. Não filtra por incidência de sensores. Retornos e viagens curtas encontrados naturalmente pelo roteador permanecem disponíveis."
+  },
+  "limitations": [
+    "Total regional não identificável com dois sensores; escala de referência permanece hipótese experimental.",
+    "Coordenadas, faixas e movimentos dos sensores permanecem sem comprovação; ajuste é condicionado aos candidatos.",
+    "Projeção de tempo livre não modela filas/inserção/sinais; somente passagens físicas SUMO avaliam o fluxo realizado.",
+    "Fontes externas modulam priors relativos de outras seções e classes; não medem a demanda destes portais.",
+    "Forma temporal arterial/local e escolha OD são hipóteses; não há OD semanal medido.",
+    "Viagens internas ausentes não são compensadas elevando entradas.",
+    "Somente carros/passenger; motocicletas, ônibus, caminhões, bicicletas e pedestres não representados.",
+    "Qualificação dos portais é cartográfica e topológica, não levantamento operacional em campo."
+  ],
+  "corridors": [
+    {
+      "id": "rondon_to_centro",
+      "label": "Rondon Pacheco",
+      "direction": "nordeste→sudoeste / centro",
+      "edges": [
+        "152937136#0",
+        "152937136#1",
+        "152937136#2",
+        "152937136#3",
+        "1156272393#0",
+        "1156272393#1",
+        "1156272393#2",
+        "1156272393#3",
+        "1156272393#4",
+        "1156272393#5",
+        "1156272393#5.rio",
+        "1156272393#6",
+        "1156272393#7",
+        "331577749#0",
+        "331577749#1",
+        "331577751#0",
+        "331577751#1",
+        "331577748#0",
+        "331577748#1",
+        "331577748#2",
+        "331577748#3",
+        "331577748#4",
+        "331577750#0",
+        "331577750#1",
+        "965367672#0",
+        "965367672#1",
+        "965367672#2",
+        "965367672#3",
+        "931572689",
+        "1156717175#0",
+        "1156717175#1",
+        "1156717175#2",
+        "1156717175#3",
+        "1156717175#4",
+        "1156717175#5",
+        "576014295",
+        "576014298",
+        "576014296#0",
+        "576014296#1",
+        "576014296#2",
+        "261432318"
+      ],
+      "observation_edges": [
+        "931572689"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/1156272393/2",
+        "https://api.openstreetmap.org/api/0.6/way/1156717175/1",
+        "https://api.openstreetmap.org/api/0.6/way/152937136/31",
+        "https://api.openstreetmap.org/api/0.6/way/261432318/27",
+        "https://api.openstreetmap.org/api/0.6/way/331577748/4",
+        "https://api.openstreetmap.org/api/0.6/way/331577749/3",
+        "https://api.openstreetmap.org/api/0.6/way/331577750/14",
+        "https://api.openstreetmap.org/api/0.6/way/331577751/3",
+        "https://api.openstreetmap.org/api/0.6/way/576014295/1",
+        "https://api.openstreetmap.org/api/0.6/way/576014296/3",
+        "https://api.openstreetmap.org/api/0.6/way/576014298/2",
+        "https://api.openstreetmap.org/api/0.6/way/931572689/3",
+        "https://api.openstreetmap.org/api/0.6/way/965367672/1"
+      ]
+    },
+    {
+      "id": "rondon_to_bairro",
+      "label": "Rondon Pacheco",
+      "direction": "sudoeste→nordeste / bairro",
+      "edges": [
+        "1171563461",
+        "462991286",
+        "46711471#0",
+        "46711471#1",
+        "46711471#2",
+        "576014301#0",
+        "576014301#1",
+        "576014300",
+        "576014290#0",
+        "576014290#1",
+        "576014290#2",
+        "576014290#3",
+        "576014290#4",
+        "576014290#5",
+        "930831032#0",
+        "930831032#1",
+        "1156717176",
+        "930831033#0",
+        "930831033#1",
+        "576876311#0",
+        "576876311#1",
+        "576876311#2",
+        "576876311#3",
+        "299471494#0",
+        "299471494#1",
+        "299471494#2",
+        "1156717170#0",
+        "1156717170#1",
+        "1156717173#0",
+        "1156717173#1",
+        "1156717173#2",
+        "1156717173#3",
+        "1156717173#4",
+        "1156717173#5",
+        "1156717163#0",
+        "1156717163#1",
+        "1156717163#1.rio",
+        "1156717163#2",
+        "1156717163#3",
+        "1156272391#0",
+        "1156272391#1",
+        "1156272391#2",
+        "1156272391#3"
+      ],
+      "observation_edges": [
+        "1156717176"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/1156272391/1",
+        "https://api.openstreetmap.org/api/0.6/way/1156717163/1",
+        "https://api.openstreetmap.org/api/0.6/way/1156717170/1",
+        "https://api.openstreetmap.org/api/0.6/way/1156717173/1",
+        "https://api.openstreetmap.org/api/0.6/way/1156717176/1",
+        "https://api.openstreetmap.org/api/0.6/way/1171563461/1",
+        "https://api.openstreetmap.org/api/0.6/way/299471494/19",
+        "https://api.openstreetmap.org/api/0.6/way/462991286/3",
+        "https://api.openstreetmap.org/api/0.6/way/46711471/30",
+        "https://api.openstreetmap.org/api/0.6/way/576014290/10",
+        "https://api.openstreetmap.org/api/0.6/way/576014300/1",
+        "https://api.openstreetmap.org/api/0.6/way/576014301/1",
+        "https://api.openstreetmap.org/api/0.6/way/576876311/6",
+        "https://api.openstreetmap.org/api/0.6/way/930831032/3",
+        "https://api.openstreetmap.org/api/0.6/way/930831033/1"
+      ]
+    },
+    {
+      "id": "avenida_afonso_pena_positive",
+      "label": "Avenida Afonso Pena",
+      "direction": "sul→norte",
+      "edges": [
+        "658279138#0",
+        "658279138#1",
+        "658279138#10",
+        "658279138#11",
+        "658279138#12",
+        "658279138#13",
+        "658279138#14",
+        "658279138#2",
+        "658279138#3",
+        "658279138#4",
+        "658279138#5",
+        "658279138#6",
+        "658279138#7",
+        "658279138#8",
+        "658279138#9",
+        "665897559#0",
+        "665897559#1",
+        "665897559#2",
+        "665897559#3",
+        "665897559#4",
+        "665897559#5",
+        "665897559#6",
+        "665897559#7",
+        "665897559#8",
+        "666324308#0",
+        "666324308#1",
+        "666324308#2",
+        "666324308#3",
+        "666324308#4",
+        "666324308#5"
+      ],
+      "observation_edges": [
+        "666324308#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/658279138/4",
+        "https://api.openstreetmap.org/api/0.6/way/665897559/4",
+        "https://api.openstreetmap.org/api/0.6/way/666324308/1"
+      ]
+    },
+    {
+      "id": "avenida_amazonas_positive",
+      "label": "Avenida Amazonas",
+      "direction": "sul→norte",
+      "edges": [
+        "30621953#0",
+        "30621953#1",
+        "30621953#10",
+        "30621953#11",
+        "30621953#12",
+        "30621953#13",
+        "30621953#14",
+        "30621953#2",
+        "30621953#3",
+        "30621953#4",
+        "30621953#5",
+        "30621953#6",
+        "30621953#7",
+        "30621953#8",
+        "30621953#9"
+      ],
+      "observation_edges": [
+        "30621953#7"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30621953/12"
+      ]
+    },
+    {
+      "id": "avenida_australia_positive",
+      "label": "Avenida Austrália",
+      "direction": "oeste→leste",
+      "edges": [
+        "30648910#0",
+        "30648910#1",
+        "30648910#3",
+        "30648910#4",
+        "30648910#5",
+        "30648910#6"
+      ],
+      "observation_edges": [
+        "30648910#3"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30648910/12"
+      ]
+    },
+    {
+      "id": "avenida_australia_negative",
+      "label": "Avenida Austrália",
+      "direction": "leste→oeste",
+      "edges": [
+        "269160815#0",
+        "269160815#1",
+        "269160815#2",
+        "269160815#3",
+        "269160815#5",
+        "269160815#6"
+      ],
+      "observation_edges": [
+        "269160815#3"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/269160815/7"
+      ]
+    },
+    {
+      "id": "avenida_belarmino_cotta_pacheco_positive",
+      "label": "Avenida Belarmino Cotta Pacheco",
+      "direction": "oeste→leste",
+      "edges": [
+        "30621470",
+        "659117930#0",
+        "659117930#1",
+        "659117933#east",
+        "659117933#west"
+      ],
+      "observation_edges": [
+        "659117930#1"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30621470/37",
+        "https://api.openstreetmap.org/api/0.6/way/659117930/3",
+        "https://api.openstreetmap.org/api/0.6/way/659117933/5"
+      ]
+    },
+    {
+      "id": "avenida_belarmino_cotta_pacheco_negative",
+      "label": "Avenida Belarmino Cotta Pacheco",
+      "direction": "leste→oeste",
+      "edges": [
+        "-659117930#0",
+        "-659117930#1",
+        "-659117933#east",
+        "-659117933#west"
+      ],
+      "observation_edges": [
+        "-659117930#1"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/659117930/3",
+        "https://api.openstreetmap.org/api/0.6/way/659117933/5"
+      ]
+    },
+    {
+      "id": "avenida_benjamin_magalhaes_positive",
+      "label": "Avenida Benjamin Magalhães",
+      "direction": "sul→norte",
+      "edges": [
+        "300971367#0",
+        "300971367#1",
+        "300971367#2",
+        "300971367#3",
+        "402968127#west",
+        "602306725#east",
+        "666324302#0",
+        "666324302#1",
+        "666324302#2",
+        "666324302#3",
+        "666324302#4",
+        "666324302#5"
+      ],
+      "observation_edges": [
+        "300971367#2"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/300971367/9",
+        "https://api.openstreetmap.org/api/0.6/way/402968127/4",
+        "https://api.openstreetmap.org/api/0.6/way/602306725/1",
+        "https://api.openstreetmap.org/api/0.6/way/666324302/9"
+      ]
+    },
+    {
+      "id": "avenida_benjamin_magalhaes_negative",
+      "label": "Avenida Benjamin Magalhães",
+      "direction": "norte→sul",
+      "edges": [
+        "1156272395#1",
+        "1156272395#2",
+        "1156272395#3",
+        "1156272395#4",
+        "30621474#0",
+        "30621474#1",
+        "30621474#2",
+        "30621474#3",
+        "30621478#east",
+        "602306745#west"
+      ],
+      "observation_edges": [
+        "30621474#2"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/1156272395/2",
+        "https://api.openstreetmap.org/api/0.6/way/30621474/14",
+        "https://api.openstreetmap.org/api/0.6/way/30621478/25",
+        "https://api.openstreetmap.org/api/0.6/way/602306745/3"
+      ]
+    },
+    {
+      "id": "avenida_brasil_positive",
+      "label": "Avenida Brasil",
+      "direction": "sul→norte",
+      "edges": [
+        "261301884#0",
+        "261301884#1",
+        "261301884#10",
+        "261301884#11",
+        "261301884#12",
+        "261301884#13",
+        "261301884#14",
+        "261301884#15",
+        "261301884#16",
+        "261301884#17",
+        "261301884#18",
+        "261301884#19",
+        "261301884#2",
+        "261301884#20",
+        "261301884#21",
+        "261301884#22",
+        "261301884#23",
+        "261301884#24",
+        "261301884#25",
+        "261301884#26",
+        "261301884#27",
+        "261301884#28",
+        "261301884#29",
+        "261301884#3",
+        "261301884#4",
+        "261301884#5",
+        "261301884#6",
+        "261301884#7",
+        "261301884#8",
+        "261301884#9"
+      ],
+      "observation_edges": [
+        "261301884#15"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/261301884/13"
+      ]
+    },
+    {
+      "id": "avenida_cesario_alvim_positive",
+      "label": "Avenida Cesário Alvim",
+      "direction": "sul→norte",
+      "edges": [
+        "602306713#0",
+        "602306713#1",
+        "602306713#10",
+        "602306713#11",
+        "602306713#12",
+        "602306713#13",
+        "602306713#14",
+        "602306713#15",
+        "602306713#16",
+        "602306713#17",
+        "602306713#18",
+        "602306713#19",
+        "602306713#2",
+        "602306713#20",
+        "602306713#21",
+        "602306713#3",
+        "602306713#4",
+        "602306713#5",
+        "602306713#6",
+        "602306713#7",
+        "602306713#8",
+        "602306713#9",
+        "665897570#0",
+        "665897570#1",
+        "665897570#2",
+        "665897570#3",
+        "665897570#4",
+        "665897570#5",
+        "665897570#6",
+        "665897570#7",
+        "665897572"
+      ],
+      "observation_edges": [
+        "602306713#15"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/602306713/4",
+        "https://api.openstreetmap.org/api/0.6/way/665897570/3",
+        "https://api.openstreetmap.org/api/0.6/way/665897572/2"
+      ]
+    },
+    {
+      "id": "avenida_europa_positive",
+      "label": "Avenida Europa",
+      "direction": "oeste→leste",
+      "edges": [
+        "30622921",
+        "30622945#0",
+        "30622945#1",
+        "30622945#2",
+        "402968137",
+        "402968147#0",
+        "402968147#1",
+        "402968147#2",
+        "403166943",
+        "403166945#0",
+        "403166945#1",
+        "403166945#2",
+        "602306733#west",
+        "665897547"
+      ],
+      "observation_edges": [
+        "665897547"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30622921/12",
+        "https://api.openstreetmap.org/api/0.6/way/30622945/4",
+        "https://api.openstreetmap.org/api/0.6/way/402968137/5",
+        "https://api.openstreetmap.org/api/0.6/way/402968147/4",
+        "https://api.openstreetmap.org/api/0.6/way/403166943/3",
+        "https://api.openstreetmap.org/api/0.6/way/403166945/5",
+        "https://api.openstreetmap.org/api/0.6/way/602306733/3",
+        "https://api.openstreetmap.org/api/0.6/way/665897547/5"
+      ]
+    },
+    {
+      "id": "avenida_europa_negative",
+      "label": "Avenida Europa",
+      "direction": "leste→oeste",
+      "edges": [
+        "-30622945#0",
+        "-30622945#1",
+        "-30622945#2",
+        "402968133#west",
+        "402968135#0",
+        "402968135#2",
+        "402968139#0",
+        "402968139#1",
+        "402968139#2",
+        "402968139#3",
+        "602306749#0",
+        "602306749#1",
+        "602306749#2"
+      ],
+      "observation_edges": [
+        "402968135#2"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30622945/4",
+        "https://api.openstreetmap.org/api/0.6/way/402968133/4",
+        "https://api.openstreetmap.org/api/0.6/way/402968135/11",
+        "https://api.openstreetmap.org/api/0.6/way/402968139/5",
+        "https://api.openstreetmap.org/api/0.6/way/602306749/5"
+      ]
+    },
+    {
+      "id": "avenida_floriano_peixoto_negative",
+      "label": "Avenida Floriano Peixoto",
+      "direction": "norte→sul",
+      "edges": [
+        "152937004#0",
+        "152937004#1",
+        "152937004#10",
+        "152937004#11",
+        "152937004#12",
+        "152937004#13",
+        "152937004#14",
+        "152937004#15",
+        "152937004#16",
+        "152937004#17",
+        "152937004#18",
+        "152937004#19",
+        "152937004#2",
+        "152937004#20",
+        "152937004#21",
+        "152937004#22",
+        "152937004#23",
+        "152937004#24",
+        "152937004#25",
+        "152937004#26",
+        "152937004#27",
+        "152937004#28",
+        "152937004#29",
+        "152937004#3",
+        "152937004#30",
+        "152937004#31",
+        "152937004#32",
+        "152937004#4",
+        "152937004#5",
+        "152937004#6",
+        "152937004#7",
+        "152937004#8",
+        "152937004#9"
+      ],
+      "observation_edges": [
+        "152937004#15"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/152937004/20"
+      ]
+    },
+    {
+      "id": "avenida_joao_naves_de_avila_positive",
+      "label": "Avenida João Naves de Ávila",
+      "direction": "oeste→leste",
+      "edges": [
+        "259739911#0",
+        "259739911#1",
+        "259739911#2",
+        "259739911#3",
+        "259739911#4",
+        "259739911#5",
+        "259739911#6",
+        "259739911#7",
+        "30621187",
+        "462993308#0",
+        "462993308#1",
+        "462993308#2",
+        "462993309",
+        "462993806",
+        "462993807#0",
+        "462993807#1",
+        "462993807#2",
+        "576014292#0",
+        "576014292#1",
+        "576014292#2",
+        "577166561#0",
+        "577166561#1",
+        "577488380",
+        "602306707",
+        "669609231",
+        "669609232",
+        "82009804",
+        "901329257"
+      ],
+      "observation_edges": [
+        "462993309"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/259739911/22",
+        "https://api.openstreetmap.org/api/0.6/way/30621187/28",
+        "https://api.openstreetmap.org/api/0.6/way/462993308/8",
+        "https://api.openstreetmap.org/api/0.6/way/462993309/14",
+        "https://api.openstreetmap.org/api/0.6/way/462993806/8",
+        "https://api.openstreetmap.org/api/0.6/way/462993807/6",
+        "https://api.openstreetmap.org/api/0.6/way/576014292/3",
+        "https://api.openstreetmap.org/api/0.6/way/577166561/5",
+        "https://api.openstreetmap.org/api/0.6/way/577488380/2",
+        "https://api.openstreetmap.org/api/0.6/way/602306707/9",
+        "https://api.openstreetmap.org/api/0.6/way/669609231/3",
+        "https://api.openstreetmap.org/api/0.6/way/669609232/6",
+        "https://api.openstreetmap.org/api/0.6/way/82009804/9",
+        "https://api.openstreetmap.org/api/0.6/way/901329257/2"
+      ]
+    },
+    {
+      "id": "avenida_joao_naves_de_avila_negative",
+      "label": "Avenida João Naves de Ávila",
+      "direction": "leste→oeste",
+      "edges": [
+        "1171661493#0",
+        "1171661493#1",
+        "259739904#0",
+        "259739904#1",
+        "259739913#0",
+        "259739913#1",
+        "259739913#2",
+        "462993804",
+        "462993805#0",
+        "462993805#1",
+        "462993805#2",
+        "462993805#3",
+        "576014293#0",
+        "576014293#1",
+        "659117928#0",
+        "659117928#1",
+        "659117928#2",
+        "669609230",
+        "708111982",
+        "708111983",
+        "708111984",
+        "708111985#0",
+        "708111985#1",
+        "708111986#0",
+        "708111986#1",
+        "708111986#2",
+        "708111987",
+        "82009802",
+        "82009805#0",
+        "82009805#1",
+        "901329256"
+      ],
+      "observation_edges": [
+        "576014293#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/1171661493/3",
+        "https://api.openstreetmap.org/api/0.6/way/259739904/22",
+        "https://api.openstreetmap.org/api/0.6/way/259739913/11",
+        "https://api.openstreetmap.org/api/0.6/way/462993804/6",
+        "https://api.openstreetmap.org/api/0.6/way/462993805/7",
+        "https://api.openstreetmap.org/api/0.6/way/576014293/4",
+        "https://api.openstreetmap.org/api/0.6/way/659117928/8",
+        "https://api.openstreetmap.org/api/0.6/way/669609230/2",
+        "https://api.openstreetmap.org/api/0.6/way/708111982/3",
+        "https://api.openstreetmap.org/api/0.6/way/708111983/4",
+        "https://api.openstreetmap.org/api/0.6/way/708111984/3",
+        "https://api.openstreetmap.org/api/0.6/way/708111985/3",
+        "https://api.openstreetmap.org/api/0.6/way/708111986/6",
+        "https://api.openstreetmap.org/api/0.6/way/708111987/4",
+        "https://api.openstreetmap.org/api/0.6/way/82009802/11",
+        "https://api.openstreetmap.org/api/0.6/way/82009805/16",
+        "https://api.openstreetmap.org/api/0.6/way/901329256/2"
+      ]
+    },
+    {
+      "id": "avenida_joao_pinheiro_negative",
+      "label": "Avenida João Pinheiro",
+      "direction": "norte→sul",
+      "edges": [
+        "261301880#0",
+        "261301880#1",
+        "261301880#2",
+        "261301880#3",
+        "261301880#4",
+        "261301880#5",
+        "261301880#6",
+        "261301881#0",
+        "261301881#1",
+        "261301881#2",
+        "261301881#3",
+        "261301881#4",
+        "261301881#5",
+        "261301881#6",
+        "261301881#7",
+        "261301881#8",
+        "665897565#0",
+        "665897565#1",
+        "665897565#2",
+        "665897565#3",
+        "665897565#4",
+        "665897565#5",
+        "665897565#6",
+        "665897565#7",
+        "666324275#0",
+        "666324275#1",
+        "666324275#2",
+        "666324275#3",
+        "666324275#4",
+        "666324275#5"
+      ],
+      "observation_edges": [
+        "261301881#1"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/261301880/12",
+        "https://api.openstreetmap.org/api/0.6/way/261301881/6",
+        "https://api.openstreetmap.org/api/0.6/way/665897565/1",
+        "https://api.openstreetmap.org/api/0.6/way/666324275/1"
+      ]
+    },
+    {
+      "id": "avenida_maranhao_negative",
+      "label": "Avenida Maranhão",
+      "direction": "norte→sul",
+      "edges": [
+        "30620737#0",
+        "30620737#1",
+        "30620737#10",
+        "30620737#11",
+        "30620737#12",
+        "30620737#13",
+        "30620737#14",
+        "30620737#2",
+        "30620737#3",
+        "30620737#4",
+        "30620737#5",
+        "30620737#6",
+        "30620737#7",
+        "30620737#8",
+        "30620737#9",
+        "835765047"
+      ],
+      "observation_edges": [
+        "30620737#7"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30620737/14",
+        "https://api.openstreetmap.org/api/0.6/way/835765047/4"
+      ]
+    },
+    {
+      "id": "avenida_monsenhor_eduardo_positive",
+      "label": "Avenida Monsenhor Eduardo",
+      "direction": "sul→norte",
+      "edges": [
+        "261533405#0",
+        "261533405#1",
+        "261533405#10",
+        "261533405#11",
+        "261533405#12",
+        "261533405#13",
+        "261533405#14",
+        "261533405#15",
+        "261533405#16",
+        "261533405#17",
+        "261533405#2",
+        "261533405#3",
+        "261533405#4",
+        "261533405#5",
+        "261533405#6",
+        "261533405#7",
+        "261533405#8",
+        "261533405#9",
+        "332052778",
+        "332052779"
+      ],
+      "observation_edges": [
+        "261533405#9"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/261533405/10",
+        "https://api.openstreetmap.org/api/0.6/way/332052778/3",
+        "https://api.openstreetmap.org/api/0.6/way/332052779/1"
+      ]
+    },
+    {
+      "id": "avenida_monsenhor_eduardo_negative",
+      "label": "Avenida Monsenhor Eduardo",
+      "direction": "norte→sul",
+      "edges": [
+        "307156125#0",
+        "307156125#1",
+        "307156125#10",
+        "307156125#11",
+        "307156125#12",
+        "307156125#13",
+        "307156125#14",
+        "307156125#15",
+        "307156125#2",
+        "307156125#3",
+        "307156125#4",
+        "307156125#5",
+        "307156125#6",
+        "307156125#7",
+        "307156125#8",
+        "307156125#9",
+        "421573242#0",
+        "421573242#1",
+        "421573242#2"
+      ],
+      "observation_edges": [
+        "307156125#8"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/307156125/14",
+        "https://api.openstreetmap.org/api/0.6/way/421573242/4"
+      ]
+    },
+    {
+      "id": "avenida_ortizio_borges_positive",
+      "label": "Avenida Ortízio Borges",
+      "direction": "oeste→leste",
+      "edges": [
+        "-647043773#0",
+        "-647043773#1",
+        "-659117881",
+        "-659117913#0",
+        "-659117913#1",
+        "-659117913#2",
+        "-659117913#3",
+        "-659117913#4",
+        "-659117913#5",
+        "-659117941"
+      ],
+      "observation_edges": [
+        "-659117913#1"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/647043773/2",
+        "https://api.openstreetmap.org/api/0.6/way/659117881/2",
+        "https://api.openstreetmap.org/api/0.6/way/659117913/1",
+        "https://api.openstreetmap.org/api/0.6/way/659117941/1"
+      ]
+    },
+    {
+      "id": "avenida_ortizio_borges_negative",
+      "label": "Avenida Ortízio Borges",
+      "direction": "leste→oeste",
+      "edges": [
+        "647043773#0",
+        "647043773#1",
+        "659117881",
+        "659117913#0",
+        "659117913#1",
+        "659117913#2",
+        "659117913#3",
+        "659117913#4",
+        "659117913#5",
+        "659117941"
+      ],
+      "observation_edges": [
+        "659117913#1"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/647043773/2",
+        "https://api.openstreetmap.org/api/0.6/way/659117881/2",
+        "https://api.openstreetmap.org/api/0.6/way/659117913/1",
+        "https://api.openstreetmap.org/api/0.6/way/659117941/1"
+      ]
+    },
+    {
+      "id": "avenida_para_positive",
+      "label": "Avenida Pará",
+      "direction": "sul→norte",
+      "edges": [
+        "-261301886",
+        "30621952#0",
+        "30621952#1",
+        "30621952#10",
+        "30621952#11",
+        "30621952#12",
+        "30621952#2",
+        "30621952#3",
+        "30621952#4",
+        "30621952#5",
+        "30621952#6",
+        "30621952#7",
+        "30621952#8",
+        "30621952#9"
+      ],
+      "observation_edges": [
+        "30621952#6"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/261301886/4",
+        "https://api.openstreetmap.org/api/0.6/way/30621952/9"
+      ]
+    },
+    {
+      "id": "avenida_para_negative",
+      "label": "Avenida Pará",
+      "direction": "norte→sul",
+      "edges": [
+        "261301886"
+      ],
+      "observation_edges": [
+        "261301886"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/261301886/4"
+      ]
+    },
+    {
+      "id": "avenida_portugal_positive",
+      "label": "Avenida Portugal",
+      "direction": "sul→norte",
+      "edges": [
+        "-30621726#0",
+        "-30621726#1",
+        "-30621726#2",
+        "-30621726#3",
+        "-30621726#4",
+        "-30621726#5",
+        "1542864329"
+      ],
+      "observation_edges": [
+        "-30621726#3"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/1542864329/1",
+        "https://api.openstreetmap.org/api/0.6/way/30621726/21"
+      ]
+    },
+    {
+      "id": "avenida_portugal_negative",
+      "label": "Avenida Portugal",
+      "direction": "norte→sul",
+      "edges": [
+        "30621726#0",
+        "30621726#1",
+        "30621726#2",
+        "30621726#3",
+        "30621726#4",
+        "30621726#5",
+        "853676885"
+      ],
+      "observation_edges": [
+        "30621726#3"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30621726/21",
+        "https://api.openstreetmap.org/api/0.6/way/853676885/4"
+      ]
+    },
+    {
+      "id": "avenida_professor_jose_inacio_de_souza_negative",
+      "label": "Avenida Professor José Inácio de Souza",
+      "direction": "norte→sul",
+      "edges": [
+        "30621954#0",
+        "30621954#1",
+        "30621954#10",
+        "30621954#11",
+        "30621954#12",
+        "30621954#13",
+        "30621954#14",
+        "30621954#15",
+        "30621954#16",
+        "30621954#17",
+        "30621954#18",
+        "30621954#19",
+        "30621954#2",
+        "30621954#20",
+        "30621954#3",
+        "30621954#4",
+        "30621954#5",
+        "30621954#6",
+        "30621954#7",
+        "30621954#8",
+        "30621954#9"
+      ],
+      "observation_edges": [
+        "30621954#10"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30621954/16"
+      ]
+    },
+    {
+      "id": "avenida_segismundo_pereira_positive",
+      "label": "Avenida Segismundo Pereira",
+      "direction": "oeste→leste",
+      "edges": [
+        "398537158#east",
+        "616971268#west"
+      ],
+      "observation_edges": [
+        "398537158#east"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/398537158/9",
+        "https://api.openstreetmap.org/api/0.6/way/616971268/4"
+      ]
+    },
+    {
+      "id": "avenida_segismundo_pereira_negative",
+      "label": "Avenida Segismundo Pereira",
+      "direction": "leste→oeste",
+      "edges": [
+        "616971270#east",
+        "931172668#west"
+      ],
+      "observation_edges": [
+        "616971270#east"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/616971270/1",
+        "https://api.openstreetmap.org/api/0.6/way/931172668/1"
+      ]
+    },
+    {
+      "id": "avenida_africa_positive",
+      "label": "Avenida África",
+      "direction": "oeste→leste",
+      "edges": [
+        "30648920#0",
+        "30648920#2",
+        "30648920#3",
+        "30648920#5"
+      ],
+      "observation_edges": [
+        "30648920#3"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30648920/17"
+      ]
+    },
+    {
+      "id": "avenida_africa_negative",
+      "label": "Avenida África",
+      "direction": "leste→oeste",
+      "edges": [
+        "402968122#0",
+        "402968122#2",
+        "402968122#3",
+        "402968122#5"
+      ],
+      "observation_edges": [
+        "402968122#2"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/402968122/4"
+      ]
+    },
+    {
+      "id": "praca_senador_camilo_chaves_positive",
+      "label": "Praça Senador Camilo Chaves",
+      "direction": "sul→norte",
+      "edges": [
+        "30621472#0",
+        "665897609#1"
+      ],
+      "observation_edges": [
+        "30621472#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30621472/11",
+        "https://api.openstreetmap.org/api/0.6/way/665897609/4"
+      ]
+    },
+    {
+      "id": "praca_senador_camilo_chaves_negative",
+      "label": "Praça Senador Camilo Chaves",
+      "direction": "norte→sul",
+      "edges": [
+        "30621472#1",
+        "665897517",
+        "665897609#0",
+        "666324279",
+        "666324303",
+        "666324304"
+      ],
+      "observation_edges": [
+        "666324304"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30621472/11",
+        "https://api.openstreetmap.org/api/0.6/way/665897517/3",
+        "https://api.openstreetmap.org/api/0.6/way/665897609/4",
+        "https://api.openstreetmap.org/api/0.6/way/666324279/2",
+        "https://api.openstreetmap.org/api/0.6/way/666324303/2",
+        "https://api.openstreetmap.org/api/0.6/way/666324304/2"
+      ]
+    },
+    {
+      "id": "praca_das_nacoes_negative",
+      "label": "Praça das Nações",
+      "direction": "leste→oeste",
+      "edges": [
+        "1167877348#west",
+        "269160814#west"
+      ],
+      "observation_edges": [
+        "1167877348#west"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/1167877348/4",
+        "https://api.openstreetmap.org/api/0.6/way/269160814/7"
+      ]
+    },
+    {
+      "id": "rio_branco_positive",
+      "label": "Rio Branco",
+      "direction": "sul→norte",
+      "edges": [
+        "248261375#0",
+        "248261375#1",
+        "248261375#2",
+        "248261375#3",
+        "248261375#4",
+        "248261375#5"
+      ],
+      "observation_edges": [
+        "248261375#2"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/248261375/5"
+      ]
+    },
+    {
+      "id": "rua_alagoas_positive",
+      "label": "Rua Alagoas",
+      "direction": "oeste→leste",
+      "edges": [
+        "30620978#0",
+        "30620978#1",
+        "30620978#10",
+        "30620978#11",
+        "30620978#2",
+        "30620978#3",
+        "30620978#4",
+        "30620978#5",
+        "30620978#6",
+        "30620978#7",
+        "30620978#8",
+        "30620978#9"
+      ],
+      "observation_edges": [
+        "30620978#6"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30620978/8"
+      ]
+    },
+    {
+      "id": "rua_bahia_positive",
+      "label": "Rua Bahia",
+      "direction": "oeste→leste",
+      "edges": [
+        "30621947#0",
+        "30621947#1",
+        "30621947#10",
+        "30621947#11",
+        "30621947#12",
+        "30621947#2",
+        "30621947#3",
+        "30621947#4",
+        "30621947#5",
+        "30621947#6",
+        "30621947#7",
+        "30621947#8",
+        "30621947#9"
+      ],
+      "observation_edges": [
+        "30621947#6"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30621947/8"
+      ]
+    },
+    {
+      "id": "rua_belem_positive",
+      "label": "Rua Belém",
+      "direction": "oeste→leste",
+      "edges": [
+        "274995593#0",
+        "274995593#1",
+        "274995593#2",
+        "274995593#3",
+        "299471495#0",
+        "299471495#1",
+        "299471495#2",
+        "299471495#3",
+        "30628244#0",
+        "30628244#1",
+        "30628244#2",
+        "666324307#0",
+        "666324307#1",
+        "666324307#2",
+        "666324307#3",
+        "666324307#4",
+        "965367671",
+        "965367673#0"
+      ],
+      "observation_edges": [
+        "299471495#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/274995593/6",
+        "https://api.openstreetmap.org/api/0.6/way/299471495/9",
+        "https://api.openstreetmap.org/api/0.6/way/30628244/11",
+        "https://api.openstreetmap.org/api/0.6/way/666324307/1",
+        "https://api.openstreetmap.org/api/0.6/way/965367671/1",
+        "https://api.openstreetmap.org/api/0.6/way/965367673/1"
+      ]
+    },
+    {
+      "id": "rua_benjamim_constant_positive",
+      "label": "Rua Benjamim Constant",
+      "direction": "sul→norte",
+      "edges": [
+        "30664642#0",
+        "30664642#1",
+        "30664642#10",
+        "30664642#11",
+        "30664642#12",
+        "30664642#13",
+        "30664642#14",
+        "30664642#2",
+        "30664642#3",
+        "30664642#4",
+        "30664642#5",
+        "30664642#6",
+        "30664642#7",
+        "30664642#8",
+        "30664642#9"
+      ],
+      "observation_edges": [
+        "30664642#7"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30664642/19"
+      ]
+    },
+    {
+      "id": "rua_ciganos_do_brasil_negative",
+      "label": "Rua Ciganos do Brasil",
+      "direction": "norte→sul",
+      "edges": [
+        "152937010#0",
+        "152937010#1",
+        "152937010#2",
+        "152937010#3"
+      ],
+      "observation_edges": [
+        "152937010#2"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/152937010/20"
+      ]
+    },
+    {
+      "id": "rua_claudemiro_jose_de_souza_negative",
+      "label": "Rua Claudemiro José de Souza",
+      "direction": "leste→oeste",
+      "edges": [
+        "403166935#0",
+        "403166935#1",
+        "403166935#10",
+        "403166935#11",
+        "403166935#12",
+        "403166935#2",
+        "403166935#3",
+        "403166935#4",
+        "403166935#5",
+        "403166935#6",
+        "403166935#7",
+        "403166935#8",
+        "403166935#9"
+      ],
+      "observation_edges": [
+        "403166935#6"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/403166935/4"
+      ]
+    },
+    {
+      "id": "rua_espirito_santo_negative",
+      "label": "Rua Espiríto Santo",
+      "direction": "leste→oeste",
+      "edges": [
+        "30621958#0",
+        "30621958#1",
+        "30621958#10",
+        "30621958#11",
+        "30621958#12",
+        "30621958#2",
+        "30621958#3",
+        "30621958#4",
+        "30621958#5",
+        "30621958#6",
+        "30621958#7",
+        "30621958#8",
+        "30621958#9"
+      ],
+      "observation_edges": [
+        "30621958#6"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30621958/9"
+      ]
+    },
+    {
+      "id": "rua_geraldo_morais_negative",
+      "label": "Rua Geraldo Morais",
+      "direction": "leste→oeste",
+      "edges": [
+        "248261379#0",
+        "248261379#1",
+        "248261379#2"
+      ],
+      "observation_edges": [
+        "248261379#1"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/248261379/2"
+      ]
+    },
+    {
+      "id": "rua_holanda_positive",
+      "label": "Rua Holanda",
+      "direction": "sul→norte",
+      "edges": [
+        "402968128#0",
+        "402968128#2",
+        "402968128#3",
+        "402968128#4",
+        "403166941#0",
+        "403166941#1",
+        "403166941#2",
+        "403166941#3",
+        "403166941#4",
+        "403166941#5",
+        "665897537#0",
+        "665897537#1",
+        "665897537#2",
+        "665897537#3",
+        "665897537#4"
+      ],
+      "observation_edges": [
+        "665897537#3"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/402968128/5",
+        "https://api.openstreetmap.org/api/0.6/way/403166941/9",
+        "https://api.openstreetmap.org/api/0.6/way/665897537/4"
+      ]
+    },
+    {
+      "id": "rua_holanda_negative",
+      "label": "Rua Holanda",
+      "direction": "norte→sul",
+      "edges": [
+        "30622952#0",
+        "30622952#1",
+        "30622952#2",
+        "30622952#3",
+        "30622952#4",
+        "30622952#5",
+        "403166940#0",
+        "403166940#1",
+        "403166940#2",
+        "403166940#4",
+        "665897603#0",
+        "665897603#1",
+        "665897603#2",
+        "665897603#3",
+        "665897603#4"
+      ],
+      "observation_edges": [
+        "30622952#2"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30622952/17",
+        "https://api.openstreetmap.org/api/0.6/way/403166940/2",
+        "https://api.openstreetmap.org/api/0.6/way/665897603/4"
+      ]
+    },
+    {
+      "id": "rua_ipiranga_negative",
+      "label": "Rua Ipiranga",
+      "direction": "leste→oeste",
+      "edges": [
+        "1163825151"
+      ],
+      "observation_edges": [
+        "1163825151"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/1163825151/3"
+      ]
+    },
+    {
+      "id": "rua_itumbiara_negative",
+      "label": "Rua Itumbiara",
+      "direction": "leste→oeste",
+      "edges": [
+        "259739915",
+        "330066084#0",
+        "330066084#1",
+        "330066084#10",
+        "330066084#11",
+        "330066084#12",
+        "330066084#13",
+        "330066084#14",
+        "330066084#2",
+        "330066084#3",
+        "330066084#4",
+        "330066084#5",
+        "330066084#6",
+        "330066084#7",
+        "330066084#8",
+        "330066084#9"
+      ],
+      "observation_edges": [
+        "330066084#7"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/259739915/5",
+        "https://api.openstreetmap.org/api/0.6/way/330066084/5"
+      ]
+    },
+    {
+      "id": "rua_ivaldo_alves_do_nascimento_1080_negative",
+      "label": "Rua Ivaldo Alves do Nascimento, 1080",
+      "direction": "leste→oeste",
+      "edges": [
+        "30665258#0",
+        "30665258#1",
+        "30665258#10",
+        "30665258#2",
+        "30665258#3",
+        "30665258#4",
+        "30665258#5",
+        "30665258#6",
+        "30665258#7",
+        "30665258#8",
+        "30665258#9"
+      ],
+      "observation_edges": [
+        "30665258#4"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30665258/12"
+      ]
+    },
+    {
+      "id": "rua_jeronimo_martins_do_nacimento_positive",
+      "label": "Rua Jerônimo Martins do Nacimento",
+      "direction": "oeste→leste",
+      "edges": [
+        "30665257#0",
+        "30665257#1",
+        "30665257#10",
+        "30665257#2",
+        "30665257#3",
+        "30665257#4",
+        "30665257#5",
+        "30665257#6",
+        "30665257#7",
+        "30665257#8",
+        "30665257#9"
+      ],
+      "observation_edges": [
+        "30665257#6"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30665257/13"
+      ]
+    },
+    {
+      "id": "rua_jose_alves_garcia_negative",
+      "label": "Rua José Alves Garcia",
+      "direction": "leste→oeste",
+      "edges": [
+        "30621943#0",
+        "30621943#1",
+        "30621943#10",
+        "30621943#11",
+        "30621943#12",
+        "30621943#13",
+        "30621943#2",
+        "30621943#3",
+        "30621943#4",
+        "30621943#5",
+        "30621943#6",
+        "30621943#7",
+        "30621943#8",
+        "30621943#9"
+      ],
+      "observation_edges": [
+        "30621943#6"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30621943/11"
+      ]
+    },
+    {
+      "id": "rua_jose_rezende_dos_santos_positive",
+      "label": "Rua José Rezende dos Santos",
+      "direction": "oeste→leste",
+      "edges": [
+        "30621940#0",
+        "30621940#1",
+        "30621940#10",
+        "30621940#11",
+        "30621940#12",
+        "30621940#2",
+        "30621940#3",
+        "30621940#4",
+        "30621940#5",
+        "30621940#6",
+        "30621940#7",
+        "30621940#8",
+        "30621940#9"
+      ],
+      "observation_edges": [
+        "30621940#6"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30621940/16"
+      ]
+    },
+    {
+      "id": "rua_maria_das_dores_dias_positive",
+      "label": "Rua Maria das Dores Dias",
+      "direction": "sul→norte",
+      "edges": [
+        "154562663#north",
+        "616971271#0",
+        "616971271#1",
+        "616971271#2",
+        "616971271#3"
+      ],
+      "observation_edges": [
+        "616971271#1"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/154562663/19",
+        "https://api.openstreetmap.org/api/0.6/way/616971271/4"
+      ]
+    },
+    {
+      "id": "rua_maria_das_dores_dias_negative",
+      "label": "Rua Maria das Dores Dias",
+      "direction": "norte→sul",
+      "edges": [
+        "-154562663#north",
+        "-616971271#0",
+        "-616971271#1",
+        "-616971271#2",
+        "-616971271#3"
+      ],
+      "observation_edges": [
+        "-616971271#1"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/154562663/19",
+        "https://api.openstreetmap.org/api/0.6/way/616971271/4"
+      ]
+    },
+    {
+      "id": "rua_miguel_rocha_dos_santos_negative",
+      "label": "Rua Miguel Rocha dos Santos",
+      "direction": "norte→sul",
+      "edges": [
+        "30649088#0",
+        "30649088#1"
+      ],
+      "observation_edges": [
+        "30649088#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30649088/9"
+      ]
+    },
+    {
+      "id": "rua_natal_positive",
+      "label": "Rua Natal",
+      "direction": "oeste→leste",
+      "edges": [
+        "30622937#0",
+        "30622937#1",
+        "30622937#2",
+        "30622937#3",
+        "30622937#4",
+        "30622937#5",
+        "30622937#6",
+        "30622937#7",
+        "330219918"
+      ],
+      "observation_edges": [
+        "30622937#4"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30622937/7",
+        "https://api.openstreetmap.org/api/0.6/way/330219918/2"
+      ]
+    },
+    {
+      "id": "rua_natal_negative",
+      "label": "Rua Natal",
+      "direction": "leste→oeste",
+      "edges": [
+        "-30622937#0",
+        "-30622937#1",
+        "-30622937#2",
+        "-30622937#3",
+        "-30622937#4",
+        "-30622937#5",
+        "-30622937#6",
+        "-30622937#7",
+        "-330219918",
+        "30628247#0",
+        "30628247#1",
+        "30664531#0",
+        "30664531#1",
+        "30664531#10",
+        "30664531#2",
+        "30664531#3",
+        "30664531#4",
+        "30664531#5",
+        "30664531#6",
+        "30664531#7",
+        "30664531#8",
+        "30664531#9"
+      ],
+      "observation_edges": [
+        "30664531#3"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30622937/7",
+        "https://api.openstreetmap.org/api/0.6/way/30628247/7",
+        "https://api.openstreetmap.org/api/0.6/way/30664531/11",
+        "https://api.openstreetmap.org/api/0.6/way/330219918/2"
+      ]
+    },
+    {
+      "id": "rua_niteroi_positive",
+      "label": "Rua Niterói",
+      "direction": "oeste→leste",
+      "edges": [
+        "1156717177#0",
+        "1156717177#1",
+        "1156717177#2",
+        "1156717177#3",
+        "1156717177#4",
+        "1156717177#5",
+        "30622933#0",
+        "30622933#1",
+        "30622933#10",
+        "30622933#11",
+        "30622933#2",
+        "30622933#3",
+        "30622933#4",
+        "30622933#5",
+        "30622933#6",
+        "30622933#7",
+        "30622933#8",
+        "30622933#9"
+      ],
+      "observation_edges": [
+        "30622933#7"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/1156717177/3",
+        "https://api.openstreetmap.org/api/0.6/way/30622933/21"
+      ]
+    },
+    {
+      "id": "rua_nordau_goncalves_de_melo_positive",
+      "label": "Rua Nordau Gonçalves de Melo",
+      "direction": "sul→norte",
+      "edges": [
+        "616180216",
+        "647043774#0",
+        "647043774#1"
+      ],
+      "observation_edges": [
+        "647043774#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/616180216/3",
+        "https://api.openstreetmap.org/api/0.6/way/647043774/3"
+      ]
+    },
+    {
+      "id": "rua_nordau_goncalves_de_melo_negative",
+      "label": "Rua Nordau Gonçalves de Melo",
+      "direction": "norte→sul",
+      "edges": [
+        "-616180216",
+        "-647043774#0",
+        "-647043774#1"
+      ],
+      "observation_edges": [
+        "-647043774#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/616180216/3",
+        "https://api.openstreetmap.org/api/0.6/way/647043774/3"
+      ]
+    },
+    {
+      "id": "rua_parana_positive",
+      "label": "Rua Paraná",
+      "direction": "oeste→leste",
+      "edges": [
+        "1156717166#0",
+        "1156717166#1",
+        "1156717167#0",
+        "1156717167#1",
+        "30664522#0",
+        "30664522#1",
+        "30664522#2",
+        "30664522#3",
+        "30664522#4",
+        "30664522#5",
+        "30664522#6",
+        "30664522#7",
+        "665897556#0",
+        "665897556#1",
+        "901328279#0",
+        "901328279#1",
+        "901328279#2"
+      ],
+      "observation_edges": [
+        "30664522#7"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/1156717166/1",
+        "https://api.openstreetmap.org/api/0.6/way/1156717167/1",
+        "https://api.openstreetmap.org/api/0.6/way/30664522/17",
+        "https://api.openstreetmap.org/api/0.6/way/665897556/2",
+        "https://api.openstreetmap.org/api/0.6/way/901328279/1"
+      ]
+    },
+    {
+      "id": "rua_parana_negative",
+      "label": "Rua Paraná",
+      "direction": "leste→oeste",
+      "edges": [
+        "1156717168",
+        "154252437#0",
+        "154252437#1",
+        "30648037",
+        "331577754",
+        "331577756#0",
+        "331577756#1"
+      ],
+      "observation_edges": [
+        "331577756#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/1156717168/1",
+        "https://api.openstreetmap.org/api/0.6/way/154252437/8",
+        "https://api.openstreetmap.org/api/0.6/way/30648037/11",
+        "https://api.openstreetmap.org/api/0.6/way/331577754/4",
+        "https://api.openstreetmap.org/api/0.6/way/331577756/2"
+      ]
+    },
+    {
+      "id": "rua_pedro_crosara_cherulli_negative",
+      "label": "Rua Pedro Crosara Cherulli",
+      "direction": "norte→sul",
+      "edges": [
+        "303790003#0",
+        "303790003#1",
+        "303790003#2",
+        "303790003#3",
+        "303790003#4"
+      ],
+      "observation_edges": [
+        "303790003#2"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/303790003/3"
+      ]
+    },
+    {
+      "id": "rua_rio_grande_do_sul_positive",
+      "label": "Rua Rio Grande do Sul",
+      "direction": "oeste→leste",
+      "edges": [
+        "-261301887#0",
+        "-261301887#1",
+        "30665250#0",
+        "30665250#1",
+        "789705871#0",
+        "789705871#1",
+        "789705871#10",
+        "789705871#11",
+        "789705871#12",
+        "789705871#13",
+        "789705871#2",
+        "789705871#3",
+        "789705871#4",
+        "789705871#5",
+        "789705871#6",
+        "789705871#7",
+        "789705871#8",
+        "789705871#9"
+      ],
+      "observation_edges": [
+        "789705871#8"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/261301887/3",
+        "https://api.openstreetmap.org/api/0.6/way/30665250/5",
+        "https://api.openstreetmap.org/api/0.6/way/789705871/1"
+      ]
+    },
+    {
+      "id": "rua_rio_grande_do_sul_negative",
+      "label": "Rua Rio Grande do Sul",
+      "direction": "leste→oeste",
+      "edges": [
+        "-30665250#0",
+        "-30665250#1",
+        "261301887#0",
+        "261301887#1"
+      ],
+      "observation_edges": [
+        "-30665250#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/261301887/3",
+        "https://api.openstreetmap.org/api/0.6/way/30665250/5"
+      ]
+    },
+    {
+      "id": "rua_rio_de_janeiro_positive",
+      "label": "Rua Rio de Janeiro",
+      "direction": "oeste→leste",
+      "edges": [
+        "142719720#0",
+        "142719720#1",
+        "142719720#10",
+        "142719720#11",
+        "142719720#2",
+        "142719720#3",
+        "142719720#4",
+        "142719720#5",
+        "142719720#6",
+        "142719720#7",
+        "142719720#8",
+        "142719720#9"
+      ],
+      "observation_edges": [
+        "142719720#6"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/142719720/5"
+      ]
+    },
+    {
+      "id": "rua_salvador_positive",
+      "label": "Rua Salvador",
+      "direction": "oeste→leste",
+      "edges": [
+        "300965447#0",
+        "300965447#1",
+        "30622911#0",
+        "30622911#1",
+        "30622911#2",
+        "30622911#3",
+        "30622911#4",
+        "30622911#5",
+        "30622911#6",
+        "30622911#7",
+        "30622911#8",
+        "30622911#9",
+        "30622916#0",
+        "30622916#1",
+        "30622916#2",
+        "30622916#3",
+        "30622916#4",
+        "30622916#5",
+        "30622916#6",
+        "30622916#7",
+        "421572935"
+      ],
+      "observation_edges": [
+        "30622911#7"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/300965447/4",
+        "https://api.openstreetmap.org/api/0.6/way/30622911/13",
+        "https://api.openstreetmap.org/api/0.6/way/30622916/6",
+        "https://api.openstreetmap.org/api/0.6/way/421572935/1"
+      ]
+    },
+    {
+      "id": "rua_salvador_negative",
+      "label": "Rua Salvador",
+      "direction": "leste→oeste",
+      "edges": [
+        "-30622916#0",
+        "-30622916#1",
+        "-30622916#2",
+        "-30622916#3",
+        "-30622916#4",
+        "-30622916#5",
+        "-30622916#6",
+        "-30622916#7"
+      ],
+      "observation_edges": [
+        "-30622916#3"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30622916/6"
+      ]
+    },
+    {
+      "id": "rua_santa_catarina_positive",
+      "label": "Rua Santa Catarina",
+      "direction": "oeste→leste",
+      "edges": [
+        "30665249#0",
+        "30665249#1"
+      ],
+      "observation_edges": [
+        "30665249#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30665249/5"
+      ]
+    },
+    {
+      "id": "rua_santa_catarina_negative",
+      "label": "Rua Santa Catarina",
+      "direction": "leste→oeste",
+      "edges": [
+        "-30665249#0",
+        "-30665249#1",
+        "30664521#0",
+        "30664521#1",
+        "30664521#10",
+        "30664521#11",
+        "30664521#12",
+        "30664521#13",
+        "30664521#2",
+        "30664521#3",
+        "30664521#4",
+        "30664521#5",
+        "30664521#6",
+        "30664521#7",
+        "30664521#8",
+        "30664521#9"
+      ],
+      "observation_edges": [
+        "30664521#5"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30664521/22",
+        "https://api.openstreetmap.org/api/0.6/way/30665249/5"
+      ]
+    },
+    {
+      "id": "rua_sao_paulo_positive",
+      "label": "Rua São Paulo",
+      "direction": "oeste→leste",
+      "edges": [
+        "-463005565#0",
+        "-463005565#1",
+        "-463005565#2",
+        "300965451#0",
+        "300965451#1",
+        "30648038#0",
+        "30648038#1",
+        "30648038#2"
+      ],
+      "observation_edges": [
+        "300965451#1"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/300965451/4",
+        "https://api.openstreetmap.org/api/0.6/way/30648038/7",
+        "https://api.openstreetmap.org/api/0.6/way/463005565/2"
+      ]
+    },
+    {
+      "id": "rua_sao_paulo_negative",
+      "label": "Rua São Paulo",
+      "direction": "leste→oeste",
+      "edges": [
+        "30664523#0",
+        "30664523#1",
+        "30664523#2",
+        "30664523#3",
+        "30664523#4",
+        "30664523#5",
+        "30664523#6",
+        "463005565#0",
+        "463005565#1",
+        "463005565#2",
+        "665897568#0",
+        "665897568#1",
+        "665897568#2"
+      ],
+      "observation_edges": [
+        "30664523#0"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30664523/10",
+        "https://api.openstreetmap.org/api/0.6/way/463005565/2",
+        "https://api.openstreetmap.org/api/0.6/way/665897568/1"
+      ]
+    },
+    {
+      "id": "rua_tupaciguara_positive",
+      "label": "Rua Tupaciguara",
+      "direction": "oeste→leste",
+      "edges": [
+        "30665265#0",
+        "30665265#1",
+        "30665265#10",
+        "30665265#11",
+        "30665265#2",
+        "30665265#3",
+        "30665265#4",
+        "30665265#5",
+        "30665265#6",
+        "30665265#7",
+        "30665265#8",
+        "30665265#9"
+      ],
+      "observation_edges": [
+        "30665265#6"
+      ],
+      "references": [
+        "https://api.openstreetmap.org/api/0.6/way/30665265/8"
+      ]
+    },
+    {
+      "id": "rua_jatai_negative",
+      "label": "Rua Jataí",
+      "direction": "sudeste→noroeste / leste→oeste",
+      "edges": [
+        "30665261#0",
+        "30665261#1",
+        "30665261#2",
+        "30665261#3",
+        "30665261#4",
+        "30665261#5",
+        "30665261#6",
+        "30665261#7",
+        "30665261#8",
+        "30665261#9"
+      ],
+      "observation_edges": [
+        "30665261#6",
+        "30665261#7"
+      ],
+      "references": [
+        "https://www.openstreetmap.org/way/30665261"
+      ],
+      "scope": "Corredor interno de ligação: não é portal. Os probes são seções antes/depois do cruzamento com Brasil; passagens sobrepostas não se somam como viagens independentes."
+    }
+  ],
+  "regional_demand": {
+    "default": "regional-integrated",
+    "compatibility_alias": "regional-midpoint",
+    "reference_expected_departures": 17864.715594787627,
+    "reference_context": {
+      "day": "tuesday",
+      "start": "15:00",
+      "seconds": 10800,
+      "kind": "hypothesis",
+      "basis": "Escala do experimento anterior, preservada para isolar distribuição espacial. Não confirma volume regional e não é recalculada somando VMD ou sensores."
+    },
+    "destination_hierarchy_weights": {
+      "highway.primary": 4,
+      "highway.primary_link": 4,
+      "highway.secondary": 3,
+      "highway.secondary_link": 3,
+      "highway.tertiary": 2,
+      "highway.tertiary_link": 2,
+      "highway.residential": 1,
+      "": 1
+    },
+    "weight_status": "Prior de oportunidade por acesso físico orientado: faixas passenger × peso ordinal da hierarquia × evidência VMD relativa quando disponível. Representações no mesmo boundary_group repartem a maior oportunidade do grupo. Extremidades opostas da mesma avenida não dividem massa por nome de rua. Hipótese espacial, não capacidade semafórica nem orçamento de veículos; normalização global conserva população. Alternativas do mesmo OD repartem oportunidade por eficiência relativa de tempo livre.",
+    "relative_corridor_evidence": {
+      "avenida_joao_naves_de_avila": "joao_naves",
+      "avenida_monsenhor_eduardo": "monsenhor",
+      "avenida_afonso_pena": "afonso",
+      "avenida_segismundo_pereira": "segismundo"
+    },
+    "external_evidence_use": "VMD por faixa fiscalizada, normalizados pela média das quatro referências por faixa, modulam somente pesos relativos por acesso. Faixas locais entram uma vez no prior. Transferência aos dois sentidos é hipótese; medições são de outras seções e todas as classes. Nenhum novo orçamento.",
+    "directional_prior": {
+      "origin": "1171563461",
+      "ratios": [
+        0.8155756207674943,
+        0.927891156462585
+      ],
+      "source": "https://repositorio.ufu.br/handle/123456789/49701",
+      "source_page": 31,
+      "status": "Estimativa de razão por período em outras seções/classes. Projeta fluxo no sentido bairro relativo ao candidato6 sem criar orçamento separado. Transferência ao recorte, demais dias e interpolação entre centros dos períodos são hipóteses; madrugada neutra não medida.",
+      "probe_edge": "1156717176",
+      "daily_ratio_knots": [
+        {
+          "second": 0,
+          "ratio": 1.0,
+          "kind": "hypothesis_neutral_unobserved_night"
+        },
+        {
+          "second": 27000,
+          "ratio": 1.4045754769069374,
+          "kind": "estimated_transfer_morning"
+        },
+        {
+          "second": 45000,
+          "ratio": 1.0108959014099599,
+          "kind": "estimated_transfer_midday"
+        },
+        {
+          "second": 63000,
+          "ratio": 0.8717333886150397,
+          "kind": "estimated_transfer_afternoon"
+        },
+        {
+          "second": 86400,
+          "ratio": 1.0,
+          "kind": "hypothesis_neutral_unobserved_night"
+        }
+      ],
+      "source_observations": {
+        "pdf_page": 32,
+        "printed_page": 30,
+        "table": 2,
+        "sections": [
+          "Viaduto Carlos Saraiva",
+          "Viaduto José Rezende Ribeiro"
+        ],
+        "dates": [
+          "2026-04-28",
+          "2026-05-05"
+        ],
+        "periods": [
+          "06:45–08:15",
+          "11:45–13:15",
+          "16:45–18:15"
+        ],
+        "west_east": [
+          [
+            4399,
+            3508,
+            3613
+          ],
+          [
+            5489,
+            3887,
+            4092
+          ]
+        ],
+        "east_west": [
+          [
+            3916,
+            3822,
+            4430
+          ],
+          [
+            3256,
+            3521,
+            4410
+          ]
+        ]
+      }
+    },
+    "temporal_prior": "Escala regional varia com soma normalizada das curvas car5/car6, sem interpretar a soma como veículos únicos observados. Priors OD arteriais acompanham forma relativa6 e locais5, hipótese de transferência; projeção compartilhada por15min e tempo livre ajusta probabilidades conservando massa. A observação adicional do sentido bairro é ESTIMADA por razões externas contextualizadas; não sensor medido.",
+    "limitations": [
+      "Total regional não identificável com dois sensores; escala de referência permanece hipótese experimental.",
+      "Coordenadas, faixas e movimentos dos sensores permanecem sem comprovação; ajuste é condicionado aos candidatos.",
+      "Projeção de tempo livre não modela filas/inserção/sinais; somente passagens físicas SUMO avaliam o fluxo realizado.",
+      "Fontes externas modulam priors relativos de outras seções e classes; não medem a demanda destes portais.",
+      "Forma temporal arterial/local e escolha OD são hipóteses; não há OD semanal medido.",
+      "Viagens internas ausentes não são compensadas elevando entradas."
+    ]
+  },
+  "route_templates": [
+    {
+      "id": "niteroi_through_shopping",
+      "origins": [
+        "30665257#0"
+      ],
+      "via": [
+        "30622933#11",
+        "1156717177#1"
+      ],
+      "status": "Hipótese da direção sensor5 do primeiro protótipo; caminho contínuo via duarouter.",
+      "require_junction_simple": true
+    },
+    {
+      "id": "jeronimo_brasil_niteroi",
+      "origins": [
+        "30665257#0"
+      ],
+      "via": [
+        "261301884#9",
+        "261301884#10",
+        "30622933#3",
+        "30622933#11",
+        "1156717177#1"
+      ],
+      "status": "Alternativa conectada dos experimentos; candidata repartindo massa OD com trajetos nativos, não regra100% nem população exclusiva.",
+      "require_junction_simple": true
+    },
+    {
+      "id": "brasil_through_conflicts",
+      "origins": [
+        "261301884#0"
+      ],
+      "via": [
+        "261301884#8",
+        "261301884#9",
+        "261301884#10"
+      ],
+      "destinations": [
+        "-616180216",
+        "-659117881",
+        "1156272391#3",
+        "1542864329",
+        "30621943#13",
+        "30621952#12",
+        "30621953#14",
+        "30621958#12",
+        "30628247#1",
+        "30648910#6",
+        "30648920#5",
+        "30664521#13",
+        "30664523#6",
+        "332052778",
+        "403166935#12",
+        "403166940#4",
+        "602306725#east",
+        "602306733#west",
+        "602306745#west",
+        "647043774#1",
+        "665897559#8",
+        "665897609#1"
+      ],
+      "status": "Hipótese de continuidade da Avenida Brasil; alternativa nativa, sem mínimo de viagens e sem quota exclusiva.",
+      "geographic_basis": "Entrada periférica da própria Brasil. Destinos selecionados pela progressão no semiplano adiante de 261301884#10: dot(destino_xy-fim_shape, fim_shape-inicio_shape)>=0. As 22 saídas resultam desse critério, não de uma quantidade prescrita de rotas.",
+      "conflicting_movements": [
+        "261301884#8 -> 261301884#9 (cruza Jerônimo)",
+        "261301884#9 -> 261301884#10 (cruza Jataí)"
+      ],
+      "native_validation": "22 caminhos contínuos passenger, sem edges repetidos, U-turn ou retorno ao mesmo acesso; tempo livre 1.078–1.294 vezes o shortest OD. Informação de geometria/eficiência, não validação de volume real.",
+      "require_junction_simple": true
+    },
+    {
+      "id": "joao_pinheiro_jatai_west",
+      "origins": [
+        "665897565#0"
+      ],
+      "via": [
+        "261301881#5",
+        "30665261#6",
+        "30665261#7"
+      ],
+      "destinations": [
+        "30665258#10",
+        "307156125#15",
+        "330066084#14"
+      ],
+      "status": "Hipótese de ligação João Pinheiro–Jataí aos acessos a oeste; alternativa nativa com massa OD compartilhada.",
+      "geographic_basis": "Entrada periférica da João Pinheiro. Destinos devem estar adiante de AMBOS os vetores orientados de 261301881#5 e 30665261#7: dot(destino_xy-fim_shape, fim_shape-inicio_shape)>=0 em cada seção. O resultado são Ivaldo, Monsenhor e Itumbiara, sem número de destinos escolhido previamente.",
+      "conflicting_movements": [
+        "30665261#6 -> 30665261#7 (Jataí reta, prioridade M, cruzando Brasil)"
+      ],
+      "native_validation": "Três caminhos contínuos passenger, sem edges repetidos, U-turn ou retorno ao mesmo acesso; tempo livre relativo ao shortest: Ivaldo 1.004, Monsenhor 1.133, Itumbiara 1.148. Não comprova intensidade real.",
+      "require_junction_simple": true
+    }
+  ],
+  "observation_movements": [
+    {
+      "id": "jeronimo_afonso",
+      "label": "jeronimo_afonso",
+      "from_edge": "30665257#6",
+      "to_edge": "658279138#9"
+    },
+    {
+      "id": "jeronimo_brasil",
+      "label": "jeronimo_brasil",
+      "from_edge": "30665257#4",
+      "to_edge": "261301884#9"
+    },
+    {
+      "id": "brasil_straight_conflict",
+      "label": "brasil_straight_conflict",
+      "from_edge": "261301884#8",
+      "to_edge": "261301884#9"
+    },
+    {
+      "id": "jatai_straight_conflict",
+      "label": "jatai_straight_conflict",
+      "from_edge": "30665261#6",
+      "to_edge": "30665261#7"
+    },
+    {
+      "id": "jatai_brasil_conflict",
+      "label": "jatai_brasil_conflict",
+      "from_edge": "30665261#6",
+      "to_edge": "261301884#10"
+    },
+    {
+      "id": "niteroi_cross_afonso",
+      "label": "niteroi_cross_afonso",
+      "from_edge": "30622933#4",
+      "to_edge": "30622933#5"
+    },
+    {
+      "id": "afonso_niteroi",
+      "label": "afonso_niteroi",
+      "from_edge": "658279138#10",
+      "to_edge": "30622933#5"
+    },
+    {
+      "id": "afonso_straight_conflict",
+      "label": "afonso_straight_conflict",
+      "from_edge": "658279138#10",
+      "to_edge": "658279138#11"
+    },
+    {
+      "id": "rondon_joao_naves_left",
+      "label": "rondon_joao_naves_left",
+      "from_edge": "1156717175#5",
+      "to_edge": "462993309"
+    }
+  ],
+  "temporal_contexts": {
+    "timezone": "America/Sao_Paulo",
+    "weekday_order": [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday"
+    ],
+    "section_starts": [
+      "00:00",
+      "03:00",
+      "06:00",
+      "09:00",
+      "12:00",
+      "15:00",
+      "18:00",
+      "21:00"
+    ],
+    "section_seconds": 10800,
+    "variations": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "organization": "MetaSettran / day / [start,start+03:00) / variation; shared parameters, routes only on demand"
+  }
+}

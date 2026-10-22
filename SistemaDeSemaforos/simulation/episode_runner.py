@@ -94,6 +94,8 @@ def run_simulation(
     settran_plan: str | None = None,
     settran_intersections: list[str] | None = None,
     _settran_document: dict | None = None,
+    demand_observation_edges: tuple[str, ...] = (),
+    track_teleported_vehicles: bool = False,
 ) -> None:
     """Executa demanda pronta; recording_dir habilita arquivos de observação."""
     selection = _validate_signal_profile(signal_profile, settran_plan, net_file,
@@ -120,7 +122,7 @@ def run_simulation(
         "--begin", "0",
         "--no-step-log", "true",
         # Mostra exemplos e depois agrupa avisos repetidos de congestionamento.
-        "--aggregate-warnings", "5",
+        "--aggregate-warnings", "-1" if track_teleported_vehicles else "5",
     ]
     if end is not None:
         command.extend(["--end", str(end)])
@@ -142,7 +144,9 @@ def run_simulation(
         return
 
     preparation_started = perf_counter()
-    output_options = prepare_outputs(recording_dir, profile=metrics_profile)
+    observation_options = ({"demand_observation_edges": demand_observation_edges}
+                           if demand_observation_edges else {})
+    output_options = prepare_outputs(recording_dir, profile=metrics_profile, **observation_options)
     if selection is not None:
         # Uma única opção mantém programas e observações; repetir a flag pode
         # substituir o arquivo de coleta já usado pelo pipeline.
@@ -190,7 +194,7 @@ def run_simulation(
             metadata["duration_seconds"] = perf_counter() - started
 
 
-def run_random_episodes(
+def run_episodes(
     *,
     net_file: Path | str = DEFAULT_NET_FILE,
     output_dir: Path | str = DEFAULT_EPISODE_DIR,
@@ -203,13 +207,47 @@ def run_random_episodes(
     signal_profile: str = "current",
     settran_plan: str | None = None,
     settran_intersections: list[str] | None = None,
+    demand_profile: str = "random",
+    day: str | None = None,
+    start: str | None = None,
+    sections: int | None = None,
+    variation: int | None = None,
+    drain_limit: float | None = None,
+    spatial_scenario: str | None = None,
 ) -> Path:
     """Gera episódios em um lote exclusivo e grava os resultados de cada um."""
     # Validar antes de sortear seed, gerar demanda ou criar qualquer episódio.
     selection = _validate_signal_profile(signal_profile, settran_plan, net_file,
                                          settran_intersections)
+    if demand_profile not in {"random", "metasettran"}:
+        raise ValueError("demand_profile deve ser random ou metasettran.")
+    demand_options = None
+    if demand_profile == "random":
+        if any(value is not None for value in (day, start, sections, variation, drain_limit, spatial_scenario)):
+            raise ValueError("Dia, seção, variação e escoamento exigem --demand-profile metasettran.")
+    else:
+        from ..demand.metasettran_demand_generator import SPATIAL_SCENARIOS, validate_selection
+        demand_options = {"day": "tuesday" if day is None else day,
+                          "start": "15:00" if start is None else start,
+                          "sections": 1 if sections is None else sections,
+                          "variation": 1 if variation is None else variation}
+        validate_selection(**demand_options)
+        spatial_scenario = "regional-integrated" if spatial_scenario is None else spatial_scenario
+        if spatial_scenario not in SPATIAL_SCENARIOS:
+            raise ValueError("Cenário regional inválido ou pertencente a um modelo de demanda retirado.")
+        demand_options["spatial_scenario"] = spatial_scenario
+        if duration != DEFAULT_DURATION or period != DEFAULT_PERIOD or end is not None:
+            raise ValueError("MetaSettran define a janela de partidas; use apenas --drain-limit para o horizonte.")
+        drain_limit = 2700.0 if drain_limit is None else drain_limit
+        if (isinstance(drain_limit, bool) or not math.isfinite(drain_limit)
+                or drain_limit < 0 or drain_limit != int(drain_limit)):
+            raise ValueError("drain_limit deve ser um número inteiro de segundos, finito e não negativo.")
+        duration = 10800.0 * demand_options["sections"]
+        end = duration + drain_limit
     if isinstance(episodes, bool) or not isinstance(episodes, int) or episodes < 1:
         raise ValueError("episodes deve ser um inteiro maior que zero.")
+    if demand_options is not None and demand_options["variation"] + episodes - 1 > 25:
+        raise ValueError("O lote excede as 25 variações; não há retorno automático à variação 1.")
     if metrics_profile not in {"core", "full"}:
         raise ValueError("metrics_profile deve ser core ou full.")
     if end is not None and (not math.isfinite(end) or end <= 0):
@@ -218,9 +256,12 @@ def run_random_episodes(
         if not math.isfinite(value) or value <= 0:
             raise ValueError(f"{name} deve ser finito e maior que zero.")
 
+    if demand_profile == "metasettran" and Path(output_dir) == DEFAULT_EPISODE_DIR:
+        output_dir = OUTPUT_ROOT / "outputs-metasettran"
     output_dir = Path(output_dir).expanduser().resolve()
-    if not output_dir.is_relative_to((OUTPUT_ROOT / "outputs-random").resolve()):
-        raise ValueError("output_dir deve ficar dentro de outputs/outputs-random/.")
+    expected_root = (OUTPUT_ROOT / f"outputs-{demand_profile}").resolve()
+    if not output_dir.is_relative_to(expected_root):
+        raise ValueError(f"output_dir deve ficar dentro de outputs/outputs-{demand_profile}/.")
     net_file = Path(net_file).expanduser().resolve()
     if not net_file.is_file():
         raise FileNotFoundError(f"Rede SUMO não encontrada: {net_file}")
@@ -229,17 +270,28 @@ def run_random_episodes(
     batch_dir.mkdir(parents=True, exist_ok=False)
     context = {}
     for episode in range(1, episodes + 1):
-        _run_random_episode(net_file, batch_dir, episode, episodes, gui, duration, period,
-                            end, metrics_profile, context, signal_profile, selection)
+        episode_demand = (dict(demand_options, variation=demand_options["variation"] + episode - 1)
+                          if demand_options is not None else None)
+        _run_episode(net_file, batch_dir, episode, episodes, gui, duration, period,
+                     end, metrics_profile, context, signal_profile, selection, episode_demand)
     return batch_dir
 
 
-def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, period,
-                        end, metrics_profile, context, signal_profile, selection=None):
+def run_random_episodes(**kwargs) -> Path:
+    """Mantém a interface Python e os defaults do executor random existente."""
+    return run_episodes(**kwargs)
+
+
+def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
+                 end, metrics_profile, context, signal_profile, selection=None, demand_options=None):
     """Mantém juntos o ciclo de vida, o contexto e o tratamento de falhas."""
     started = perf_counter()
     started_at = _utc_now()
-    seed = random.randint(0, 2**31 - 1)
+    if demand_options is None:
+        seed = random.randint(0, 2**31 - 1)
+    else:
+        from ..demand.metasettran_demand_generator import effective_seed
+        seed = effective_seed(demand_options["variation"])
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     episode_id = f"{timestamp}_seed-{seed}_{uuid4().hex[:8]}"
     directory = output_dir / episode_id
@@ -248,7 +300,7 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
     inputs = directory / "inputs"
     inputs.mkdir()
     metrics = {
-        "episode_id": episode_id, "demand_model": "random", "seed": seed,
+        "episode_id": episode_id, "demand_model": "random" if demand_options is None else "metasettran", "seed": seed,
         "episode_index": episode, "batch_episodes": episodes,
         "started_at_utc": started_at, "gui": gui,
         "demand_duration_seconds": float(duration), "demand_period_seconds": float(period),
@@ -256,6 +308,9 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
         "vehicles_requested": math.ceil(duration / period), "status": "running",
         "metrics_profile": metrics_profile,
     }
+    if demand_options is not None:
+        metrics.pop("demand_period_seconds")
+        metrics.pop("vehicles_requested")
     if end is not None:
         metrics["simulation_end_requested_seconds"] = float(end)
     execution = {
@@ -284,10 +339,25 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
         execution["timings_seconds"]["configuration_preparation_time_seconds"] = (
             perf_counter() - configuration_started)
         generation = execution["generation"]
-        demand_file = generate_random_demand(
-            net_file=net_file, output_dir=inputs, duration=duration, period=period,
-            seed=seed, metadata=generation, log_file=directory / "generation.log",
-        )
+        if demand_options is None:
+            demand_file = generate_random_demand(
+                net_file=net_file, output_dir=inputs, duration=duration, period=period,
+                seed=seed, metadata=generation, log_file=directory / "generation.log",
+            )
+        else:
+            from ..demand.metasettran_demand_generator import generate_metasettran_demand
+            demand_file = generate_metasettran_demand(
+                net_file=net_file, output_dir=inputs, metadata=generation,
+                log_file=directory / "generation.log", **demand_options,
+            )
+            # Uma rota reutilizável é parte do experimento MetaSettran. As viagens
+            # intermediárias e configurações SUMO continuam temporárias.
+            retained_route = directory / "metasettran.rou.xml"
+            demand_file.replace(retained_route)
+            demand_file = retained_route
+            generation["routes_file"] = str(retained_route)
+            generation["clearance_limit_seconds"] = end - duration
+            metrics["vehicles_requested"] = generation["vehicles_generated"]
         for name in ("vehicles_generated", "trips_generated"):
             metrics[name] = generation[name]
         departures = [float(vehicle.get("depart")) for vehicle in ET.parse(demand_file).getroot()
@@ -302,6 +372,12 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
             "settran_intersections": selection["intersections"],
             "_settran_document": selection["document_snapshot"],
         }
+        if demand_options is not None:
+            from ..metrics.episode_metrics_collector import metasettran_observation_edges
+            signal_options.update(
+                demand_observation_edges=metasettran_observation_edges(generation["spatial_model"]),
+                track_teleported_vehicles=True,
+            )
         run_simulation(net_file=net_file, demand_file=demand_file, gui=gui, end=end,
                        recording_dir=directory, metadata=execution["simulation"],
                        metrics_profile=metrics_profile, sumo_defaults=configuration["sumo_defaults"],
@@ -317,6 +393,13 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
         collected = collect_episode(directory / "raw", net_file, profile=metrics_profile)
         metrics.update(collected["metrics"])
         entities = collected["entities"]
+        if demand_options is not None:
+            from ..metrics.episode_metrics_collector import collect_metasettran_validation
+            validation = collect_metasettran_validation(
+                directory, generation, summary_metrics=collected["metrics"],
+                vehicles=entities.get("vehicles") if metrics_profile == "full" else None)
+            metrics.update(validation.pop("metrics"))
+            execution["demand_validation"] = validation
         metrics["aggregation_time_seconds"] = perf_counter() - aggregation_started
         metrics["status"] = "completed"
     except BaseException as exc:
@@ -346,7 +429,8 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
             "status", "finished_at_utc", "execution_time_seconds")})
         temporary_sources = []
         if metrics_profile == "core" and metrics["status"] == "completed":
-            for name in ("summary.xml.gz", "trips.xml.gz", "statistics.xml", "queues.xml.gz"):
+            for name in ("summary.xml.gz", "trips.xml.gz", "statistics.xml", "queues.xml.gz",
+                         "metasettran_counts.xml.gz", "vehicle_routes.xml.gz"):
                 path = directory / "raw" / name
                 if path.is_file():
                     temporary_sources.append(path)
@@ -369,20 +453,29 @@ def _run_random_episode(net_file, output_dir, episode, episodes, gui, duration, 
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Executa episódios random pelo terminal."""
+    """Executa episódios pelo terminal, com eixos de demanda e semáforos independentes."""
     parser = argparse.ArgumentParser(
-        description="Executa episódios com uma demanda random nova em cada um."
+        description="Executa episódios random ou MetaSettran, com semáforos independentes."
     )
     parser.add_argument("--episodes", type=int, default=1)
     parser.add_argument("--gui", action="store_true")
     parser.add_argument("--net-file", type=Path, default=DEFAULT_NET_FILE)
     parser.add_argument(
         "--output-dir", type=Path, default=DEFAULT_EPISODE_DIR,
-        help="Subpasta de outputs/outputs-random para guardar os episódios.",
+        help="Destino dentro de outputs/outputs-random ou outputs/outputs-metasettran, conforme a demanda.",
     )
     parser.add_argument("--duration", type=float, default=DEFAULT_DURATION)
     parser.add_argument("--period", type=float, default=DEFAULT_PERIOD)
     parser.add_argument("--end", type=float)
+    parser.add_argument("--demand-profile", choices=("random", "metasettran"), default="random")
+    parser.add_argument("--day", help="Dia inicial de monday a sunday; MetaSettran: tuesday por padrão.")
+    parser.add_argument("--start", help="Início civil de seção: 00:00, 03:00, ..., 21:00; padrão 15:00.")
+    parser.add_argument("--sections", type=int, help="Número de seções consecutivas de três horas, em uma simulação.")
+    parser.add_argument("--variation", type=int, help="Variação inicial 1–25; episódios seguintes usam índices consecutivos.")
+    parser.add_argument("--drain-limit", type=float, help="Escoamento após a janela de partidas; MetaSettran: 2700 s.")
+    from ..demand.metasettran_demand_generator import SPATIAL_SCENARIOS
+    parser.add_argument("--spatial-scenario", choices=SPATIAL_SCENARIOS,
+                        help="Modelo regional integrado; regional-midpoint é alias de compatibilidade, sem orçamento lateral independente.")
     parser.add_argument("--metrics-profile", choices=("core", "full"), default="core",
                         help="core: observações padrão; full: inclui séries por via/faixa/veículo.")
     parser.add_argument("--signal-profile", choices=("current", "settran"), default="current",
@@ -395,9 +488,20 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        run_random_episodes(**vars(args))
+        options = vars(args)
+        if options["demand_profile"] == "random":
+            if any(options[key] is not None for key in ("day", "start", "sections", "variation", "drain_limit", "spatial_scenario")):
+                raise ValueError("Seleção temporal e variação exigem --demand-profile metasettran.")
+            for key in ("demand_profile", "day", "start", "sections", "variation", "drain_limit", "spatial_scenario"):
+                options.pop(key)
+            run_random_episodes(**options)
+        else:
+            if any(option.split("=", 1)[0] in {"--duration", "--period", "--end"}
+                   for option in (sys.argv[1:] if argv is None else argv)):
+                raise ValueError("MetaSettran usa janela própria; não combine --duration/--period/--end.")
+            run_episodes(**options)
     except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
-        print(f"Erro ao executar episódios random: {exc}", file=sys.stderr)
+        print(f"Erro ao executar episódios: {exc}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
         print("Execução interrompida pelo usuário.", file=sys.stderr)

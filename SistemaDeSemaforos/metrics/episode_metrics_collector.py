@@ -7,6 +7,7 @@ Os agregados usam amostras válidas; dados ausentes não são tratados como zero
 """
 
 from collections import Counter, defaultdict
+from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
 from functools import lru_cache
 import gzip
@@ -54,6 +55,581 @@ def _number(value):
     except (ValueError, TypeError):
         return None
     return result if math.isfinite(result) else None
+
+
+def metasettran_observation_edges(spatial_model):
+    """Reúne sensores, portais e seções de corredor, sem duplicar observações."""
+    edges = {candidate["edge"] for sensor in spatial_model["sensors"]
+             for candidate in sensor["candidates"]}
+    for role in ("entries", "exits"):
+        edges.update(portal["edge"] for portal in spatial_model.get("portals", {}).get(role, []))
+    for corridor in spatial_model.get("corridors", []):
+        edges.update(corridor.get("observation_edges", []))
+    for movement in spatial_model.get("observation_movements", []):
+        edges.update((movement["from_edge"], movement["to_edge"]))
+    return tuple(sorted(edges))
+
+
+def _metasettran_distance_stats(values):
+    """Quantis interpolados da distância registrada, separados por população."""
+    values = sorted(values)
+    if not values:
+        return {"samples": 0, "min": None, "p25": None, "median": None,
+                "p75": None, "max": None, "mean": None}
+
+    def quantile(fraction):
+        position = (len(values) - 1) * fraction
+        index = int(position)
+        return values[index] + (values[min(index + 1, len(values) - 1)] - values[index]) * (position - index)
+
+    return {"samples": len(values), "min": values[0], "p25": quantile(.25),
+            "median": quantile(.5), "p75": quantile(.75), "max": values[-1],
+            "mean": sum(values) / len(values)}
+
+
+def _count_errors(simulated, reference):
+    if len(simulated) != len(reference):
+        raise ValueError("Curvas MetaSettran com janelas temporais incompatíveis.")
+    pairs = [(actual, expected) for actual, expected in zip(simulated, reference)
+             if actual is not None and expected is not None]
+    errors = [abs(actual - expected) for actual, expected in pairs]
+    total = sum(expected for _, expected in pairs)
+    return {"n_windows": len(pairs), "mae_cars_per_15min": sum(errors) / len(errors) if errors else None,
+            "wape": sum(errors) / total if total else None,
+            "simulated_cars": sum(actual for actual, _ in pairs), "reference_cars": total}
+
+
+def _metasettran_sensor_timing(raw, planned_routes, scheduled, departures, teleported, spatial_model, duration):
+    """Mede atrasos nativos, sem deslocar as janelas civis para melhorar o erro."""
+    candidates = {candidate["edge"] for sensor in spatial_model["sensors"]
+                  for candidate in sensor["candidates"]}
+    records = {}
+    for edge in sorted(candidates):
+        identifiers = {identifier for identifier, route in planned_routes.items() if edge in route}
+        inserted = identifiers & departures.keys()
+        records[edge] = {
+            "edge": edge, "planned_trips_crossing": len(identifiers),
+            "not_inserted": len(identifiers - departures.keys()),
+            "inserted_with_teleport_excluded": len(inserted & teleported),
+            "inserted_without_teleport": len(inserted - teleported),
+            "reached_without_teleport": 0, "not_reached_without_teleport": 0,
+            "physical_passages_per_15min_without_teleport": [0] * (duration // 900),
+            "physical_passages_during_clearance_without_teleport": 0,
+            "_travel": [], "_delay": [],
+        }
+    movements = []
+    for definition in spatial_model.get("observation_movements", []):
+        pair = (definition["from_edge"], definition["to_edge"])
+        identifiers = {identifier for identifier, route in planned_routes.items()
+                       if pair in tuple(zip(route, route[1:]))}
+        movements.append({
+            **{key: definition[key] for key in ("id", "label", "from_edge", "to_edge") if key in definition},
+            "planned_trips": len(identifiers), "not_inserted": len(identifiers - departures.keys()),
+            "inserted_with_teleport_excluded": len(identifiers & departures.keys() & teleported),
+            "physical_passages_per_15min_without_teleport": [0] * (duration // 900),
+            "physical_passages_during_clearance_without_teleport": 0,
+            "_identifiers": identifiers,
+        })
+    seen = set()
+    for item in _elements(raw / "vehicle_routes.xml.gz", "vehicle"):
+        identifier = item.get("id")
+        depart = _number(item.get("depart"))
+        if (identifier not in departures or identifier in seen or depart is None or
+                abs(depart - departures[identifier]) > .00001):
+            raise ValueError("Vehroute MetaSettran diverge das inserções observadas no tripinfo.")
+        seen.add(identifier)
+        # Mesmo uma passagem anterior ao teleporte fica fora desta população
+        # conservadora: exitTimes não certifica deslocamentos físicos após TP.
+        if identifier in teleported:
+            continue
+        routes = item.findall("route")
+        if len(routes) != 1:
+            raise ValueError("Vehroute MetaSettran sem uma rota individual verificável.")
+        edges = routes[0].get("edges", "").split()
+        times = [_number(value) for value in routes[0].get("exitTimes", "").split()]
+        if (tuple(edge for edge in edges if not edge.startswith(":")) != planned_routes[identifier]
+                or len(times) != len(edges) or any(value is None or value < -1 for value in times)):
+            raise ValueError("Vehroute MetaSettran contém rota ou exitTimes inválidos.")
+        previous = depart
+        unfinished = False
+        for timestamp in times:
+            if timestamp == -1:
+                unfinished = True
+            elif unfinished or timestamp < previous:
+                raise ValueError("Vehroute MetaSettran contém exitTimes fora de ordem.")
+            else:
+                previous = timestamp
+        for edge in candidates.intersection(edges):
+            record = records[edge]
+            positions = [index for index, value in enumerate(edges) if value == edge]
+            if len(positions) != 1:
+                raise ValueError("Uma viagem MetaSettran atravessa repetidamente o mesmo sensor.")
+            index = positions[0]
+            # Internal=true inclui a conexão: a saída do predecessor é a
+            # entrada no sensor, mesmo quando a viagem termina dentro dele.
+            entry = depart if index == 0 else times[index - 1]
+            if entry < 0:
+                record["not_reached_without_teleport"] += 1
+                continue
+            record["reached_without_teleport"] += 1
+            record["_travel"].append(entry - depart)
+            record["_delay"].append(max(0.0, depart - scheduled[identifier]))
+            if entry < duration:
+                record["physical_passages_per_15min_without_teleport"][int(entry // 900)] += 1
+            else:
+                record["physical_passages_during_clearance_without_teleport"] += 1
+        external = [(index, edge) for index, edge in enumerate(edges) if not edge.startswith(":")]
+        for record in movements:
+            if identifier not in record["_identifiers"]:
+                continue
+            for (_, previous_edge), (index, edge) in zip(external, external[1:]):
+                if (previous_edge, edge) != (record["from_edge"], record["to_edge"]):
+                    continue
+                entry = times[index - 1]
+                if entry < 0:
+                    continue
+                if entry < duration:
+                    record["physical_passages_per_15min_without_teleport"][int(entry // 900)] += 1
+                else:
+                    record["physical_passages_during_clearance_without_teleport"] += 1
+    if seen != departures.keys():
+        raise ValueError("Vehroute MetaSettran não cobre todos os veículos inseridos.")
+    for record in records.values():
+        if record["reached_without_teleport"] + record["not_reached_without_teleport"] != record["inserted_without_teleport"]:
+            raise ValueError("Populações de alcance dos sensores MetaSettran não se reconciliam.")
+        record["entry_to_sensor_seconds"] = _metasettran_distance_stats(record.pop("_travel"))
+        record["insertion_delay_seconds_for_reached_trips"] = _metasettran_distance_stats(record.pop("_delay"))
+    for record in movements:
+        del record["_identifiers"]
+        reached = (sum(record["physical_passages_per_15min_without_teleport"])
+                   + record["physical_passages_during_clearance_without_teleport"])
+        record["not_reached_without_teleport"] = (
+            record["planned_trips"] - record["not_inserted"]
+            - record["inserted_with_teleport_excluded"] - reached)
+        if record["not_reached_without_teleport"] < 0:
+            raise ValueError("Uma viagem MetaSettran repete um movimento observado.")
+    return {
+        "source": "SUMO vehroute exitTimes with internal edges; previous-edge exit is sensor-edge entry",
+        "insertion_delay_seconds_all_inserted": _metasettran_distance_stats(
+            [max(0.0, depart - scheduled[identifier]) for identifier, depart in departures.items()]),
+        "departure_rounding_tolerance_seconds": .0005,
+        "candidates": list(records.values()),
+        "movements": movements,
+        "note": "Civil 15-minute count windows remain unchanged. Travel-time quantiles include only reached trips without any teleport; unreached, uninserted and teleport-affected populations remain explicit. No holdout-derived phase shift or hidden warm-up is applied.",
+    }
+
+
+def _metasettran_progress(raw, scheduled, natural_arrivals, horizon):
+    """Quinze minutos de diagnóstico operacional no mesmo resultado do episódio."""
+    intervals = {}
+    for step in _elements(raw / "summary.xml.gz", "step"):
+        timestamp = float(step.get("time"))
+        index = int(timestamp // 900)
+        row = intervals.setdefault(index, {"begin": index * 900, "end": min((index + 1) * 900, horizon),
+                                           "halting_max": 0, "waiting_insertion_max": 0})
+        row.update(snapshot_time=timestamp, inserted_cumulative=int(step.get("inserted")),
+                   arrived_cumulative_including_teleports=int(step.get("arrived")),
+                   running=int(step.get("running")), waiting_insertion=int(step.get("waiting")),
+                   teleport_events_cumulative=int(step.get("teleports")))
+        row["halting_max"] = max(row["halting_max"], int(step.get("halting")))
+        row["waiting_insertion_max"] = max(row["waiting_insertion_max"], int(step.get("waiting")))
+    scheduled, natural_arrivals = sorted(scheduled.values()), sorted(natural_arrivals)
+    for row in intervals.values():
+        row["programmed_cumulative"] = bisect_right(scheduled, row["snapshot_time"] + .0005)
+        row["natural_arrivals_cumulative"] = bisect_right(natural_arrivals, row["snapshot_time"])
+    return {"source": "Native summary snapshots and maxima in 900s windows; natural arrivals from tripinfo and verified teleport IDs",
+            "intervals": list(intervals.values())}
+
+
+def _metasettran_portal_accounting(planned, scheduled, departures, trip_statuses, teleported,
+                                  spatial_model, duration, horizon):
+    """Reconstrói a espera de inserção por origem, sem observador por timestep."""
+    metadata = {portal["edge"]: portal for portal in spatial_model.get("portals", {}).get("entries", [])}
+    identifiers_by_origin = defaultdict(list)
+    for identifier, (origin, _) in planned.items():
+        identifiers_by_origin[origin].append(identifier)
+    records = []
+    for origin in sorted(set(identifiers_by_origin) | metadata.keys()):
+        identifiers = identifiers_by_origin[origin]
+        inserted_ids = [identifier for identifier in identifiers if identifier in departures]
+        status_counts = Counter(trip_statuses[identifier] for identifier in identifiers)
+        scheduled_times = sorted(scheduled[identifier] for identifier in identifiers)
+        # An insertion rounded down by SUMO by <=0.5 ms must not subtract a
+        # different pending vehicle before its own scheduled boundary.
+        released_times = sorted(max(scheduled[identifier], departures[identifier]) for identifier in inserted_ids)
+        programmed_bins = Counter(int(scheduled[identifier] // 900) for identifier in identifiers)
+        delay_bins = defaultdict(list)
+        for identifier in inserted_ids:
+            delay_bins[int(departures[identifier] // 900)].append(max(0.0, departures[identifier] - scheduled[identifier]))
+        intervals = []
+        for index in range(math.ceil(horizon / 900)):
+            begin, end = index * 900, min((index + 1) * 900, horizon)
+            # Half-open civil windows. At a boundary, a departure exactly at
+            # end belongs to the next interval, as does its scheduled time.
+            pending = bisect_left(scheduled_times, end) - bisect_left(released_times, end)
+            intervals.append({
+                "begin": begin, "end": end,
+                "phase": "demand" if begin < duration else "clearance",
+                "programmed": programmed_bins[index], "inserted": len(delay_bins[index]),
+                "pending_insertion_at_end": pending,
+                "insertion_delay_seconds": _metasettran_distance_stats(delay_bins[index]),
+            })
+        portal = metadata.get(origin, {})
+        records.append({
+            "edge": origin,
+            **{key: portal[key] for key in ("name", "boundary_group", "corridor") if key in portal},
+            "programmed": len(identifiers), "inserted": len(inserted_ids),
+            **{name: status_counts[name] for name in (
+                "not_inserted", "completed_without_teleport", "completed_after_teleport",
+                "incomplete_at_end", "removed_without_completion")},
+            "vehicles_with_teleport": sum(identifier in teleported for identifier in identifiers),
+            "inserted_during_clearance": sum(departures[identifier] >= duration for identifier in inserted_ids),
+            "insertion_delay_seconds": _metasettran_distance_stats(
+                [max(0.0, departures[identifier] - scheduled[identifier]) for identifier in inserted_ids]),
+            "intervals": intervals,
+        })
+    return {
+        "bin_seconds": 900, "entries": records,
+        "source": "Scheduled routes plus native tripinfo; intervals are half-open. Pending means scheduled before the boundary but not inserted before it, including vehicles that insert later.",
+        "note": "Trip statuses are exclusive; vehicles_with_teleport overlaps statuses. Clearance may contain late insertions as well as completion of trips already in the network.",
+    }
+
+
+def _metasettran_route_incidence(planned_routes, spatial_model):
+    """Conta viagens únicas; incidências distintas nunca são somadas como demanda."""
+    candidates = {candidate["edge"] for sensor in spatial_model["sensors"] for candidate in sensor["candidates"]}
+    sensors = {str(sensor["sensor_id"]): {candidate["edge"] for candidate in sensor["candidates"]}
+               for sensor in spatial_model["sensors"]}
+    candidate_counts, combinations = Counter(), Counter()
+    for route in planned_routes.values():
+        edges = set(route)
+        candidate_counts.update(candidates & edges)
+        combination = tuple(sorted(sensor for sensor, observed_edges in sensors.items() if edges & observed_edges))
+        combinations[combination] += 1
+    return {
+        "unique_programmed_trips": len(planned_routes),
+        "candidate_edges": [{"edge": edge, "programmed_trips": candidate_counts[edge]} for edge in sorted(candidates)],
+        "sensor_combinations": [{"sensor_ids": list(combination), "programmed_trips": count}
+                                for combination, count in sorted(combinations.items())],
+        "note": "Sensor membership is the union of its alternative candidate edges; it is not a confirmed physical sensor location. Each trip belongs to one combination and can cross multiple observed edges or sensors without duplication.",
+    }
+
+
+def collect_metasettran_validation(directory, generation, *, summary_metrics=None, vehicles=None):
+    """Valida o piloto com as saídas nativas, preservando as métricas legadas.
+
+    Chegada após teleporte não é conclusão natural. As comparações espaciais
+    são condicionais ao cadastro de sensores ainda não confirmado; nenhum
+    erro pequeno transforma o cadastro numa medição geográfica comprovada.
+    """
+    directory = Path(directory)
+    raw = directory / "raw"
+    duration = generation["duration"]
+    if (isinstance(duration, bool) or not isinstance(duration, (int, float)) or
+            not math.isfinite(duration) or duration <= 0 or duration % 900):
+        raise ValueError("Janela MetaSettran deve conter intervalos completos de quinze minutos.")
+    duration = int(duration)
+    bins = duration // 900
+    route_records = ET.parse(generation["routes_file"]).getroot().findall("vehicle")
+    planned, planned_routes, scheduled, departures = {}, {}, {}, {}
+    for item in route_records:
+        route = item.find("route")
+        edges = route.get("edges", "").split() if route is not None else []
+        if not edges or item.get("departPos") != "0" or item.get("arrivalPos") != "max":
+            raise ValueError("Demanda MetaSettran não declara extremos completos da viagem.")
+        planned[item.get("id")] = (edges[0], edges[-1])
+        planned_routes[item.get("id")] = tuple(edges)
+        scheduled[item.get("id")] = _number(item.get("depart"))
+        if scheduled[item.get("id")] is None or not 0 <= scheduled[item.get("id")] < generation["duration"]:
+            raise ValueError("Partida programada MetaSettran fora da janela de demanda.")
+    if (not planned or None in planned or "" in planned or
+            len(planned) != len(route_records) or len(planned) != generation["vehicles_generated"]):
+        raise ValueError("Demanda MetaSettran com IDs repetidos ou contagem divergente.")
+    del route_records
+    lane_lengths = {lane.get("id"): float(lane.get("length"))
+                    for edge in ET.parse(generation["net_file"]).getroot().findall("edge")
+                    for lane in edge.findall("lane")}
+    teleported = set()
+    events = 0
+    with (directory / "sumo.log").open(encoding="utf-8") as stream:
+        for line in stream:
+            if "Teleporting vehicle" in line:
+                match = re.search(r"Teleporting vehicle '([^']+)'", line)
+                if match is None:
+                    raise ValueError("Evento de teleporte sem identificação reconhecível.")
+                events += 1
+                teleported.add(match.group(1))
+    if not teleported.issubset(planned):
+        raise ValueError("Teleporte de veículo não pertencente à demanda MetaSettran.")
+    if summary_metrics is None:
+        summary_metrics = _summary(raw / "summary.xml.gz")
+    if events != summary_metrics["teleports"]:
+        raise ValueError("Log de teleportes incompleto; não é possível certificar conclusões naturais.")
+    statuses = Counter()
+    trip_statuses = {}
+    distances = defaultdict(list)
+    seen = set()
+    inserted = late = 0
+    natural_arrivals = []
+    for item in _elements(raw / "trips.xml.gz", "tripinfo"):
+        identifier = item.get("id")
+        if identifier not in planned or identifier in seen:
+            raise ValueError("Tripinfo MetaSettran com ID desconhecido ou repetido.")
+        seen.add(identifier)
+        depart, arrival = float(item.get("depart")), float(item.get("arrival"))
+        if not math.isfinite(depart) or not math.isfinite(arrival) or depart < -1 or arrival < -1:
+            raise ValueError("Tripinfo MetaSettran contém tempo inválido.")
+        vaporized = item.get("vaporized", "") not in {"", "false", "0", "end"}
+        if depart < 0:
+            status = "not_inserted"
+        else:
+            origin, destination = planned[identifier]
+            depart_position = _number(item.get("departPos"))
+            if (item.get("departLane", "").rsplit("_", 1)[0] != origin or
+                    depart_position is None or abs(depart_position) > .001):
+                raise ValueError("Veículo MetaSettran inserido fora do início do portal previsto.")
+            inserted += 1
+            # SUMO representa tempo em milissegundos; o XML de demanda conserva
+            # microssegundos. Até meio milissegundo é arredondamento, não antecipação.
+            if depart < scheduled[identifier] - .00050001:
+                raise ValueError("Inserção MetaSettran antecede a partida programada.")
+            departures[identifier] = depart
+            late += depart >= generation["duration"]
+            if vaporized:
+                status = "removed_without_completion"
+            elif arrival < 0:
+                status = "incomplete_at_end"
+            else:
+                status = "completed_after_teleport" if identifier in teleported else "completed_without_teleport"
+                if identifier not in teleported:
+                    natural_arrivals.append(arrival)
+                    lane = item.get("arrivalLane", "")
+                    position = _number(item.get("arrivalPos"))
+                    if (lane.rsplit("_", 1)[0] != destination or lane not in lane_lengths or
+                            position is None or abs(position - lane_lengths[lane]) > .001):
+                        raise ValueError("Conclusão natural MetaSettran fora do final do portal previsto.")
+        statuses[status] += 1
+        trip_statuses[identifier] = status
+        if depart >= 0:
+            distance = _number(item.get("routeLength"))
+            if distance is None or distance < 0:
+                raise ValueError("Tripinfo MetaSettran contém distância ausente ou inválida.")
+            distance_group = status
+            if status == "incomplete_at_end":
+                distance_group += "_after_teleport" if identifier in teleported else "_without_teleport"
+            distances[distance_group].append(distance)
+        if vehicles is not None:
+            record = vehicles.setdefault(identifier, {})
+            record["metasettran_trip_status"] = status
+            record["experienced_teleport"] = identifier in teleported
+            record["scheduled_departure_seconds"] = scheduled[identifier]
+            record["actual_departure_seconds"] = depart if depart >= 0 else None
+            record["insertion_delay_seconds"] = max(0.0, depart - scheduled[identifier]) if depart >= 0 else None
+    # Toda partida programada antecede o horizonte; ausência de Tripinfo é
+    # falha de observação, e não evidência de veículo não inserido.
+    if seen != set(planned) or inserted != summary_metrics["vehicles_inserted"]:
+        raise ValueError("Tripinfo MetaSettran não cobre toda a demanda e suas inserções.")
+    metrics = {f"vehicles_{name}": statuses[name] for name in (
+        "completed_without_teleport", "completed_after_teleport", "not_inserted",
+        "incomplete_at_end", "removed_without_completion")}
+    metrics.update(vehicles_with_teleport=len(teleported), vehicles_inserted_after_demand_window=late)
+    spatial_model = generation["spatial_model"]
+    sensor_timing = _metasettran_sensor_timing(
+        raw, planned_routes, scheduled, departures, teleported, spatial_model, duration)
+    observation_edges = metasettran_observation_edges(spatial_model)
+    entry_edges = {portal["edge"] for portal in spatial_model.get("portals", {}).get("entries", [])}
+    exit_edges = {portal["edge"] for portal in spatial_model.get("portals", {}).get("exits", [])}
+    counts = {edge: [None] * bins for edge in observation_edges}
+    tail = Counter()
+    portal_counts = {"departed": {edge: [None] * bins for edge in entry_edges},
+                     "arrived": {edge: [None] * bins for edge in exit_edges}}
+    portal_tail = {"departed": Counter(), "arrived": Counter()}
+    previous_end = 0.0
+    for interval in _elements(raw / "metasettran_counts.xml.gz", "interval"):
+        begin, end = float(interval.get("begin")), float(interval.get("end"))
+        if (not math.isfinite(begin) or not math.isfinite(end) or begin != previous_end
+                or begin % 900 != 0 or not 0 < end - begin <= 900
+                or (begin < duration and end - begin != 900)):
+            raise ValueError("Intervalos de contagem MetaSettran incompletos ou duplicados.")
+        previous_end = end
+        interval_edges = set()
+        for edge in interval.findall("edge"):
+            identifier = edge.get("id")
+            if identifier not in counts or identifier in interval_edges:
+                raise ValueError("Observação MetaSettran contém via desconhecida ou duplicada.")
+            interval_edges.add(identifier)
+            value = int(edge.get("entered", "0"))
+            if value < 0:
+                raise ValueError("Contagem MetaSettran negativa.")
+            if begin >= duration:
+                tail[identifier] += value
+            else:
+                index = int(begin / 900)
+                if begin != index * 900 or end - begin != 900 or counts[identifier][index] is not None:
+                    raise ValueError("Intervalos de contagem MetaSettran incompletos ou duplicados.")
+                counts[identifier][index] = value
+            for attribute, selected_edges in (("departed", entry_edges), ("arrived", exit_edges)):
+                if identifier not in selected_edges:
+                    continue
+                # departed é inserção; entered é passagem desde outra via.
+                # arrived é conclusão no destino; left também inclui tráfego
+                # que apenas continua sua rota e nunca representa chegada.
+                if attribute not in edge.attrib:
+                    raise ValueError(f"Contagem MetaSettran sem atributo de portal {attribute}.")
+                value = int(edge.get(attribute))
+                if value < 0:
+                    raise ValueError("Contagem MetaSettran de portal negativa.")
+                if begin >= generation["duration"]:
+                    portal_tail[attribute][identifier] += value
+                else:
+                    portal_counts[attribute][identifier][index] = value
+        if interval_edges != set(observation_edges):
+            raise ValueError("Intervalo MetaSettran não contém todas as vias observadas.")
+    if "clearance_limit_seconds" in generation and previous_end != generation["duration"] + generation["clearance_limit_seconds"]:
+        raise ValueError("Contagens MetaSettran não cobrem o horizonte solicitado.")
+    if any(depart >= previous_end for depart in departures.values()):
+        raise ValueError("Inserção MetaSettran fora do horizonte observado.")
+    if any(value is None for values in counts.values() for value in values):
+        raise ValueError("Contagens MetaSettran não cobrem todos os intervalos de demanda.")
+    comparisons = []
+    physical_counts = {record["edge"]: record for record in sensor_timing["candidates"]}
+    for sensor in spatial_model["sensors"]:
+        profile = generation["calibration"]["sensors"][str(sensor["sensor_id"]) ]
+        for candidate in sensor["candidates"]:
+            observed = counts[candidate["edge"]]
+            physical = physical_counts[candidate["edge"]]
+            physical_observed = physical["physical_passages_per_15min_without_teleport"]
+            checks, physical_checks = {}, {}
+            for partition in ("primary", "post"):
+                checks[partition] = []
+                physical_checks[partition] = []
+                for day in profile["validation"][partition]["daily_counts"]:
+                    if any(len(day[key]) != bins for key in ("counts", "eligible", "exposure_seconds")):
+                        raise ValueError("Referência MetaSettran com janelas temporais incompatíveis.")
+                    # Comparação de contagens usa apenas quartos de hora com
+                    # exposição integral, sem expandir intervalos faltantes.
+                    reference = [value if eligible and exposure == 900 else None
+                                 for value, eligible, exposure in zip(day["counts"], day["eligible"], day["exposure_seconds"])]
+                    window = {key: day[key] for key in ("date", "start", "end") if key in day}
+                    checks[partition].append({**window, **_count_errors(observed, reference)})
+                    physical_checks[partition].append({**window, **_count_errors(physical_observed, reference)})
+            comparisons.append({
+                "sensor_id": sensor["sensor_id"], "edge": candidate["edge"],
+                "candidate_position": candidate["position"], "mapping_status": sensor["status"],
+                "simulated_cars_per_15min": observed, "cars_passing_during_clearance": tail[candidate["edge"]],
+                "against_training_curve": _count_errors(observed, profile["target_counts"]),
+                "against_held_out_dates": checks,
+                "without_any_teleport": {
+                    "physical_passages_per_15min": physical_observed,
+                    "physical_passages_during_clearance": physical["physical_passages_during_clearance_without_teleport"],
+                    "against_training_curve": _count_errors(physical_observed, profile["target_counts"]),
+                    "against_held_out_dates": physical_checks,
+                    "note": "Conservative physical population excludes every vehicle with any teleport, including passages before that event. No demand-window passage is shifted or replaced by clearance traffic.",
+                },
+            })
+    observed_edge_set = set(observation_edges)
+    planned_edge_counts = Counter(edge for route in planned_routes.values() for edge in set(route) & observed_edge_set)
+    planned_origins = Counter(origin for origin, _ in planned.values())
+    planned_destinations = Counter(destination for _, destination in planned.values())
+
+    def flow_record(edge, attribute):
+        series = counts[edge] if attribute == "entered" else portal_counts[attribute][edge]
+        clearance = tail[edge] if attribute == "entered" else portal_tail[attribute][edge]
+        planned_counts = {"entered": planned_edge_counts, "departed": planned_origins, "arrived": planned_destinations}
+        return {"edge": edge, "measure": attribute, "programmed_trips": planned_counts[attribute][edge], "cars_per_15min": series,
+                "cars_during_demand": sum(series), "cars_during_clearance": clearance,
+                "cars_total": sum(series) + clearance}
+
+    portals = {}
+    for role, attribute in (("entries", "departed"), ("exits", "arrived")):
+        portals[role] = [
+            {**{key: portal[key] for key in ("name", "boundary_group", "corridor") if key in portal},
+             **flow_record(portal["edge"], attribute)}
+            for portal in spatial_model.get("portals", {}).get(role, [])
+        ]
+    reconciled = {}
+    if entry_edges:
+        total = sum(item["cars_total"] for item in portals["entries"])
+        if total != inserted:
+            raise ValueError("Inserções nos portais MetaSettran divergem do summary e tripinfo.")
+        reconciled["departures"] = {
+            "edge_data_departed": total, "summary_inserted": summary_metrics["vehicles_inserted"],
+            "tripinfo_inserted": inserted, "status": "matched",
+        }
+    if exit_edges:
+        total = sum(item["cars_total"] for item in portals["exits"])
+        natural = statuses["completed_without_teleport"]
+        arrived = natural + statuses["completed_after_teleport"]
+        if (not natural <= total <= arrived or
+                ("vehicles_completed" in summary_metrics and summary_metrics["vehicles_completed"] != arrived)):
+            raise ValueError("Chegadas nos portais MetaSettran divergem das populações do tripinfo/summary.")
+        reconciled["arrivals"] = {
+            "edge_data_arrived": total, "tripinfo_arrived": arrived,
+            "summary_arrived": summary_metrics.get("vehicles_completed"),
+            "tripinfo_without_teleport": natural,
+            "tripinfo_after_teleport": statuses["completed_after_teleport"],
+            "arrivals_not_observed_at_exit": arrived - total,
+            "status": "matched" if total == arrived else "teleport_affected",
+            "note": "Portal arrived counts can include arrivals after a prior teleport; they are not natural-completion counts.",
+        }
+    spatial_observation = {
+        "bin_seconds": 900, "departure_window_seconds": [0, generation["duration"]],
+        "clearance_window_seconds": [generation["duration"], previous_end],
+        "portals": portals, "portal_reconciliation": reconciled,
+        "portal_trip_accounting": _metasettran_portal_accounting(
+            planned, scheduled, departures, trip_statuses, teleported, spatial_model, duration, previous_end),
+        "route_observation_incidence": _metasettran_route_incidence(planned_routes, spatial_model),
+        "observed_movements": sensor_timing.pop("movements"),
+        "corridor_probes": [
+            {**{key: corridor[key] for key in ("id", "label", "direction") if key in corridor},
+             "probes": [flow_record(edge, "entered") for edge in corridor.get("observation_edges", [])]}
+            for corridor in spatial_model.get("corridors", [])
+        ],
+        "trip_distance_m": {
+            "source": "SUMO tripinfo.routeLength; quantiles use linear interpolation between ordered samples",
+            "completed_without_teleport": _metasettran_distance_stats(distances["completed_without_teleport"]),
+            "completed_after_teleport": _metasettran_distance_stats(distances["completed_after_teleport"]),
+            "incomplete_at_end_without_teleport": _metasettran_distance_stats(distances["incomplete_at_end_without_teleport"]),
+            "incomplete_at_end_after_teleport": _metasettran_distance_stats(distances["incomplete_at_end_after_teleport"]),
+            "removed_without_completion": _metasettran_distance_stats(distances["removed_without_completion"]),
+            "note": "Unfinished/removed records describe distance reported up to interruption, not full OD length. Teleport-affected records are separate and do not certify physically travelled distance.",
+        },
+        "note": "Corridor probes are separate sections; sequential edges are never summed as distinct vehicles. Portal insertions use departed and destination completions use arrived.",
+    }
+    result = {
+        "metrics": metrics,
+        "status": "conditional_on_unconfirmed_sensor_mapping",
+        "empirical_calibration_status": "conditional_on_unconfirmed_sensor_mapping_and_external_scope",
+        "temporal_scope": {
+            **generation.get("temporal_scope", {}),
+            "start_week_second": generation.get("start_week_second"),
+            "duration_seconds": duration, "bins": bins, "bin_seconds": 900,
+        },
+        "trip_accounting": {"generated": len(planned), "accounted": sum(statuses.values()),
+                            "teleport_events": events, "teleport_vehicle_ids_verified": True},
+        "boundary_integrity": {"insertions_at_expected_portal_start": inserted,
+                               "natural_arrivals_at_expected_portal_end": statuses["completed_without_teleport"],
+                               "invalid": 0, "position_tolerance_m": .001},
+        "count_class": "car", "simulation_class": "passenger",
+        "observation": "SUMO edgeData.entered at each candidate edge; before/after values are alternatives, not summed",
+        "startup": "Empty network at t=0; trips reach sensors after departure. No hidden warm-up or phase shift.",
+        "count_comparisons": comparisons,
+        "sensor_passage_timing": sensor_timing,
+        "operational_progression": _metasettran_progress(raw, scheduled, natural_arrivals, previous_end),
+        "spatial_observation": spatial_observation,
+        "limitations": [
+            "Physical passage counts may be affected by teleport events; any such events require inspection before empirical acceptance.",
+            "OD distribution and unobserved demand are scenario estimates conditional on the spatial prior; internal trips and non-car classes are absent.",
+            "Sensor populations may overlap; a route crossing both counters represents one vehicle. Sensor totals do not identify network-wide unique demand.",
+            "Boundary departure rates and local passage targets are distinct. Freeflow projection omits queues and signal delays; empty initialization excludes vehicles already circulating at the civil start.",
+            "Only fully covered held-out 15-minute windows are scored; missing or partial observations are not zero traffic.",
+        ],
+    }
+    if "temporal_scope" not in generation:
+        # Preserve the historic pilot schema; supported contexts are now a
+        # generator declaration, separate from empirical calibration status.
+        result["ready_for_weekly_expansion"] = False
+    return result
 
 
 def _elements(path, tag):

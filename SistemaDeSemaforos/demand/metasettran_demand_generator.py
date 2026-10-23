@@ -7,14 +7,16 @@ nos metadados: executar o protótipo não confirma a localização dos sensores.
 """
 
 from datetime import datetime, timezone
-from bisect import bisect_left
+from contextlib import ExitStack
+from bisect import bisect_left, bisect_right
 from copy import deepcopy
 import hashlib
-from itertools import product
+from itertools import accumulate, product
 import json
 import math
 from pathlib import Path
 import random
+import secrets
 import shutil
 import subprocess
 from tempfile import TemporaryDirectory
@@ -24,14 +26,16 @@ import xml.etree.ElementTree as ET
 from SistemaDeSemaforos.demand.metasettran_calibration import (
     integrate_rate, interpolate_rate,
 )
+from SistemaDeSemaforos.demand.metasettran_transitions import compose_rate_curves, transport_times
 from SistemaDeSemaforos.demand.random_demand_generator import (
     DEFAULT_NET_FILE, DEFAULT_OUTPUT_DIR,
 )
 
 
-MODEL_VERSION = "metasettran-regional-integrated-v4.2"
+MODEL_VERSION = "metasettran-regional-integrated-v4.3.2-utc"
 SEED_NAMESPACE = "metasettran-prototype-v1"
 ROUTING_SEED = 0
+COMPOSITION_VERSION = "metasettran-chronological-v1"
 SPATIAL_SCENARIOS = ("regional-integrated", "regional-midpoint")
 DEFAULT_DURATION = 10800.0
 DEFAULT_CLEARANCE = 2700.0
@@ -70,6 +74,51 @@ def _sha256(path):
 
 def _stream_seed(seed, group_id, purpose):
     return int.from_bytes(hashlib.sha256(f"{seed}:{group_id}:{purpose}".encode()).digest(), "big")
+
+
+def resolve_contexts(day="tuesday", start="15:00", sections=1, variation=None,
+                     seed=None, master_seed=None, variations=None):
+    """Resolve uma sequência uma vez, independente do controlador/observação."""
+    validate_selection(day, start, sections, 1 if variation is None else variation, seed)
+    if master_seed is not None and (isinstance(master_seed, bool) or not isinstance(master_seed, int)
+                                    or not 0 <= master_seed < 2**63):
+        raise ValueError("master_seed deve ser inteiro entre 0 e 2**63-1.")
+    if variation is not None and (sections != 1 or variations is not None or master_seed is not None):
+        raise ValueError("--variation escolhe uma faixa individual; use --variations ou --master-seed para sequências.")
+    if seed is not None and (sections != 1 or variations is not None or master_seed is not None):
+        raise ValueError("seed efetiva legada exige uma faixa; utilize master_seed para composição.")
+    if variations is not None:
+        if not isinstance(variations, (list, tuple)) or len(variations) != sections:
+            raise ValueError("Forneça exatamente uma variação para cada faixa.")
+        for selected in variations:
+            validate_selection(variation=selected)
+        selected_variations = list(variations)
+        method = "explicit_sequence"
+    elif sections == 1 and master_seed is None:
+        selected_variations = [1 if variation is None else variation]
+        method = "individual_variation"
+    else:
+        master_seed = secrets.randbits(63) if master_seed is None else master_seed
+        rng = random.Random(_stream_seed(master_seed, COMPOSITION_VERSION, "context_variations"))
+        selected_variations = [rng.randrange(1, 26) for _ in range(sections)]
+        method = "independent_uniform_1_to_25"
+    begin = selection_start_week_second(day, start)
+    contexts = []
+    for index, selected in enumerate(selected_variations):
+        absolute = begin + index * int(DEFAULT_DURATION)
+        clock = absolute % 86400
+        contexts.append({"index": index, "day": DAYS[(absolute // 86400) % 7],
+                         "start": f"{clock // 3600:02}:00", "start_week_second": absolute,
+                         "begin": index * int(DEFAULT_DURATION), "end": (index + 1) * int(DEFAULT_DURATION),
+                         "week_offset": absolute // 604800,
+                         "variation": selected, "effective_seed": effective_seed(selected, seed)})
+    # A sequência explícita reproduz a demanda sem precisar da seed que a sorteou.
+    token = f"{COMPOSITION_VERSION}|{day}|{start}|{','.join(map(str, selected_variations))}"
+    run_seed = (contexts[0]["effective_seed"] if sections == 1 else
+                int.from_bytes(hashlib.sha256(token.encode()).digest()[:4], "big") & 0x7fffffff)
+    return {"version": COMPOSITION_VERSION, "method": method, "master_seed": master_seed,
+            "seed": run_seed, "contexts": contexts, "variations": selected_variations,
+            "combinations": 25**sections}
 
 
 def _passenger_allowed(lane):
@@ -156,6 +205,15 @@ def _routes_root():
 def _route_pairs(model, net_file, directory, seed, log_file):
     """Descobre caminhos nativos; filtra candidatos antes de sortear viagens."""
     edges, connections, returns, connection_costs = _read_network(net_file)
+    # A lane changing into several destination lanes remains ONE opportunity.
+    # These are geometric priors, never green times or observed discharge rates.
+    movement_lanes = {}
+    for connection in ET.parse(net_file).getroot().findall("connection"):
+        source, target = connection.get("from"), connection.get("to")
+        if (source, target) in connections:
+            if (connection.get("fromLane") in edges[source]["lanes"] and
+                    connection.get("toLane") in edges[target]["lanes"]):
+                movement_lanes.setdefault((source, target), set()).add(connection.get("fromLane"))
     entries = {portal["edge"]: portal for portal in model["portals"]["entries"]}
     exits = {portal["edge"]: portal for portal in model["portals"]["exits"]}
     if not entries or not exits or not (entries.keys() | exits.keys()) <= edges.keys():
@@ -275,6 +333,8 @@ def _route_pairs(model, net_file, directory, seed, log_file):
             if position + 1 < len(route):
                 elapsed += connection_costs[edge, route[position + 1]][1]
         pair.update(route=route, sensor_ids=sensor_ids,
+                    movement_opportunities=[len(movement_lanes[c]) for c in zip(route, route[1:])],
+                    movement_angles=[_movement_angle(edges[a], edges[b]) for a, b in zip(route, route[1:])],
                     observation_freeflow_delay_s=passage_delays,
                     observation_movements={sensor: {"edge": sensors[sensor],
                         "next_edge": route[route.index(sensors[sensor]) + 1] if route.index(sensors[sensor]) + 1 < len(route) else None}
@@ -300,6 +360,17 @@ def _route_pairs(model, net_file, directory, seed, log_file):
     return accepted, command, catalog, edges
 
 
+def _movement_angle(source, target):
+    """Magnitude of the actual change of heading, including permitted returns."""
+    a, b = source.get("shape", []), target.get("shape", [])
+    if len(a) < 2 or len(b) < 2:
+        return 0.0
+    incoming = (a[-1][0] - a[-2][0], a[-1][1] - a[-2][1])
+    outgoing = (b[1][0] - b[0][0], b[1][1] - b[0][1])
+    denominator = math.hypot(*incoming) * math.hypot(*outgoing)
+    return math.acos(max(-1.0, min(1.0, sum(x*y for x,y in zip(incoming,outgoing)) / denominator))) if denominator else 0.0
+
+
 def _mapping_sensitivity(pairs, model, calibration):
     """Projeta a MESMA demanda nos candidatos; nunca reescala o total."""
     sensors = {str(s["sensor_id"]): s for s in model["sensors"]}
@@ -313,6 +384,7 @@ def _mapping_sensitivity(pairs, model, calibration):
                         "selected": edge5 == sensors["5"]["selected_observation_edge"] and edge6 == sensors["6"]["selected_observation_edge"],
                         "expected_sensor_passages": expected,
                         "expected_network_departures": sum(p["expected_departures"] for p in pairs.values()),
+                        "scope": "full_planned_route_incidence; not physical passages within the civil window",
                         "status": "fixed_demand_projection_not_confirmed_mapping"})
     return results
 
@@ -388,6 +460,9 @@ def _regional_prior(pairs, model):
     entries = portal_weights(model["portals"]["entries"])
     exits = portal_weights(model["portals"]["exits"])
     origin_portals = {p["edge"]: p for p in model["portals"]["entries"]}
+    if config.get("route_choice", {}).get("method") == "native_path_branch_opportunities":
+        _branch_prior(pairs, entries, origin_portals, config["route_choice"])
+        return
     alternatives = {}
     for pair in pairs.values():
         alternatives.setdefault((pair["origin"], pair["destination"]), []).append(pair)
@@ -402,6 +477,44 @@ def _regional_prior(pairs, model):
     total = sum(p["prior_weight"] for p in pairs.values())
     for pair in pairs.values():
         pair["prior_weight"] /= total
+
+
+def _branch_prior(pairs, entries, portals, config):
+    """Distribute an origin's mass across native path branches, not OD counts.
+
+    Adding downstream destinations must not multiply the attractiveness of a
+    turn upstream. The trie only samples existing duarouter paths; it does not
+    find paths, inspect queues or change any permitted connection.
+    """
+    angular_cost = float(config.get("angular_cost", 1.0))
+    if not math.isfinite(angular_cost) or angular_cost < 0:
+        raise ValueError("Custo angular deve ser finito e não negativo.")
+    by_origin = {}
+    for pair in pairs.values():
+        by_origin.setdefault(pair["origin"], []).append(pair)
+    origin_total = sum(entries[origin] for origin in by_origin)
+    for origin, members in by_origin.items():
+        root = {}
+        for pair in members:
+            node = root
+            for index, edge in enumerate(pair["route"][1:]):
+                weight = pair["movement_opportunities"][index] / (1 + angular_cost * pair["movement_angles"][index] / (math.pi / 2))
+                node = node.setdefault(edge, {"weight": weight, "children": {}})["children"]
+            node["__route__"] = pair
+
+        def assign(node, mass):
+            if "__route__" in node:
+                if len(node) != 1:
+                    raise ValueError("Uma saída periférica não pode continuar para outro destino.")
+                pair = node["__route__"]
+                hierarchy = portals[origin].get("prior_road_type", portals[origin].get("road_type", ""))
+                pair.update(prior_weight=mass, demand_eligible=True,
+                            temporal_role="arterial" if hierarchy.startswith(("highway.primary", "highway.secondary")) else "local")
+                return
+            denominator = sum(branch["weight"] for branch in node.values())
+            for branch in node.values():
+                assign(branch["children"], mass * branch["weight"] / denominator)
+        assign(root, entries[origin] / origin_total)
 
 
 def _basis_segments(index, bins, duration):
@@ -549,30 +662,160 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
     }
 
 
-def _choose_route(weights, timestamp, rng):
+def _choose_route(weights, timestamp, rng, uniforms=None, cumulative_weights=None):
     coordinate = timestamp / 900 - .5
     left = max(0, min(len(weights) - 1, math.floor(coordinate)))
     right = max(0, min(len(weights) - 1, math.ceil(coordinate)))
     fraction = max(0.0, min(1.0, coordinate - math.floor(coordinate)))
-    row = weights[right if rng.random() < fraction else left]
-    return rng.choices(range(len(row)), weights=row, k=1)[0]
+    if uniforms is None:
+        row = weights[right if rng.random() < fraction else left]
+        return rng.choices(range(len(row)), weights=row, k=1)[0]
+    selected = right if uniforms[0] < fraction else left
+    cumulative = cumulative_weights[selected]
+    return bisect_right(cumulative, uniforms[1] * cumulative[-1], 0, len(cumulative) - 1)
+
+
+def _retained_indices(count, fraction, seed):
+    """Seleção sistemática na agenda ordenada, sem mudar partidas ou rotas.
+
+    O tamanho é exato; o deslocamento aleatório torna cada posição igualmente
+    elegível. Amostrar posições espaçadas preserva a curva de intensidade e
+    evita que uma realização esparsa perca a redução mínima por acaso.
+    """
+    retained = math.floor(count * fraction)
+    if retained == count:
+        return set(range(count))
+    if not retained:
+        return set()
+    rng = random.Random(_stream_seed(seed, "regional", "volume_retention"))
+    offset = rng.random()
+    return {math.floor((index + offset) * count / retained) for index in range(retained)}
+
+
+def _regional_knots(calibration, scale, curve_key):
+    curves = [calibration["sensors"][sensor][curve_key] for sensor in ("5", "6")]
+    times = sorted({k["week_second"] for curve in curves for k in curve})
+    return [{"week_second": timestamp,
+             "rate_per_second": scale * sum(interpolate_rate(curve, timestamp) for curve in curves)}
+            for timestamp in times]
+
+
+def _compose_sections(pairs, model, components, contexts, scale, retention):
+    """Compõe comportamentos aprovados, conservando cada população selecionada.
+
+    A projeção OD continua sendo a da faixa individual. Suas probabilidades nos
+    centros de 15 minutos são interpoladas também entre faixas. Só os horários
+    próximos às fronteiras são transportados pela integral conservada da taxa.
+    """
+    starts = [context["start_week_second"] for context in contexts]
+    curves = [_regional_knots(calibration, scale, "realization_knots") for calibration in components]
+    knots, transition = compose_rate_curves(curves, starts)
+    weights, observations, schedule, reference_count = [], [], [], 0
+    for context, calibration, curve in zip(contexts, components, curves):
+        begin, seed = context["start_week_second"], context["effective_seed"]
+        local_weights, projection = _observation_projection(
+            pairs, model, calibration, begin, int(DEFAULT_DURATION), curve, curve_key="realization_knots")
+        weights.extend(local_weights)
+        observations.extend(dict(row, bin=row["bin"] + context["index"] * 12)
+                            for row in projection["observations"])
+        original = list(_departures(_linear_segments(curve, begin=begin, duration=DEFAULT_DURATION),
+                                    random.Random(_stream_seed(seed, "regional", "departures"))))
+        unreduced = len(original)
+        kept = sorted(_retained_indices(unreduced, retention, seed))
+        # As marcas de cada viagem são as da realização individual aprovada.
+        # Pré-computadas uma vez, não há reinício de processo na fronteira nem
+        # influência de uma variação futura sobre percursos anteriores.
+        od_rng = random.Random(_stream_seed(seed, "regional", "od"))
+        marks = [(od_rng.random(), od_rng.random()) for _ in range(unreduced)]
+        # Reproduzir o arredondamento da faixa individual antes do transporte.
+        original = [float(f"{min(original[i], DEFAULT_DURATION - .000001):.6f}") + begin for i in kept]
+        moved = transport_times(original, curve, knots, begin, int(DEFAULT_DURATION))
+        for original_index, timestamp in zip(kept, moved):
+            relative = min(timestamp - starts[0], context["end"] - .000001)
+            schedule.append({"id": f"ms_s{context['index']:03d}_{original_index:06d}", "type": "metasettran_car",
+                             "depart": f"{relative:.6f}", "departPos": "0", "arrivalPos": "max",
+                             "_od_uniforms": marks[original_index]})
+        context.update(reference_programmed=len(kept), programmed=len(kept), unreduced_programmed=unreduced)
+        reference_count += unreduced
+    duration, begin = len(contexts) * int(DEFAULT_DURATION), starts[0]
+    # Simpson integra exatamente o produto quadrático, subdividindo tanto nos
+    # nós da ponte quanto nos centros das probabilidades OD aprovadas.
+    masses = [0.0] * len(weights)
+    breaks = sorted({0, duration} | set(range(450, duration, 900)) |
+                    {row["week_second"] - begin for row in knots if begin < row["week_second"] < begin + duration})
+    for left, right in zip(breaks, breaks[1:]):
+        for timestamp, coefficient in ((left, (right - left) / 6),
+                                       ((left + right) / 2, 2 * (right - left) / 3),
+                                       (right, (right - left) / 6)):
+            coordinate = timestamp / 900 - .5
+            lo = max(0, min(len(weights) - 1, math.floor(coordinate)))
+            hi = max(0, min(len(weights) - 1, math.ceil(coordinate)))
+            fraction = coordinate - math.floor(coordinate)
+            mass = coefficient * interpolate_rate(knots, begin + timestamp)
+            masses[lo] += mass * (1 - fraction)
+            masses[hi] += mass * fraction
+    total = integrate_rate(knots, begin, begin + duration)
+    normalization = total / sum(masses) if sum(masses) else 1.0
+    for index, pair in enumerate(pairs.values()):
+        pair.update(expected_departures=normalization * math.fsum(m * row[index] for m, row in zip(masses, weights)),
+                    generated_departures=0, generated_departures_per_bin=[0] * len(weights))
+    timestamps = [float(row["depart"]) for row in schedule]
+    for boundary in transition["boundaries"]:
+        for key in ("original_left_rate_per_second", "original_right_rate_per_second",
+                    "joined_rate_per_second", "harmonic_join_rate_per_second",
+                    "peak_rate_before_per_second", "peak_rate_after_per_second",
+                    "minimum_rate_before_per_second", "minimum_rate_after_per_second",
+                    "expected_left_half_window_before", "expected_left_half_window_after",
+                    "expected_right_half_window_before", "expected_right_half_window_after"):
+            boundary[key] *= retention
+        relative = boundary["week_second"] - begin
+        row = round(relative / 900)
+        boundary["od_neighbor_total_variation"] = sum(abs(a - b) for a, b in zip(weights[row - 1], weights[row])) / 2
+        boundary["od_half_window_seconds"] = 450
+        boundary["od_boundary_jump"] = 0.0
+        for window in boundary["windows"]:
+            width = window["seconds"]
+            window["programmed_left"] = bisect_left(timestamps, relative) - bisect_left(timestamps, relative - width)
+            window["programmed_right"] = bisect_left(timestamps, relative + width) - bisect_left(timestamps, relative)
+            for key in ("before_left", "before_right", "after_left", "after_right"):
+                window[key] *= retention
+    transition.update(expected_before=transition["expected_before"] * retention,
+                      expected_after=transition["expected_after"] * retention,
+                      standalone_programmed_sum=sum(c["reference_programmed"] for c in contexts),
+                      combined_programmed=len(schedule), programmed_difference=0,
+                      od_method="linear_interpolation_of_approved_context_probability_rows; no_refitting",
+                      od_limit="Interpolation changes route expectations only within 450 seconds of each boundary.",
+                      rate_knots=[dict(row, rate_per_second=row["rate_per_second"] * retention) for row in knots])
+    for row in transition["sections"]:
+        for key in ("expected_before", "expected_after", "difference"):
+            row[key] *= retention
+    projection = {"method": "composition_of_approved_individual_context_projections",
+                  "total_fixed": total, "observations": observations,
+                  "status": "individual_projection_references_not_recomputed_passages_after_harmonization",
+                  "limits": ["Passage predictions below refer to individual contexts before boundary transport.",
+                             "Combined physical passages are measured by the shared SUMO collector."]}
+    return knots, weights, projection, schedule, reference_count, transition
 
 
 def generate_metasettran_demand(
     *, net_file=DEFAULT_NET_FILE, output_dir=DEFAULT_OUTPUT_DIR,
     csv_file=DEFAULT_CSV_FILE, spatial_file=DEFAULT_SPATIAL_FILE,
-    day="tuesday", start="15:00", sections=1, variation=1, seed=None,
+    day="tuesday", start="15:00", sections=1, variation=None, seed=None,
+    master_seed=None, variations=None,
     spatial_scenario="regional-integrated", metadata=None, log_file=None,
-    schedule_file=None,
+    schedule_file=None, source_time_convention="utc", volume_retention=None,
 ):
     """Gera viagens regionais; schedule_file isola a distribuição espacial."""
     from SistemaDeSemaforos.demand.metasettran_calibration import calibrate_weekly, weekly_window
 
-    validate_selection(day, start, sections, variation, seed)
+    selection = resolve_contexts(day, start, sections, variation, seed, master_seed, variations)
+    if schedule_file is not None and sections != 1:
+        raise ValueError("Agenda pareada legada exige uma faixa; reutilize o XML completo para comparar controladores.")
+    variation = selection["variations"][0] if sections == 1 else None
     if spatial_scenario not in SPATIAL_SCENARIOS:
         raise ValueError("Cenário regional retirado; utilize regional-integrated.")
     requested_scenario, spatial_scenario = spatial_scenario, "regional-integrated"
-    seed = effective_seed(variation, seed)
+    seed = selection["seed"]
     begin = selection_start_week_second(day, start)
     duration = int(DEFAULT_DURATION) * sections
     bins = 12 * sections
@@ -589,19 +832,46 @@ def generate_metasettran_demand(
     reference_total = model["regional_demand"]["reference_expected_departures"]
     if isinstance(reference_total, bool) or not isinstance(reference_total, (float, int)) or not math.isfinite(reference_total) or reference_total <= 0:
         raise ValueError("Volume regional de referência deve ser finito e positivo.")
-    weekly = calibrate_weekly(csv_file, variation=variation, seed=seed)
+    retention = (model["regional_demand"].get("volume_recalibration", {}).get("retained_fraction", 1.0)
+                 if volume_retention is None else volume_retention)
+    if isinstance(retention, bool) or not isinstance(retention, (float, int)) or not math.isfinite(retention) or not 0 < retention <= 1:
+        raise ValueError("Fração de retenção deve estar em (0, 1].")
+    # Agenda pareada é um contrato de população fixa; não reduzir novamente.
+    if schedule_file is not None:
+        retention = 1.0
+    weekly = calibrate_weekly(csv_file, variation=selection["contexts"][0]["variation"], seed=selection["contexts"][0]["effective_seed"],
+                              source_time_convention=source_time_convention)
     calibration = weekly_window(weekly, begin, duration)
-    reference_counts = {sensor: weekly["sensors"][sensor]["baseline_reference_cars_15_18"] for sensor in ("5", "6")}
+    reference_counts = model["regional_demand"].get("frozen_scale_reference_cars", {
+        sensor: weekly["sensors"][sensor]["baseline_reference_cars_15_18"] for sensor in ("5", "6")})
     if any(not math.isfinite(value) or value <= 0 for value in reference_counts.values()):
         raise ValueError("Referência temporal requer contagens car positivas e finitas para ambos os sensores.")
     calibration["baseline_reference_cars_15_18"] = reference_counts
     scale = reference_total / sum(reference_counts.values())
     curve_key = "knots" if schedule_file is not None else "realization_knots"
-    sensor_knots = {sensor: calibration["sensors"][sensor][curve_key] for sensor in ("5", "6")}
-    times = sorted({k["week_second"] for curve in sensor_knots.values() for k in curve})
-    knots = [{"week_second": timestamp,
-              "rate_per_second": scale * sum(interpolate_rate(curve, timestamp) for curve in sensor_knots.values())}
-             for timestamp in times]
+    knots = _regional_knots(calibration, scale, curve_key)
+    components = []
+    if sections > 1:
+        cache = {selection["contexts"][0]["effective_seed"]: weekly}
+        for context in selection["contexts"]:
+            context_seed = context["effective_seed"]
+            if context_seed not in cache:
+                cache[context_seed] = calibrate_weekly(csv_file, variation=context["variation"], seed=context_seed,
+                                                       source_time_convention=source_time_convention)
+            component = weekly_window(cache[context_seed], context["start_week_second"], int(DEFAULT_DURATION))
+            component["baseline_reference_cars_15_18"] = reference_counts
+            components.append(component)
+        for sensor in ("5", "6"):
+            profile = calibration["sensors"][sensor]
+            profile.pop("realization_knots", None)
+            profile["realization_contexts"] = [{"index": c["index"], "variation": c["variation"],
+                "knots": component["sensors"][sensor]["realization_knots"]}
+                for c, component in zip(selection["contexts"], components)]
+            profile["realized_target_counts"] = [value for component in components for value in
+                component["sensors"][sensor].get("realized_target_counts", component["sensors"][sensor]["target_counts"])]
+            profile["realized_expected_cars"] = sum(profile["realized_target_counts"])
+        calibration["realization"] = {"method": "independent_context_variations", "variations": selection["variations"]}
+        del cache
     fixed_schedule, vehicle_types = None, None
     if schedule_file is not None:
         schedule_file = Path(schedule_file).expanduser().resolve()
@@ -622,6 +892,7 @@ def generate_metasettran_demand(
     ending = (begin + duration) % 604800
     metadata.update(
         demand_model="metasettran", model_version=MODEL_VERSION, seed=seed, variation=variation,
+        context_selection=selection, composition_version=COMPOSITION_VERSION,
         spatial_scenario=spatial_scenario, requested_spatial_scenario=requested_scenario,
         seed_namespace=SEED_NAMESPACE, routing_seed=ROUTING_SEED,
         day=day, start=start, end=f"{int(ending % 86400 // 3600):02d}:00", end_day=DAYS[int(ending // 86400)],
@@ -630,8 +901,8 @@ def generate_metasettran_demand(
         net_file=str(net_file), source_network_sha256=network_sha256,
         csv_file=str(csv_file), spatial_file=str(spatial_file), spatial_sha256=hashlib.sha256(spatial_bytes).hexdigest(),
         trips_file=str(trips_file), routes_file=str(routes_file), calibration=calibration,
-        spatial_model=model, status="experimental_regional_model_sensor_mapping_unconfirmed",
-        variability=weekly.get("realization", {}),
+        spatial_model=model, status=model.get("status", "experimental_regional_model_sensor_mapping_unconfirmed"),
+        variability=calibration.get("realization", weekly.get("realization", {})),
         temporal_scope={"contexts": 56, "variations_per_context": 25,
                         "shared_model": True, "continuous_selection": True,
                         "empirical_status": "local_car_curves; regional_OD_and_scale_experimental"},
@@ -647,15 +918,25 @@ def generate_metasettran_demand(
             pairs, command, catalog, network_edges = _route_pairs(model, net_file, directory, seed, log_file)
             metadata["command"] = command
             _regional_prior(pairs, model)
-            weights, projection = _observation_projection(pairs, model, calibration, begin, duration, knots, fixed_schedule, curve_key)
-            temporal_rng = random.Random(_stream_seed(seed, "regional", "departures"))
+            if sections > 1:
+                knots, weights, projection, schedule, reference_count, transition = _compose_sections(
+                    pairs, model, components, selection["contexts"], scale, retention)
+                metadata["chronological_composition"] = transition
+                retained_indices = range(len(schedule))
+            else:
+                weights, projection = _observation_projection(pairs, model, calibration, begin, duration, knots, fixed_schedule, curve_key)
+                temporal_rng = random.Random(_stream_seed(seed, "regional", "departures"))
+                schedule = fixed_schedule if fixed_schedule is not None else [
+                    {"id": f"ms_{index:06d}", "type": "metasettran_car",
+                     "depart": f"{min(timestamp, duration - .000001):.6f}", "departPos": "0", "arrivalPos": "max"}
+                    for index, timestamp in enumerate(_departures(_linear_segments(knots, begin=begin, duration=duration), temporal_rng))]
+                reference_count = len(schedule)
+                retained_indices = _retained_indices(reference_count, retention, seed)
+                selection["contexts"][0].update(reference_programmed=len(retained_indices), programmed=len(retained_indices),
+                                                unreduced_programmed=reference_count)
             od_rng = random.Random(_stream_seed(seed, "regional", "od"))
-            schedule = fixed_schedule if fixed_schedule is not None else [
-                {"id": f"ms_{index:06d}", "type": "metasettran_car",
-                 "depart": f"{min(timestamp, duration - .000001):.6f}", "departPos": "0", "arrivalPos": "max"}
-                for index, timestamp in enumerate(_departures(_linear_segments(knots, begin=begin, duration=duration), temporal_rng))]
-            if not schedule:
-                raise ValueError("O perfil não gerou viagens; confira taxas e exposição dos dados.")
+            if not retained_indices:
+                raise ValueError("A redução não deixou viagens nesta realização; não forçar inserções.")
             trips, routes = _routes_root(), _routes_root()
             if vehicle_types is not None:
                 trips, routes = ET.Element("routes"), ET.Element("routes")
@@ -663,26 +944,61 @@ def generate_metasettran_demand(
                     trips.append(deepcopy(item))
                     routes.append(deepcopy(item))
             route_list = list(pairs.values())
+            cumulative_weights = [list(accumulate(row)) for row in weights] if sections > 1 else None
             used_lengths, generated_bins = [], [0] * bins
-            for attributes in schedule:
-                timestamp = float(attributes["depart"])
-                pair = route_list[_choose_route(weights, timestamp, od_rng)]
-                bin_index = min(int(timestamp // 900), bins - 1)
-                pair["generated_departures"] += 1
-                pair["generated_departures_per_bin"][bin_index] += 1
-                generated_bins[bin_index] += 1
-                used_lengths.append(pair["length_m"])
-                ET.SubElement(trips, "trip", dict(attributes, **{"from": pair["origin"], "to": pair["destination"]}))
-                vehicle = ET.SubElement(routes, "vehicle", attributes)
-                ET.SubElement(vehicle, "route", edges=" ".join(pair["route"]))
+            new_trips, new_routes = directory / trips_file.name, directory / routes_file.name
+            with ExitStack() as stack:
+                streams = []
+                if sections > 1:
+                    for path in (new_trips, new_routes):
+                        stream = stack.enter_context(path.open("wb"))
+                        stream.write(b"<?xml version='1.0' encoding='utf-8'?>\n<routes>\n  <vType id=\"metasettran_car\" vClass=\"passenger\" />\n")
+                        streams.append(stream)
+                for schedule_index, attributes in enumerate(schedule):
+                    timestamp = float(attributes["depart"])
+                    pair = route_list[_choose_route(weights, timestamp, od_rng, attributes.pop("_od_uniforms", None), cumulative_weights)]
+                    # Consumir a escolha OD também nas viagens removidas mantém o
+                    # percurso de cada ID retido idêntico ao da referência UTC.
+                    if schedule_index not in retained_indices:
+                        continue
+                    bin_index = min(int(timestamp // 900), bins - 1)
+                    pair["generated_departures"] += 1
+                    pair["generated_departures_per_bin"][bin_index] += 1
+                    generated_bins[bin_index] += 1
+                    used_lengths.append(pair["length_m"])
+                    trip = ET.Element("trip", dict(attributes, **{"from": pair["origin"], "to": pair["destination"]}))
+                    vehicle = ET.Element("vehicle", attributes)
+                    ET.SubElement(vehicle, "route", edges=" ".join(pair["route"]))
+                    if streams:
+                        for stream, element in zip(streams, (trip, vehicle)):
+                            ET.indent(element, space="  ", level=1)
+                            stream.write(b"  " + ET.tostring(element, encoding="utf-8") + b"\n")
+                    else:
+                        trips.append(trip)
+                        routes.append(vehicle)
+                for stream in streams:
+                    stream.write(b"</routes>")
+            schedule = [attrs for index, attrs in enumerate(schedule) if index in retained_indices]
+            for pair in pairs.values():
+                pair["expected_departures"] *= retention
+            projection["unreduced_total_fixed"] = projection["total_fixed"]
+            projection["total_fixed"] *= retention
+            for observation in projection["observations"]:
+                observation["unreduced_projected_freeflow_passages"] = observation["projected_freeflow_passages"]
+                observation["projected_freeflow_passages"] *= retention
+                observation["experimental_target_passages"] = observation["target_passages"] * retention
+                observation["residual"] = observation["projected_freeflow_passages"] - observation["target_passages"]
+            projection["retention_note"] = "OD fitted at unreduced reference; measured targets unchanged. Reduced projections are experimental, not a recalibration of observed counts."
             used_lengths.sort()
             new_trips, new_routes = directory / trips_file.name, directory / routes_file.name
-            _write_xml(new_trips, trips)
-            _write_xml(new_routes, routes)
-            expected_bins = [integrate_rate(knots, begin + index * 900, begin + (index + 1) * 900) for index in range(bins)]
+            if sections == 1:
+                _write_xml(new_trips, trips)
+                _write_xml(new_routes, routes)
+            expected_bins = [retention * integrate_rate(knots, begin + index * 900, begin + (index + 1) * 900) for index in range(bins)]
             groups = [{"id": "regional", "sensor_ids": [], "basis": {"kind": "fixed_regional_scale_hypothesis",
                        "reference_expected_departures": reference_total,
-                       "scale": "reference_total * (car5(t)+car6(t)) / reference_tuesday_sum; not sensor coverage"},
+                       "scale": "retention * frozen_v4.3.1_coefficient * (car5(t)+car6(t)); not sensor coverage",
+                       "unreduced_coefficient": scale, "frozen_reference_cars": reference_counts},
                        "expected_departures": projection["total_fixed"], "generated_departures": len(schedule),
                        "expected_departures_per_bin": ([sum(1 for attrs in schedule if index * 900 <= float(attrs['depart']) < (index + 1) * 900)
                            for index in range(bins)] if fixed_schedule is not None else expected_bins),
@@ -716,6 +1032,15 @@ def generate_metasettran_demand(
                          if ("both" if len(p["sensor_ids"]) == 2 else p["sensor_ids"][0] if p["sensor_ids"] else "neither") == label)
                          for label in ("5", "6", "both", "neither")}
             metadata.update(
+                volume_recalibration={"retained_fraction": retention,
+                    "reference_programmed": reference_count, "retained_programmed": len(schedule),
+                    "actual_reduction_fraction": 1 - len(schedule) / reference_count,
+                    "method": ("per_context_fixed_count_subset_then_mass_conserving_time_transport" if sections > 1
+                               else "fixed_count_systematic_subset_of_reference_schedule"),
+                    "paired_schedule_bypasses_reduction": fixed_schedule is not None,
+                    "preserved": (["context_vehicle_budgets", "individual_context_probability_rows", "vehicle_attributes"] if sections > 1
+                                  else ["retained_vehicle_ids", "departure_times", "routes", "vehicle_attributes"]),
+                    "status": "project_experimental_reduction_not_measured_percentage"},
                 vehicles_requested=len(schedule), vehicles_generated=len(schedule), trips_generated=len(schedule),
                 groups=groups, routes_sha256=_sha256(new_routes), trips_sha256=_sha256(new_trips),
                 spatial_distribution={"scenario": spatial_scenario, "method": "integrated_OD_shared_observations",

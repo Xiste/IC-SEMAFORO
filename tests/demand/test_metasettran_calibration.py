@@ -1,7 +1,7 @@
 """Verifica exposição, separação temporal e interpolação do piloto MetaSettran."""
 
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import tempfile
@@ -13,6 +13,29 @@ from SistemaDeSemaforos.demand import metasettran_calibration as calibration
 
 FIELDS = ["hora_inicio", "hora_fim", "vlink_id", "descricao_linha", *calibration.COUNTS,
           "speed_pxm", "speed_pxm_max"]
+
+
+class SourceTimeTests(unittest.TestCase):
+    def test_explicit_utc_conversion_changes_day_and_weekday(self):
+        source = datetime(2026, 8, 25, 0, 30)
+        civil = calibration._source_to_civil(source, "utc")
+        self.assertEqual(civil, datetime(2026, 8, 24, 21, 30))
+        self.assertEqual(civil.weekday(), 0)
+        self.assertEqual(calibration._source_to_civil(datetime(2026, 8, 25, 9), "utc").hour, 6)
+        self.assertEqual(calibration._source_to_civil(source, "legacy_civil"), source)
+        with self.assertRaises(ValueError):
+            calibration._source_to_civil(source.replace(tzinfo=timezone.utc), "utc")
+
+    def test_midnight_interval_is_split_by_civil_date_without_changing_source(self):
+        begin, end = datetime(2026, 8, 24, 2, 59), datetime(2026, 8, 24, 3, 1)
+        records = {"5": [(begin, end, 12, 120)], "6": []}
+        bins = calibration._aggregate(records, source_time_convention="utc")
+        self.assertEqual(bins["5"][datetime(2026, 8, 23, 23, 45)], [60, 6])
+        self.assertEqual(bins["5"][datetime(2026, 8, 24)], [60, 6])
+        self.assertLess(datetime(2026, 8, 23).date(), calibration.TRAIN_BEFORE)
+        self.assertEqual(records["5"][0][0], begin)
+        with self.assertRaises(ValueError):
+            calibration._aggregate(records, -3, source_time_convention="utc")
 
 
 class MetaSettranCalibrationTests(unittest.TestCase):
@@ -244,7 +267,7 @@ class MetaSettranWeeklyCalibrationTests(unittest.TestCase):
                     for sensor in calibration.SENSORS:
                         self.bins[sensor][stamp] = (900, count * (1 if sensor == "5" else 2))
         self.read_patch = patch.object(calibration, "_read_measurements", return_value=({}, {}, "fixture"))
-        self.aggregate_patch = patch.object(calibration, "_aggregate", side_effect=lambda *_: self.bins)
+        self.aggregate_patch = patch.object(calibration, "_aggregate", side_effect=lambda *_, **__: self.bins)
         self.read_patch.start()
         self.aggregate_patch.start()
         self.addCleanup(self.read_patch.stop)
@@ -252,7 +275,7 @@ class MetaSettranWeeklyCalibrationTests(unittest.TestCase):
 
     def test_week_is_cyclic_and_all_contexts_have_distinct_observed_support(self):
         result = calibration.calibrate_weekly()
-        self.assertEqual(result["time"]["offset_applied_hours"], 0)
+        self.assertEqual(result["time"]["offset_applied_hours"], -3)
         self.assertEqual(len(result["training_dates"]), 21)
         for sensor in calibration.SENSORS:
             knots = result["sensors"][sensor]["knots"]
@@ -273,6 +296,31 @@ class MetaSettranWeeklyCalibrationTests(unittest.TestCase):
                 totals.append(profile["expected_cars"])
         self.assertEqual(len(totals), 56)
         self.assertGreater(len(set(totals)), 30)
+
+    def test_training_support_excludes_holdout_and_partial_windows(self):
+        missing = datetime(2026, 7, 7, 15)
+        del self.bins["5"][missing]
+        result = calibration.calibrate_weekly()
+        selected = calibration.weekly_window(result, calibration.START_WEEK_SECOND, 10800)
+        support = selected["sensors"]["5"]["training_support"]
+        self.assertEqual(support["complete_observed_windows"], 2)
+        self.assertEqual(support["eligible_observed_quarters"], 35)
+        self.assertEqual(support["joint_training_dates_per_quarter_min"], 2)
+        self.assertEqual(support["joint_training_dates_per_quarter_max"], 3)
+        self.assertEqual(support["normalized_car_count_statistics"]["n_dates"], 2)
+
+    def test_clock_anomaly_is_reported_without_changing_hours_or_counts(self):
+        for sensor in calibration.SENSORS:
+            for timestamp in self.bins[sensor]:
+                if timestamp.hour == 6:
+                    self.bins[sensor][timestamp] = (900, .1)
+        result = calibration.calibrate_weekly()
+        evidence = result["training_clock_evidence"]["sensors"]["6"]
+        self.assertTrue(all(day["morning_minimum_requires_civil_context_review"] for day in evidence))
+        self.assertTrue(all(day["median_hourly_minimum_hour"] == 6 for day in evidence))
+        self.assertEqual(result["time"]["offset_applied_hours"], -3)
+        knot = next(k for k in result["sensors"]["6"]["knots"] if k["week_second"] == 6*3600+450)
+        self.assertAlmostEqual(knot["rate_per_second"], .1/900)
         json.dumps(result, allow_nan=False)
 
     def test_validation_is_reserved_before_fitting_and_before_resampling(self):

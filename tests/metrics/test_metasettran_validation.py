@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 
 from SistemaDeSemaforos.metrics.episode_metrics_collector import (
     collect_metasettran_validation, metasettran_observation_edges,
+    _metasettran_boundary_continuity,
 )
 from SistemaDeSemaforos.metrics.sumo_output_configuration import prepare_outputs
 
@@ -218,6 +219,80 @@ class MetaSettranValidationTests(unittest.TestCase):
         self.assertEqual(rows[-1]["arrived_cumulative_including_teleports"], 2)
         self.assertEqual(rows[-1]["teleport_events_cumulative"], 3)
 
+    def test_boundary_continuity_separates_carryover_pending_and_final_outcomes(self):
+        scheduled = {"crossing": 10700, "arrives_on_boundary": 0, "next_section": 10800,
+                     "late": 100, "never_inserted": 100, "teleported": 0,
+                     "unfinished": 11000, "removed": 0, "unknown_removal": 0}
+        departures = {"crossing": 10705, "arrives_on_boundary": 0, "next_section": 10800,
+                      "late": 10801, "teleported": 0, "unfinished": 11000,
+                      "removed": 0, "unknown_removal": 0}
+        endings = {"crossing": 10900, "arrives_on_boundary": 10800, "next_section": 10900,
+                   "late": 10900, "teleported": 21601, "unfinished": None,
+                   "removed": 100, "unknown_removal": None}
+        statuses = {identifier: "completed_without_teleport" for identifier in scheduled}
+        statuses.update(teleported="completed_after_teleport", unfinished="incomplete_at_end",
+                        never_inserted="not_inserted", removed="removed_without_completion",
+                        unknown_removal="removed_without_completion")
+        result = _metasettran_boundary_continuity(
+            scheduled, departures, endings, statuses, {"teleported"}, 32400, 35100)
+        first, second = result["boundaries"]
+        self.assertEqual(first["time_seconds"], 10800)
+        self.assertEqual(first["pending_insertion_from_previous_sections"], 2)
+        self.assertEqual(first["carried_without_any_teleport"], 1)
+        self.assertEqual(first["carried_with_teleport"], 1)
+        self.assertEqual(first["removed_with_unknown_end_time"], 1)
+        self.assertEqual([item["id"] for item in first["continuity_examples"]], ["crossing"])
+        witness = first["continuity_examples"][0]
+        self.assertLess(witness["actual_departure_seconds"], first["time_seconds"])
+        self.assertGreater(witness["trip_end_seconds"], first["time_seconds"])
+        self.assertEqual(second["pending_insertion_from_previous_sections"], 1)
+        self.assertEqual(second["carried_without_any_teleport"], 1)
+        self.assertEqual(second["carried_with_teleport"], 1)
+        self.assertEqual(second["continuity_examples"][0]["final_status"], "incomplete_at_end")
+        self.assertEqual(result["clearance_window_seconds"], [32400, 35100])
+
+    def test_week_boundary_continuity_has_no_intermediate_clearance_or_state_reset(self):
+        result = _metasettran_boundary_continuity(
+            {"persistent": 0}, {"persistent": 1}, {"persistent": None},
+            {"persistent": "incomplete_at_end"}, set(), 604800, 607500)
+        self.assertEqual([row["time_seconds"] for row in result["boundaries"]],
+                         list(range(10800, 604800, 10800)))
+        self.assertEqual(len(result["boundaries"]), 55)
+        for row in result["boundaries"]:
+            self.assertEqual(row["carried_without_any_teleport"], 1)
+            self.assertEqual(row["pending_insertion_from_previous_sections"], 0)
+            self.assertEqual(row["continuity_examples"][0]["id"], "persistent")
+        self.assertEqual(result["clearance_window_seconds"], [604800, 607500])
+
+    def test_single_section_has_no_internal_state_transition(self):
+        continuity = self.collect()["boundary_continuity"]
+        self.assertEqual(continuity["boundaries"], [])
+        self.assertEqual(continuity["departure_window_seconds"], [0, 10800])
+
+    def test_boundary_millisecond_rounding_does_not_preempt_next_section(self):
+        scheduled = {"rounded": 10800.0002, "exact": 10800, "previous": 10799.9994}
+        departures = {"rounded": 10800, "exact": 10800, "previous": 10799.999}
+        result = _metasettran_boundary_continuity(
+            scheduled, departures, {identifier: 10900 for identifier in scheduled},
+            {identifier: "completed_without_teleport" for identifier in scheduled},
+            set(), 21600, 24300)
+        boundary = result["boundaries"][0]
+        self.assertEqual(boundary["programmed_before_boundary"], 1)
+        self.assertEqual(boundary["inserted_before_boundary"], 1)
+        self.assertEqual(boundary["pending_insertion_from_previous_sections"], 0)
+        self.assertEqual(boundary["carried_without_any_teleport"], 1)
+        self.assertEqual([item["id"] for item in boundary["continuity_examples"]], ["previous"])
+
+    def test_streamed_demand_rejects_duplicate_and_empty_vehicle_ids(self):
+        original = ET.parse(self.routes_path).getroot()
+        for identifier in (original[0].get("id"), ""):
+            with self.subTest(identifier=identifier):
+                root = deepcopy(original)
+                root[-1].set("id", identifier)
+                ET.ElementTree(root).write(self.routes_path)
+                with self.assertRaisesRegex(ValueError, "IDs repetidos"):
+                    self.collect()
+
     def test_portal_accounting_retains_pending_and_exclusive_statuses_without_raw_files(self):
         result = self.collect()["spatial_observation"]["portal_trip_accounting"]
         self.assertEqual(len(result["entries"]), 1)
@@ -322,6 +397,11 @@ class MetaSettranValidationTests(unittest.TestCase):
         self.assertEqual(spatial["departure_window_seconds"], [0, 21600])
         self.assertEqual(spatial["clearance_window_seconds"], [21600, 24300])
         self.assertEqual(len(spatial["portal_trip_accounting"]["entries"][0]["intervals"]), 27)
+        continuity = result["boundary_continuity"]
+        self.assertEqual(continuity["clearance_window_seconds"], [21600, 24300])
+        self.assertEqual(len(continuity["boundaries"]), 1)
+        self.assertEqual(continuity["boundaries"][0]["pending_insertion_from_previous_sections"], 2)
+        self.assertEqual(continuity["boundaries"][0]["carried_without_any_teleport"], 0)
 
     def test_temporal_reference_mismatch_is_not_silently_truncated(self):
         self.generation["calibration"]["sensors"]["6"]["target_counts"] *= 2

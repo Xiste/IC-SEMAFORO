@@ -9,10 +9,12 @@ Cada episódio recebe uma seed de demanda; entradas temporárias são removidas 
 
 import argparse
 from datetime import datetime, timezone
+import hashlib
 import json
 import math
 from pathlib import Path
 import random
+import secrets
 import shutil
 import subprocess
 import sys
@@ -212,6 +214,8 @@ def run_episodes(
     start: str | None = None,
     sections: int | None = None,
     variation: int | None = None,
+    master_seed: int | None = None,
+    variations: list[int] | None = None,
     drain_limit: float | None = None,
     spatial_scenario: str | None = None,
 ) -> Path:
@@ -223,15 +227,25 @@ def run_episodes(
         raise ValueError("demand_profile deve ser random ou metasettran.")
     demand_options = None
     if demand_profile == "random":
-        if any(value is not None for value in (day, start, sections, variation, drain_limit, spatial_scenario)):
+        if any(value is not None for value in (day, start, sections, variation, master_seed,
+                                               variations, drain_limit, spatial_scenario)):
             raise ValueError("Dia, seção, variação e escoamento exigem --demand-profile metasettran.")
     else:
-        from ..demand.metasettran_demand_generator import SPATIAL_SCENARIOS, validate_selection
+        from ..demand.metasettran_demand_generator import SPATIAL_SCENARIOS, resolve_contexts
         demand_options = {"day": "tuesday" if day is None else day,
                           "start": "15:00" if start is None else start,
                           "sections": 1 if sections is None else sections,
-                          "variation": 1 if variation is None else variation}
-        validate_selection(**demand_options)
+                          "variation": variation,
+                          "master_seed": master_seed, "variations": variations}
+        # Uma faixa sem opções mantém a variação histórica; uma sequência sorteia
+        # cada contexto. A validação não consome aleatoriedade nem cria saídas.
+        if demand_options["sections"] == 1 and all(
+                value is None for value in (variation, master_seed, variations)):
+            demand_options["variation"] = 1
+        validation_options = dict(demand_options)
+        if demand_options["variation"] is None and master_seed is None and variations is None:
+            validation_options["master_seed"] = 0
+        resolve_contexts(**validation_options)
         spatial_scenario = "regional-integrated" if spatial_scenario is None else spatial_scenario
         if spatial_scenario not in SPATIAL_SCENARIOS:
             raise ValueError("Cenário regional inválido ou pertencente a um modelo de demanda retirado.")
@@ -246,7 +260,8 @@ def run_episodes(
         end = duration + drain_limit
     if isinstance(episodes, bool) or not isinstance(episodes, int) or episodes < 1:
         raise ValueError("episodes deve ser um inteiro maior que zero.")
-    if demand_options is not None and demand_options["variation"] + episodes - 1 > 25:
+    if (demand_options is not None and demand_options["variation"] is not None
+            and demand_options["variation"] + episodes - 1 > 25):
         raise ValueError("O lote excede as 25 variações; não há retorno automático à variação 1.")
     if metrics_profile not in {"core", "full"}:
         raise ValueError("metrics_profile deve ser core ou full.")
@@ -265,13 +280,36 @@ def run_episodes(
     net_file = Path(net_file).expanduser().resolve()
     if not net_file.is_file():
         raise FileNotFoundError(f"Rede SUMO não encontrada: {net_file}")
+    batch_master_seed = None
+    if demand_options is not None and demand_options["variation"] is None:
+        batch_master_seed = master_seed
+        if batch_master_seed is None and variations is None:
+            batch_master_seed = secrets.randbits(63)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     batch_dir = output_dir / f"{timestamp}_{uuid4().hex[:8]}"
     batch_dir.mkdir(parents=True, exist_ok=False)
     context = {}
     for episode in range(1, episodes + 1):
-        episode_demand = (dict(demand_options, variation=demand_options["variation"] + episode - 1)
-                          if demand_options is not None else None)
+        episode_demand = None
+        if demand_options is not None:
+            episode_demand = dict(demand_options)
+            if demand_options["variation"] is not None:
+                episode_demand["variation"] += episode - 1
+            else:
+                # A primeira execução usa a seed informada. As demais recebem
+                # seeds derivadas, sem depender de estado global ou de semáforos.
+                episode_master = batch_master_seed
+                if episode > 1 and variations is None:
+                    digest = hashlib.sha256(
+                        f"metasettran-batch-v1:{batch_master_seed}:{episode}".encode()).digest()
+                    episode_master = int.from_bytes(digest[:8], "big") & (2**63 - 1)
+                episode_demand["master_seed"] = episode_master
+            resolved = resolve_contexts(**{key: episode_demand[key] for key in (
+                "day", "start", "sections", "variation", "master_seed", "variations")})
+            if episode_demand["variation"] is None:
+                episode_demand["variations"] = [item["variation"] for item in resolved["contexts"]]
+            episode_demand["_context_selection"] = {
+                **resolved, "batch_master_seed": batch_master_seed, "batch_episode": episode}
         _run_episode(net_file, batch_dir, episode, episodes, gui, duration, period,
                      end, metrics_profile, context, signal_profile, selection, episode_demand)
     return batch_dir
@@ -290,8 +328,7 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
     if demand_options is None:
         seed = random.randint(0, 2**31 - 1)
     else:
-        from ..demand.metasettran_demand_generator import effective_seed
-        seed = effective_seed(demand_options["variation"])
+        seed = demand_options["_context_selection"]["seed"]
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     episode_id = f"{timestamp}_seed-{seed}_{uuid4().hex[:8]}"
     directory = output_dir / episode_id
@@ -320,6 +357,8 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
         "collection": {"profile": metrics_profile},
     }
     entities = {}
+    if demand_options is not None:
+        execution["context_selection"] = demand_options["_context_selection"]
     if selection is not None:
         execution["signal_configuration"] = {
             "mode": "explicit_fixed_plan", "plan_id": selection["plan_id"],
@@ -348,7 +387,8 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
             from ..demand.metasettran_demand_generator import generate_metasettran_demand
             demand_file = generate_metasettran_demand(
                 net_file=net_file, output_dir=inputs, metadata=generation,
-                log_file=directory / "generation.log", **demand_options,
+                log_file=directory / "generation.log",
+                **{key: value for key, value in demand_options.items() if not key.startswith("_")},
             )
             # Uma rota reutilizável é parte do experimento MetaSettran. As viagens
             # intermediárias e configurações SUMO continuam temporárias.
@@ -360,12 +400,26 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
             metrics["vehicles_requested"] = generation["vehicles_generated"]
         for name in ("vehicles_generated", "trips_generated"):
             metrics[name] = generation[name]
-        departures = [float(vehicle.get("depart")) for vehicle in ET.parse(demand_file).getroot()
-                      if vehicle.tag == "vehicle"]
-        if departures:
-            metrics["demand_first_departure_seconds"] = min(departures)
-            metrics["demand_last_departure_seconds"] = max(departures)
-            metrics["demand_departure_mean_seconds"] = sum(departures) / len(departures)
+        # Uma semana pode conter centenas de milhares de rotas: estes três
+        # agregados não precisam carregar novamente o XML inteiro na memória.
+        departure_count, departure_sum = 0, 0.0
+        first_departure, last_departure = math.inf, -math.inf
+        with demand_file.open("rb") as source:
+            parsed = ET.iterparse(source, events=("start", "end"))
+            _, route_root = next(parsed)
+            for event, vehicle in parsed:
+                if event != "end" or vehicle.tag != "vehicle":
+                    continue
+                depart = float(vehicle.get("depart"))
+                departure_count += 1
+                departure_sum += depart
+                first_departure = min(first_departure, depart)
+                last_departure = max(last_departure, depart)
+                route_root.clear()
+        if departure_count:
+            metrics["demand_first_departure_seconds"] = first_departure
+            metrics["demand_last_departure_seconds"] = last_departure
+            metrics["demand_departure_mean_seconds"] = departure_sum / departure_count
         metrics["generation_time_seconds"] = generation["duration_seconds"]
         signal_options = {} if selection is None else {
             "settran_plan": selection["plan_id"],
@@ -471,7 +525,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--day", help="Dia inicial de monday a sunday; MetaSettran: tuesday por padrão.")
     parser.add_argument("--start", help="Início civil de seção: 00:00, 03:00, ..., 21:00; padrão 15:00.")
     parser.add_argument("--sections", type=int, help="Número de seções consecutivas de três horas, em uma simulação.")
-    parser.add_argument("--variation", type=int, help="Variação inicial 1–25; episódios seguintes usam índices consecutivos.")
+    parser.add_argument("--variation", type=int,
+                        help="Variação 1–25 de uma faixa; episódios seguintes usam índices consecutivos.")
+    parser.add_argument("--master-seed", type=int,
+                        help="Seed mestra para sortear uma variação independente em cada faixa (0 a 2^63−1).")
+    parser.add_argument("--variations", type=int, nargs="+",
+                        help="Lista explícita de variações 1–25, uma por faixa, para reproduzir uma sequência.")
     parser.add_argument("--drain-limit", type=float, help="Escoamento após a janela de partidas; MetaSettran: 2700 s.")
     from ..demand.metasettran_demand_generator import SPATIAL_SCENARIOS
     parser.add_argument("--spatial-scenario", choices=SPATIAL_SCENARIOS,
@@ -490,9 +549,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         options = vars(args)
         if options["demand_profile"] == "random":
-            if any(options[key] is not None for key in ("day", "start", "sections", "variation", "drain_limit", "spatial_scenario")):
+            if any(options[key] is not None for key in ("day", "start", "sections", "variation", "master_seed",
+                                                       "variations", "drain_limit", "spatial_scenario")):
                 raise ValueError("Seleção temporal e variação exigem --demand-profile metasettran.")
-            for key in ("demand_profile", "day", "start", "sections", "variation", "drain_limit", "spatial_scenario"):
+            for key in ("demand_profile", "day", "start", "sections", "variation", "master_seed", "variations",
+                        "drain_limit", "spatial_scenario"):
                 options.pop(key)
             run_random_episodes(**options)
         else:

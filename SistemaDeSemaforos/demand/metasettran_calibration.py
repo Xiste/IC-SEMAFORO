@@ -1,18 +1,20 @@
 """Curvas locais de carros e referências semanais, sem extrapolação regional.
 
 ``calibrate`` preserva o piloto histórico; ``calibrate_weekly`` compartilha
-um modelo entre os 56 contextos. O relógio civil permanece em Brasília.
+um modelo entre os 56 contextos, convertendo UTC para o relógio civil de Brasília.
+A origem UTC é uma convenção experimental do projeto, não um fato do equipamento.
 """
 
 from bisect import bisect_right
 from collections import defaultdict
 import csv
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 import hashlib
 import io
 import math
 from pathlib import Path
 import statistics
+from zoneinfo import ZoneInfo
 
 
 VERSION = "metasettran-tuesday-car-v1"
@@ -33,6 +35,23 @@ HOLIDAYS = frozenset((date(2026, 8, 15), date(2026, 8, 31), date(2026, 9, 7)))
 WEEKLY_VERSION = "metasettran-weekly-car-v1"
 WEEK_SECONDS = 7 * 86400
 WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+CIVIL_TIMEZONE = ZoneInfo("America/Sao_Paulo")
+
+
+def _source_to_civil(stamp, source_time_convention):
+    """Converte uma vez o timestamp original; os bins internos usam hora civil.
+
+    Rejeitar entradas aware evita reaplicar a conversão a dados já tratados.
+    A remoção de tzinfo ocorre somente após astimezone, para compatibilidade
+    com a álgebra civil semanal existente. Não se subtraem três horas à mão.
+    """
+    if stamp.tzinfo is not None:
+        raise ValueError("A conversão requer o timestamp original sem fuso; não reconverter horários tratados.")
+    if source_time_convention == "utc":
+        return stamp.replace(tzinfo=timezone.utc).astimezone(CIVIL_TIMEZONE).replace(tzinfo=None)
+    if source_time_convention == "legacy_civil":
+        return stamp
+    raise ValueError("source_time_convention deve ser 'utc' ou 'legacy_civil'.")
 
 
 def _quantile(values, fraction):
@@ -82,7 +101,9 @@ def integrate_rate(knots, begin, end):
     )
 
 
-def _read_measurements(csv_path, class_offset_hours=0):
+def _read_measurements(csv_path, class_offset_hours=0, source_time_convention=None):
+    if source_time_convention is not None and class_offset_hours:
+        raise ValueError("Não combinar conversão de fuso com deslocamento legado de composição.")
     contents = Path(csv_path).read_bytes()
     reader = csv.DictReader(io.StringIO(contents.decode("utf-8-sig")))
     required = {"hora_inicio", "hora_fim", "vlink_id", "descricao_linha", "speed_pxm", "speed_pxm_max", *COUNTS}
@@ -130,8 +151,10 @@ def _read_measurements(csv_path, class_offset_hours=0):
         if duration <= MAX_INTERVAL_SECONDS:
             # Composição e curvas devem usar o mesmo dia civil, inclusive na
             # sensibilidade UTC. Os timestamps originais em records não mudam.
-            cursor = begin + timedelta(hours=class_offset_hours)
-            class_end = end + timedelta(hours=class_offset_hours)
+            cursor = (_source_to_civil(begin, source_time_convention) if source_time_convention is not None
+                      else begin + timedelta(hours=class_offset_hours))
+            class_end = (_source_to_civil(end, source_time_convention) if source_time_convention is not None
+                         else end + timedelta(hours=class_offset_hours))
             while cursor < class_end:
                 stop = min(class_end, datetime.combine(cursor.date() + timedelta(days=1), datetime.min.time()))
                 if cursor.weekday() == 1 and cursor.date() < TRAIN_BEFORE and cursor.date() not in HOLIDAYS:
@@ -157,15 +180,20 @@ def _read_measurements(csv_path, class_offset_hours=0):
     return records, quality, hashlib.sha256(contents).hexdigest()
 
 
-def _aggregate(records, offset_hours):
+def _aggregate(records, offset_hours=0, source_time_convention=None):
     """Rateia somente intervalos aceitos; ausência permanece ausência."""
+    if source_time_convention is not None and offset_hours:
+        raise ValueError("Não combinar conversão de fuso com deslocamento legado de curvas.")
     bins = {sensor: defaultdict(lambda: [0.0, 0.0]) for sensor in SENSORS}
     shift = timedelta(hours=offset_hours)
     for sensor, values in records.items():
         for begin, end, cars, duration in values:
             if duration > MAX_INTERVAL_SECONDS:
                 continue
-            begin, end = begin + shift, end + shift
+            if source_time_convention is None:
+                begin, end = begin + shift, end + shift
+            else:
+                begin, end = (_source_to_civil(stamp, source_time_convention) for stamp in (begin, end))
             while begin < end:
                 bucket = begin.replace(minute=begin.minute // 15 * 15, second=0, microsecond=0)
                 stop = min(end, bucket + timedelta(seconds=BIN_SECONDS))
@@ -400,6 +428,74 @@ def _weekly_date_rows(bins, observed_dates):
     return rows
 
 
+def _weekly_clock_evidence(date_rows, training):
+    """Descreve o relógio registrado, sem deslocar picos para horas presumidas."""
+    result = {}
+    for sensor, observations in date_rows.items():
+        weekdays = []
+        for weekday in range(7):
+            days = [day for day in training if day.weekday() == weekday
+                    and all(observations[day.isoformat()]["eligible"])]
+            hours = []
+            for day in days:
+                row = observations[day.isoformat()]
+                hours.append([sum(row["counts"][index] * BIN_SECONDS /
+                                  row["exposure_seconds"][index]
+                                  for index in range(hour * 4, (hour + 1) * 4))
+                              for hour in range(24)])
+            minimums, peaks = defaultdict(int), defaultdict(int)
+            for counts in hours:
+                minimums[min(range(24), key=counts.__getitem__)] += 1
+                peaks[max(range(24), key=counts.__getitem__)] += 1
+            median_hours = [statistics.median(counts[hour] for counts in hours)
+                            for hour in range(24)] if hours else []
+            minimum = min(range(24), key=median_hours.__getitem__) if hours else None
+            peak = max(range(24), key=median_hours.__getitem__) if hours else None
+            weekdays.append({
+                "day": WEEKDAYS[weekday], "complete_training_dates": len(days),
+                "median_hourly_minimum_hour": minimum, "median_hourly_peak_hour": peak,
+                "daily_minimum_hour_frequency": dict(sorted(minimums.items())),
+                "daily_peak_hour_frequency": dict(sorted(peaks.items())),
+                "morning_minimum_requires_civil_context_review": minimum in (6, 7, 8),
+            })
+        result[sensor] = weekdays
+    return {
+        "basis": "Training only; full days with all 96 quarters eligible at that sensor; hourly counts normalized by recorded exposure; earliest hour breaks ties.",
+        "sensors": result,
+        "interpretation": "Recurrence describes the civil clock under the explicitly selected source-time convention. A 06:00–09:00 minimum flags unresolved plausibility, not permission to alter observed peaks or infer the equipment timezone.",
+    }
+
+
+def _window_training_support(date_rows, knots, week_starts, training_dates, begin, duration):
+    """Resume amostras reais da janela; não preenche interrupções com zero."""
+    totals = []
+    eligible_quarters = 0
+    offset = begin % WEEK_SECONDS
+    for week_start in week_starts:
+        civil_start = datetime.combine(week_start, datetime.min.time()) + timedelta(seconds=offset)
+        counts = []
+        for relative in range(0, duration, BIN_SECONDS):
+            stamp = civil_start + timedelta(seconds=relative)
+            row = date_rows.get(stamp.date().isoformat())
+            index = stamp.hour * 4 + stamp.minute // 15
+            if (stamp.date().isoformat() not in training_dates or not row
+                    or not row["eligible"][index]):
+                continue
+            counts.append(row["counts"][index] * BIN_SECONDS / row["exposure_seconds"][index])
+        eligible_quarters += len(counts)
+        if len(counts) == duration // BIN_SECONDS:
+            totals.append(sum(counts))
+    supported = [knot for knot in knots if begin <= knot["week_second"] < begin + duration]
+    return {
+        "joint_training_dates_per_quarter_min": min(knot["n_dates"] for knot in supported),
+        "joint_training_dates_per_quarter_max": max(knot["n_dates"] for knot in supported),
+        "eligible_observed_quarters": eligible_quarters,
+        "complete_observed_windows": len(totals),
+        "normalized_car_count_statistics": _statistics(totals) if totals else None,
+        "meaning": "Local car observations on real consecutive training dates, normalized only for accepted exposure. Partial windows contribute exposure support but not complete-window dispersion. These counts neither identify regional demand nor validate the civil meaning of peak hours.",
+    }
+
+
 def _weekly_validation(date_rows, knots, week_starts, begin, duration):
     """Cada amostra percorre uma janela de datas realmente consecutivas."""
     observations, daily_counts, excluded = [], [], 0
@@ -443,22 +539,26 @@ def _weekly_validation(date_rows, knots, week_starts, begin, duration):
             "daily_counts_semantics": "Recorded car counts and exposure on consecutive real dates; None is missing, not zero. Holidays are ineligible. Only explicitly normalized comparison counts expand accepted exposure."}
 
 
-def calibrate_weekly(csv_path=DEFAULT_CSV, variation=1, seed=None):
+def calibrate_weekly(csv_path=DEFAULT_CSV, variation=1, seed=None, source_time_convention="utc"):
     """Estima curvas locais semanais e uma realização conjunta dos sensores.
 
     A divisão cronológica é fixada antes de inspecionar os valores. Cada
     weekday usa seus próprios quinze minutos; os dias integrais reamostrados
     preservam correlação intradia e entre sensores. A realização independe da
     janela solicitada. A falta de cobertura nunca é convertida em fluxo zero.
+    UTC é a convenção metodológica ativa; ``legacy_civil`` existe somente
+    para a referência controlada anterior, sem deslocar os dados originais.
     """
+    if source_time_convention not in ("utc", "legacy_civil"):
+        raise ValueError("source_time_convention deve ser 'utc' ou 'legacy_civil'.")
     if isinstance(variation, bool) or not isinstance(variation, int) or not 1 <= variation <= 25:
         raise ValueError("A variação semanal deve estar entre 1 e 25.")
     if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int) or seed < 0):
         raise ValueError("A seed semanal deve ser um inteiro não negativo.")
     effective_seed = seed if seed is not None else int.from_bytes(
         hashlib.sha256(f"{WEEKLY_VERSION}|{variation}".encode()).digest()[:4], "big")
-    records, quality, digest = _read_measurements(csv_path)
-    bins = _aggregate(records, 0)
+    records, quality, digest = _read_measurements(csv_path, source_time_convention=source_time_convention)
+    bins = _aggregate(records, source_time_convention=source_time_convention)
     observed_dates = sorted({stamp.date() for values in bins.values() for stamp in values})
     training = [day for day in observed_dates if day < TRAIN_BEFORE and day not in HOLIDAYS]
     if len(training) < MIN_TRAINING_DATES:
@@ -528,9 +628,22 @@ def calibrate_weekly(csv_path=DEFAULT_CSV, variation=1, seed=None):
     return {
         "version": WEEKLY_VERSION,
         "source": {"name": Path(csv_path).name, "sha256": digest, "count_column": "car"},
-        "time": {"timezone": "America/Sao_Paulo", "interpretation": "brasilia", "offset_applied_hours": 0,
-                 "status": "provisional_owner_attestation", "decision": "Keep the owner's civil clock; no speculative conversion.",
-                 "provenance": "Owner attestation; source timestamps contain no explicit timezone metadata."},
+        "time": {"timezone": CIVIL_TIMEZONE.key,
+                 "source_time_convention": source_time_convention,
+                 "source_timezone_assumed": "UTC" if source_time_convention == "utc" else CIVIL_TIMEZONE.key,
+                 "interpretation": "utc" if source_time_convention == "utc" else "brasilia",
+                 "offset_applied_hours": (datetime(2026, 1, 1, tzinfo=timezone.utc).astimezone(CIVIL_TIMEZONE).utcoffset().total_seconds() / 3600
+                                          if source_time_convention == "utc" else 0),
+                 "conversion": "Attach UTC to original naive timestamps, astimezone(America/Sao_Paulo), then aggregate local civil dates exactly once."
+                               if source_time_convention == "utc" else "No conversion; controlled v4.3.1 original-clock reference only.",
+                 "status": "project_methodological_hypothesis_not_device_confirmation" if source_time_convention == "utc" else "legacy_control_reference",
+                 "decision": "UTC interpretation required by the project; do not select the clock convention by optimizing traffic indicators.",
+                 "civil_peak_alignment": "not_independently_verified; inspect training_clock_evidence before naming a civil peak",
+                 "provenance": "Project decision adopts UTC as source time. The CSV and exporter origin still provide no explicit timezone evidence; the device convention remains unconfirmed.",
+                 "calendar": {"observed_civil_dates": len(observed_dates),
+                              "first_observed_civil_date": observed_dates[0].isoformat(),
+                              "last_observed_civil_date": observed_dates[-1].isoformat(),
+                              "training_and_holidays": "Evaluated after conversion on local civil dates; cutoff remains local Monday 2026-08-24."}},
         "method": {
             "class": "car_only_as_passenger", "bin_seconds": BIN_SECONDS,
             "maximum_accepted_interval_seconds": MAX_INTERVAL_SECONDS, "minimum_coverage": MIN_COVERAGE,
@@ -539,7 +652,7 @@ def calibrate_weekly(csv_path=DEFAULT_CSV, variation=1, seed=None):
             "interpolation": "Cyclic linear interpolation between adjacent quarter-hour centers; no extra smoothing window.",
             "count_allocation": "Uniform within accepted recorded intervals; normalization by recorded exposure is an estimate.",
             "sampling": "One complete observed training day per weekday, shared by both sensors; empirical day bootstrap preserves intraday and intersensor dependence. Missing full days use explicitly flagged baseline fallback.",
-            "split": "Fixed Monday 2026-08-24 cutoff before fit; primary is that week, post is all later weeks. Weekdays remain distinct.",
+            "split": "Fixed local-civil Monday 2026-08-24 cutoff after source-time conversion and before fit; primary is that week, post is all later weeks. Weekdays remain distinct.",
         },
         "training_dates": [day.isoformat() for day in training],
         "validation_dates": [day.isoformat() for day in observed_dates if day >= TRAIN_BEFORE and day not in HOLIDAYS],
@@ -547,7 +660,9 @@ def calibrate_weekly(csv_path=DEFAULT_CSV, variation=1, seed=None):
         "realization": {"variation": variation, "seed": effective_seed, "sampled_days": sampled_days,
                         "meaning": "25 reproducible realizations, not 25 independent observed weeks; choices do not depend on selected sections or signal profile."},
         "sensors": profiles, "quality": quality,
+        "training_clock_evidence": _weekly_clock_evidence(date_rows, training),
         "limitations": [
+            "UTC is a project methodological hypothesis, not a documented fact about the source equipment. The original CSV is unchanged; civil weekdays, holidays and train/verification membership follow the explicit conversion.",
             "Weekly local sensor estimates do not identify a regional OD matrix or establish sensor geography.",
             "Car-only; classifier reliability and omitted motorized classes are not independently validated.",
             "Resampling complete eligible days can favor well-monitored dates; rare events and seasonality are not established.",
@@ -581,6 +696,7 @@ def weekly_window(calibration, begin_week_second, duration_seconds):
         "start_week_second": begin, "end_week_second": end, "departure_seconds": duration_seconds,
     }
     week_starts = [date.fromisoformat(value) for value in calibration["observed_week_starts"]]
+    training_dates = set(calibration["training_dates"])
     result["sensors"] = {}
     for sensor, profile in calibration["sensors"].items():
         knots = _window_knots(profile["knots"], begin, end)
@@ -594,6 +710,8 @@ def weekly_window(calibration, begin_week_second, duration_seconds):
                               for offset in range(begin, end, BIN_SECONDS)],
             "realized_target_counts": [integrate_rate(realized, offset, offset + BIN_SECONDS)
                                        for offset in range(begin, end, BIN_SECONDS)],
+            "training_support": _window_training_support(profile["date_observations"], knots,
+                week_starts, training_dates, begin, duration_seconds),
             "validation": {
                 "primary": _weekly_validation(profile["date_observations"], knots,
                     [week for week in week_starts if week == TRAIN_BEFORE], begin, duration_seconds),

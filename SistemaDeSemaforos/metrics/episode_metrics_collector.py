@@ -241,6 +241,68 @@ def _metasettran_progress(raw, scheduled, natural_arrivals, horizon):
             "intervals": list(intervals.values())}
 
 
+def _metasettran_boundary_continuity(scheduled, departures, endings, trip_statuses,
+                                    teleported, duration, horizon):
+    """Certifica identidades em circulação nas fronteiras, sem novos snapshots.
+
+    Diferenças de intervalos evitam uma varredura de todas as viagens para cada
+    fronteira. Só três exemplos por intervalo de vida precisam ser retidos.
+    """
+    boundaries = list(range(10800, duration, 10800))
+    differences = {name: [0] * (len(boundaries) + 1) for name in (
+        "carried_without_any_teleport", "carried_with_teleport",
+        "removed_with_unknown_end_time")}
+    examples = {}
+    for identifier, depart in departures.items():
+        # Não antecipar a faixa de uma partida arredondada pelo SUMO (<0,5 ms).
+        start = bisect_right(boundaries, max(scheduled[identifier], depart))
+        unknown_removal = (trip_statuses[identifier] == "removed_without_completion"
+                           and endings[identifier] is None)
+        end = endings[identifier] if endings[identifier] is not None else horizon
+        stop = bisect_left(boundaries, end)
+        if start >= stop:
+            continue
+        population = ("removed_with_unknown_end_time" if unknown_removal else
+                      "carried_with_teleport" if identifier in teleported else
+                      "carried_without_any_teleport")
+        differences[population][start] += 1
+        differences[population][stop] -= 1
+        if population == "carried_without_any_teleport":
+            candidates = examples.setdefault((start, stop), [])
+            if len(candidates) < 3 or identifier < candidates[-1]:
+                candidates.append(identifier)
+                candidates.sort()
+                del candidates[3:]
+    programmed = sorted(scheduled.values())
+    released = sorted(max(scheduled[identifier], depart) for identifier, depart in departures.items())
+    rows, populations = [], Counter()
+    for index, boundary in enumerate(boundaries):
+        populations.update({name: values[index] for name, values in differences.items()})
+        candidates = sorted(identifier for (begin, end), identifiers in examples.items()
+                            if begin <= index < end for identifier in identifiers)[:3]
+        programmed_before = bisect_left(programmed, boundary)
+        inserted_before = bisect_left(released, boundary)
+        rows.append({
+            "time_seconds": boundary,
+            "programmed_before_boundary": programmed_before,
+            "inserted_before_boundary": inserted_before,
+            "pending_insertion_from_previous_sections": programmed_before - inserted_before,
+            **populations,
+            "continuity_examples": [{
+                "id": identifier, "scheduled_departure_seconds": scheduled[identifier],
+                "actual_departure_seconds": departures[identifier],
+                "trip_end_seconds": endings[identifier],
+                "final_status": trip_statuses[identifier],
+            } for identifier in candidates],
+        })
+    return {
+        "section_seconds": 10800, "departure_window_seconds": [0, duration],
+        "clearance_window_seconds": [duration, horizon], "boundaries": rows,
+        "source": "Native tripinfo identities, actual departures and arrivals/removals; verified teleport IDs from the SUMO log.",
+        "note": "Carryover requires an insertion before the boundary and a trip end strictly after it. Pending insertions are separate. Teleport-affected lifetimes may include temporary absence from the road. No intermediate boundary is a final incomplete-trip classification; the clearance window occurs only at the end.",
+    }
+
+
 def _metasettran_portal_accounting(planned, scheduled, departures, trip_statuses, teleported,
                                   spatial_model, duration, horizon):
     """Reconstrói a espera de inserção por origem, sem observador por timestep."""
@@ -330,22 +392,27 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
         raise ValueError("Janela MetaSettran deve conter intervalos completos de quinze minutos.")
     duration = int(duration)
     bins = duration // 900
-    route_records = ET.parse(generation["routes_file"]).getroot().findall("vehicle")
-    planned, planned_routes, scheduled, departures = {}, {}, {}, {}
-    for item in route_records:
+    planned, planned_routes, scheduled, departures, endings = {}, {}, {}, {}, {}
+    route_cache = {}
+    route_count = 0
+    for item in _elements(Path(generation["routes_file"]), "vehicle"):
+        route_count += 1
         route = item.find("route")
-        edges = route.get("edges", "").split() if route is not None else []
+        edges = tuple(route.get("edges", "").split()) if route is not None else ()
         if not edges or item.get("departPos") != "0" or item.get("arrivalPos") != "max":
             raise ValueError("Demanda MetaSettran não declara extremos completos da viagem.")
+        # Uma semana repete o catálogo finito de percursos; não é necessário
+        # conservar outro tuple de strings por veículo nem a árvore XML inteira.
+        edges = route_cache.setdefault(edges, edges)
         planned[item.get("id")] = (edges[0], edges[-1])
-        planned_routes[item.get("id")] = tuple(edges)
+        planned_routes[item.get("id")] = edges
         scheduled[item.get("id")] = _number(item.get("depart"))
         if scheduled[item.get("id")] is None or not 0 <= scheduled[item.get("id")] < generation["duration"]:
             raise ValueError("Partida programada MetaSettran fora da janela de demanda.")
     if (not planned or None in planned or "" in planned or
-            len(planned) != len(route_records) or len(planned) != generation["vehicles_generated"]):
+            len(planned) != route_count or len(planned) != generation["vehicles_generated"]):
         raise ValueError("Demanda MetaSettran com IDs repetidos ou contagem divergente.")
-    del route_records
+    del route_cache
     lane_lengths = {lane.get("id"): float(lane.get("length"))
                     for edge in ET.parse(generation["net_file"]).getroot().findall("edge")
                     for lane in edge.findall("lane")}
@@ -395,6 +462,10 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
                 raise ValueError("Inserção MetaSettran antecede a partida programada.")
             departures[identifier] = depart
             late += depart >= generation["duration"]
+            trip_duration = _number(item.get("duration"))
+            endings[identifier] = (arrival if arrival >= 0 else
+                                   depart + trip_duration if vaporized and trip_duration is not None
+                                   and trip_duration >= 0 else None)
             if vaporized:
                 status = "removed_without_completion"
             elif arrival < 0:
@@ -616,6 +687,8 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
         "count_comparisons": comparisons,
         "sensor_passage_timing": sensor_timing,
         "operational_progression": _metasettran_progress(raw, scheduled, natural_arrivals, previous_end),
+        "boundary_continuity": _metasettran_boundary_continuity(
+            scheduled, departures, endings, trip_statuses, teleported, duration, previous_end),
         "spatial_observation": spatial_observation,
         "limitations": [
             "Physical passage counts may be affected by teleport events; any such events require inspection before empirical acceptance.",

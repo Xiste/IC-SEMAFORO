@@ -1,5 +1,6 @@
 """Contratos da distribuição OD, incidência dos sensores e reprodução."""
 
+from collections import Counter
 import hashlib
 import json
 import math
@@ -162,6 +163,42 @@ class MetaSettranTests(unittest.TestCase):
         self.assertEqual(ET.parse(metadata["routes_file"]).getroot().find("vType").attrib,
                          {"id": "metasettran_car", "vClass": "passenger"})
 
+    def test_branch_choice_does_not_reward_number_of_downstream_destinations(self):
+        def pair(identifier, route, angles):
+            return dict(id=identifier, origin="entry", destination=route[-1], route=route,
+                        movement_opportunities=[1] * (len(route)-1), movement_angles=angles)
+        paths = {"a": pair("a", ["entry", "straight", "exit_a"], [0, 0]),
+                 "b": pair("b", ["entry", "turn", "exit_b"], [math.pi/2, 0])}
+        portals = {"entry": {"road_type": "highway.primary"}}
+        demand._branch_prior(paths, {"entry": 4}, portals, {"angular_cost": 1})
+        first_turn = paths["b"]["prior_weight"]
+        paths["c"] = pair("c", ["entry", "straight", "exit_c"], [0, 0])
+        demand._branch_prior(paths, {"entry": 4}, portals, {"angular_cost": 1})
+        self.assertAlmostEqual(paths["b"]["prior_weight"], first_turn)
+        self.assertAlmostEqual(sum(p["prior_weight"] for p in paths.values()), 1)
+        self.assertAlmostEqual(first_turn, 1/3)
+
+    def test_branch_prior_keeps_legal_return_positive_and_origin_opportunities(self):
+        paths = {"a": dict(origin="a", route=["a", "return"], movement_opportunities=[1],
+                           movement_angles=[math.pi]),
+                 "b": dict(origin="a", route=["a", "forward"], movement_opportunities=[2],
+                           movement_angles=[0]),
+                 "c": dict(origin="c", route=["c", "short_exit"], movement_opportunities=[1],
+                           movement_angles=[0])}
+        demand._branch_prior(paths, {"a": 3, "c": 1}, {"a": {}, "c": {}}, {"angular_cost": 1})
+        self.assertGreater(paths["a"]["prior_weight"], 0)
+        self.assertAlmostEqual(paths["a"]["prior_weight"] + paths["b"]["prior_weight"], .75)
+        self.assertAlmostEqual(paths["c"]["prior_weight"], .25)
+
+    def test_native_branch_model_preserves_population_and_shared_observations(self):
+        self.model["regional_demand"]["route_choice"] = {"method": "native_path_branch_opportunities", "angular_cost": 1}
+        self.write_model()
+        metadata = {}
+        self.generate(metadata=metadata)
+        self.assertAlmostEqual(sum(p["prior_weight"] for p in metadata["spatial_distribution"]["routes"]), 1)
+        self.assertGreater(metadata["spatial_distribution"]["observation_incidence_generated"]["both"], 0)
+        self.assertEqual(sum(metadata["spatial_distribution"]["observation_incidence_generated"].values()), metadata["vehicles_generated"])
+
     def test_reproduction_is_independent_of_output_directory_and_tool_headers(self):
         first, second = {}, {}
         a = self.generate(output="a", variation=7, metadata=first)
@@ -176,11 +213,234 @@ class MetaSettranTests(unittest.TestCase):
         b = self.generate(output="b", variation=25, seed=42)
         self.assertEqual(a.read_bytes(), b.read_bytes())
 
+    def test_context_selection_covers_required_chronological_windows(self):
+        cases = (("tuesday", "15:00", 1, "tuesday", "15:00"),
+                 ("tuesday", "15:00", 2, "tuesday", "18:00"),
+                 ("friday", "21:00", 2, "saturday", "00:00"),
+                 ("sunday", "21:00", 2, "monday", "00:00"),
+                 ("tuesday", "00:00", 7, "tuesday", "18:00"),
+                 ("monday", "00:00", 8, "monday", "21:00"),
+                 ("monday", "00:00", 16, "tuesday", "21:00"),
+                 ("monday", "00:00", 56, "sunday", "21:00"),
+                 ("sunday", "21:00", 56, "sunday", "18:00"))
+        for day, start, sections, last_day, last_start in cases:
+            with self.subTest(day=day, start=start, sections=sections):
+                selection = demand.resolve_contexts(day=day, start=start, sections=sections, master_seed=42)
+                contexts = selection["contexts"]
+                self.assertEqual(len(contexts), sections)
+                self.assertEqual((contexts[-1]["day"], contexts[-1]["start"]), (last_day, last_start))
+                self.assertEqual(selection["combinations"], 25 ** sections)
+                for index, context in enumerate(contexts):
+                    self.assertEqual((context["begin"], context["end"]), (index * 10800, (index + 1) * 10800))
+                    self.assertIn(context["variation"], range(1, 26))
+                    self.assertEqual(context["effective_seed"], demand.effective_seed(context["variation"]))
+                self.assertEqual([context["start_week_second"] for context in contexts],
+                                 list(range(contexts[0]["start_week_second"],
+                                            contexts[0]["start_week_second"] + sections * 10800, 10800)))
+        weekly = demand.resolve_contexts(day="sunday", start="21:00", sections=56, master_seed=42)
+        self.assertEqual(weekly["contexts"][0]["week_offset"], 0)
+        self.assertEqual(weekly["contexts"][-1]["week_offset"], 1)
+
+    def test_context_draws_cover_25_variations_without_locking_adjacent_choices(self):
+        # Deterministic distribution check, not a claim that a finite PRNG
+        # empirically proves independence. Repeats must remain eligible.
+        marginal = [Counter(), Counter()]
+        pairs, repeated = set(), 0
+        for master_seed in range(5000):
+            first, second = demand.resolve_contexts(sections=2, master_seed=master_seed)["variations"]
+            marginal[0][first] += 1
+            marginal[1][second] += 1
+            repeated += first == second
+            pairs.add((first, second))
+        for counts in marginal:
+            self.assertEqual(set(counts), set(range(1, 26)))
+            self.assertLess(sum((counts[value] - 200) ** 2 / 200 for value in range(1, 26)), 70)
+        self.assertGreater(len(pairs), 600)
+        self.assertGreater(repeated, 100)
+        self.assertLess(repeated, 300)
+
+    def test_one_section_master_or_explicit_replay_is_the_existing_variation(self):
+        selection = demand.resolve_contexts(master_seed=1847)
+        chosen, = selection["variations"]
+        original = self.generate(output="individual", variation=chosen)
+        drawn = self.generate(output="drawn", master_seed=1847)
+        replay = self.generate(output="replay", variations=[chosen])
+        self.assertEqual(original.read_bytes(), drawn.read_bytes())
+        self.assertEqual(original.read_bytes(), replay.read_bytes())
+
+    def test_master_sequence_and_explicit_replay_have_identical_trip_and_route_bytes(self):
+        first, replayed = {}, {}
+        drawn = self.generate(output="drawn", day="sunday", start="21:00", sections=2,
+                              master_seed=2468, metadata=first)
+        replay = self.generate(output="replay", day="sunday", start="21:00", sections=2,
+                               variations=first["context_selection"]["variations"], metadata=replayed)
+        self.assertEqual(drawn.read_bytes(), replay.read_bytes())
+        self.assertEqual(Path(first["trips_file"]).read_bytes(), Path(replayed["trips_file"]).read_bytes())
+        self.assertEqual(first["seed"], replayed["seed"])
+        self.assertEqual(first["context_selection"]["contexts"], replayed["context_selection"]["contexts"])
+        self.assertEqual(first["chronological_composition"], replayed["chronological_composition"])
+
+    def test_composition_calibrates_selected_context_seeds_without_using_the_master_as_variation(self):
+        with patch.object(temporal, "calibrate_weekly", return_value=self.calibration) as calibrate:
+            self.generate(sections=3, variations=[7, 8, 7], master_seed=123456789)
+        self.assertEqual([(call.kwargs["variation"], call.kwargs["seed"]) for call in calibrate.call_args_list],
+                         [(7, demand.effective_seed(7)), (8, demand.effective_seed(8))])
+
+    def test_composition_conserves_each_selected_realization_and_expected_mass(self):
+        self.model["regional_demand"]["volume_recalibration"] = {"retained_fraction": .85}
+        self.write_model()
+        metadata = {}
+        combined = ET.parse(self.generate(output="combined", sections=2, variations=[7, 8],
+                                           metadata=metadata)).getroot().findall("vehicle")
+        contexts = metadata["context_selection"]["contexts"]
+        individual_totals, expected_total, moved_count = [], 0.0, 0
+        for context in contexts:
+            standalone = {}
+            vehicles = ET.parse(self.generate(output=f"single-{context['index']}", day=context["day"],
+                                              start=context["start"], variation=context["variation"],
+                                              metadata=standalone)).getroot().findall("vehicle")
+            individual_totals.append(len(vehicles))
+            expected_total += standalone["groups"][0]["expected_departures"]
+            selected = [vehicle for vehicle in combined
+                        if context["begin"] <= float(vehicle.get("depart")) < context["end"]]
+            self.assertEqual(len(selected), len(vehicles))
+            self.assertEqual(context["reference_programmed"], len(vehicles))
+            self.assertEqual(context["programmed"], len(vehicles))
+            original_times = {vehicle.get("id"): float(vehicle.get("depart")) for vehicle in vehicles}
+            original_routes = {vehicle.get("id"): vehicle.find("route").get("edges") for vehicle in vehicles}
+            for vehicle in selected:
+                self.assertTrue(vehicle.get("id").startswith(f"ms_s{context['index']:03d}_"))
+                original_id = "ms_" + vehicle.get("id").split("_")[-1]
+                original_time = original_times.pop(original_id) + context["begin"]
+                composed_time = float(vehicle.get("depart"))
+                if abs(original_time - 10800) >= 900:
+                    self.assertAlmostEqual(composed_time, original_time, places=5)
+                    self.assertEqual(vehicle.find("route").get("edges"), original_routes[original_id])
+                else:
+                    self.assertEqual(composed_time < 10800, original_time < 10800)
+                    moved_count += abs(composed_time - original_time) > 1e-5
+            self.assertFalse(original_times)
+        self.assertGreater(moved_count, 0)
+        self.assertEqual(len(combined), sum(individual_totals))
+        transition = metadata["chronological_composition"]
+        self.assertEqual(transition["combined_programmed"], sum(individual_totals))
+        self.assertEqual(transition["programmed_difference"], 0)
+        self.assertAlmostEqual(transition["expected_before"], expected_total, places=7)
+        self.assertAlmostEqual(transition["expected_after"], expected_total, places=7)
+        self.assertAlmostEqual(metadata["groups"][0]["expected_departures"], expected_total, places=7)
+        self.assertAlmostEqual(sum(metadata["groups"][0]["expected_departures_per_bin"]), expected_total, places=7)
+        self.assertAlmostEqual(sum(route["expected_departures"] for route in metadata["spatial_distribution"]["routes"]),
+                               expected_total, places=7)
+        for section in transition["sections"]:
+            self.assertAlmostEqual(section["expected_before"], section["expected_after"], places=7)
+
+    def test_composition_metadata_and_small_windows_remain_comparable(self):
+        metadata = {}
+        vehicles = ET.parse(self.generate(sections=2, variations=[4, 17], metadata=metadata)).getroot().findall("vehicle")
+        departures = [float(vehicle.get("depart")) for vehicle in vehicles]
+        boundary, = metadata["chronological_composition"]["boundaries"]
+        knots = metadata["chronological_composition"]["rate_knots"]
+        moment = boundary["week_second"]
+        self.assertAlmostEqual(demand.interpolate_rate(knots, moment - 1e-6),
+                               demand.interpolate_rate(knots, moment + 1e-6), places=8)
+        self.assertEqual(boundary["od_boundary_jump"], 0)
+        for window in boundary["windows"]:
+            width = window["seconds"]
+            self.assertEqual(window["programmed_left"], sum(10800 - width <= t < 10800 for t in departures))
+            self.assertEqual(window["programmed_right"], sum(10800 <= t < 10800 + width for t in departures))
+            if width == 900:
+                self.assertAlmostEqual(window["before_left"], window["after_left"], places=7)
+                self.assertAlmostEqual(window["before_right"], window["after_right"], places=7)
+        # This pre-existing fixture deliberately has no realized_target_counts;
+        # composition still reports each selected curve and a complete bin axis.
+        for sensor in ("5", "6"):
+            profile = metadata["calibration"]["sensors"][sensor]
+            self.assertNotIn("realization_knots", profile)
+            self.assertEqual(len(profile["realization_contexts"]), 2)
+            self.assertEqual(len(profile["realized_target_counts"]), 24)
+            self.assertAlmostEqual(profile["realized_expected_cars"], sum(profile["realized_target_counts"]))
+
+    def test_long_compositions_have_unique_ordered_half_open_departures(self):
+        for sections, day, end_day, end_time in ((7, "tuesday", "tuesday", "21:00"),
+                                                (8, "monday", "tuesday", "00:00"),
+                                                (16, "monday", "wednesday", "00:00")):
+            with self.subTest(sections=sections):
+                metadata = {}
+                root = ET.parse(self.generate(output=f"long-{sections}", day=day, start="00:00", sections=sections,
+                                               master_seed=42, metadata=metadata)).getroot()
+                vehicles = root.findall("vehicle")
+                departures = [float(vehicle.get("depart")) for vehicle in vehicles]
+                self.assertEqual(len({vehicle.get("id") for vehicle in vehicles}), len(vehicles))
+                self.assertEqual(departures, sorted(departures))
+                self.assertGreaterEqual(min(departures), 0)
+                self.assertLess(max(departures), sections * 10800)
+                self.assertEqual((metadata["end_day"], metadata["end"]), (end_day, end_time))
+                self.assertEqual(metadata["route_validation"]["valid_boundary_routes"], len(vehicles))
+                self.assertEqual(metadata["vehicles_generated"], len(vehicles))
+                self.assertEqual(len(metadata["groups"][0]["generated_departures_per_bin"]), sections * 12)
+                contexts = metadata["context_selection"]["contexts"]
+                self.assertEqual(sum(context["reference_programmed"] for context in contexts), len(vehicles))
+                self.assertEqual(len(metadata["chronological_composition"]["boundaries"]), sections - 1)
+                for context in contexts:
+                    self.assertEqual(sum(context["begin"] <= t < context["end"] for t in departures),
+                                     context["programmed"])
+
+    def test_volume_reduction_preserves_exact_reference_routes_times_and_observations(self):
+        self.model["regional_demand"]["volume_recalibration"] = {"retained_fraction": .85}
+        self.write_model()
+        before, after = {}, {}
+        reference = ET.parse(self.generate(output="reference", volume_retention=1, metadata=before)).getroot()
+        reduced_file = self.generate(output="reduced", metadata=after)
+        reduced = ET.parse(reduced_file).getroot()
+        originals = {v.get("id"): ET.tostring(v) for v in reference.findall("vehicle")}
+        self.assertEqual(len(reduced.findall("vehicle")), math.floor(.85 * len(originals)))
+        for vehicle in reduced.findall("vehicle"):
+            self.assertEqual(ET.tostring(vehicle), originals[vehicle.get("id")])
+        self.assertEqual(after["calibration"], before["calibration"])
+        self.assertEqual(reduced_file.read_bytes(), self.generate(output="repeat").read_bytes())
+        self.assertAlmostEqual(after["groups"][0]["expected_departures"], .85*before["groups"][0]["expected_departures"])
+        observations = after["spatial_distribution"]["observation_projection"]["observations"]
+        for old, new in zip(before["spatial_distribution"]["observation_projection"]["observations"], observations):
+            self.assertEqual(old["target_passages"], new["target_passages"])
+            self.assertAlmostEqual(new["projected_freeflow_passages"], .85*old["projected_freeflow_passages"])
+        paired = ET.parse(self.generate(output="paired", schedule_file=reduced_file)).getroot()
+        self.assertEqual(len(paired.findall("vehicle")), len(reduced.findall("vehicle")))
+
+    def test_retention_has_exact_count_and_preserves_temporal_quantiles(self):
+        for count in (1, 2, 30, 555, 18117):
+            for variation in range(1, 26):
+                selected = sorted(demand._retained_indices(count, .85, demand.effective_seed(variation)))
+                self.assertEqual(len(selected), math.floor(.85*count))
+                self.assertLess(len(selected), .9*count)
+                for cut in range(0, count, max(1, count//20)):
+                    self.assertLess(abs(sum(i < cut for i in selected) - cut*len(selected)/count), 1.000001)
+
+    def test_frozen_scale_is_not_renormalized_by_a_new_clock_reference(self):
+        reference = {s: p["baseline_reference_cars_15_18"] for s,p in self.calibration["sensors"].items()}
+        self.model["regional_demand"]["frozen_scale_reference_cars"] = reference
+        self.write_model()
+        before, after = {}, {}
+        self.generate(output="oldclock", metadata=before)
+        for profile in self.calibration["sensors"].values():
+            profile["baseline_reference_cars_15_18"] *= 2
+        self.generate(output="newclock", metadata=after)
+        self.assertEqual(before["routes_sha256"], after["routes_sha256"])
+
+    def test_invalid_retention_is_rejected(self):
+        for fraction in (0, -1, 1.1, True, float("nan"), float("inf")):
+            with self.assertRaises(ValueError):
+                self.generate(volume_retention=fraction)
+
     def test_invalid_or_discontinuous_context_selections_are_rejected(self):
         invalid = [dict(day="2026-08-25"), dict(day="Tuesday"), dict(start="16:00"), dict(sections=0), dict(sections=57),
                    dict(sections=True), dict(sections=1.0), dict(variation=0), dict(variation=26),
                    dict(variation=True), dict(variation=1.5), dict(seed=-1),
-                   dict(seed=2**31), dict(seed=True), dict(spatial_scenario="balanced"), dict(spatial_scenario="dispersed"), dict(spatial_scenario="local")]
+                   dict(seed=2**31), dict(seed=True), dict(spatial_scenario="balanced"), dict(spatial_scenario="dispersed"), dict(spatial_scenario="local"),
+                   dict(sections=2, variation=7), dict(sections=2, seed=42),
+                   dict(master_seed=-1), dict(master_seed=2**63), dict(master_seed=True),
+                   dict(variation=7, master_seed=42), dict(variation=7, variations=[7]),
+                   dict(sections=2, variations=[7]), dict(sections=2, variations=[7, 26]),
+                   dict(sections=2, variations=[7, True]), dict(variations="7")]
         for parameters in invalid:
             with self.subTest(parameters=parameters), self.assertRaises(ValueError):
                 self.generate(**parameters)

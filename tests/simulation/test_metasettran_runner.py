@@ -46,8 +46,11 @@ class MetaSettranRunnerTests(unittest.TestCase):
         route.write_text('<routes><vehicle id="a" depart="0.5"/>'
                          f'<vehicle id="b" depart="{duration - 0.5}"/></routes>', encoding="utf-8")
         (output_dir / "metasettran.trips.xml").write_text("<routes />", encoding="utf-8")
+        selection = demand.resolve_contexts(
+            day=kwargs["day"], start=kwargs["start"], sections=kwargs["sections"], variation=variation,
+            master_seed=kwargs.get("master_seed"), variations=kwargs.get("variations"))
         metadata.update(
-            seed=demand.effective_seed(variation), variation=variation, vehicles_generated=2,
+            seed=selection["seed"], variation=variation, contexts=selection["contexts"], vehicles_generated=2,
             trips_generated=2, duration=duration, duration_seconds=0.1, routes_file=str(route),
             routes_sha256=hashlib.sha256(route.read_bytes()).hexdigest(),
             spatial_model={"sensors": [{"candidates": [{"edge": "before"}, {"edge": "after"}]}]},
@@ -94,7 +97,13 @@ class MetaSettranRunnerTests(unittest.TestCase):
                         dict(drain_limit=0.5), dict(drain_limit=float("nan")), dict(drain_limit=float("inf")),
                         dict(duration=10800), dict(period=2), dict(end=13500),
                         dict(demand_profile="random", day="tuesday"), dict(spatial_scenario="unknown"),
-                        dict(demand_profile="random", spatial_scenario="local")):
+                        dict(demand_profile="random", spatial_scenario="local"),
+                        dict(sections=57), dict(sections=2, variation=7),
+                        dict(master_seed=-1), dict(master_seed=True), dict(master_seed=2**63),
+                        dict(sections=2, variations=[7]), dict(sections=2, variations=[7, 26]),
+                        dict(sections=2, variations=[7, True]), dict(variation=7, variations=[7]),
+                        dict(demand_profile="random", master_seed=5),
+                        dict(demand_profile="random", variations=[7])):
             with self.subTest(options=options), self.assertRaises(ValueError):
                 self.run_batch(**options)
         self.assertFalse(self.output_root.exists())
@@ -201,6 +210,8 @@ class MetaSettranRunnerTests(unittest.TestCase):
         base = ["--demand-profile", "metasettran", "--net-file", str(self.net),
                 "--output-dir", str(self.output_dir)]
         for extra in (["--day", "tomorrow"], ["--sections", "0"], ["--variation", "25", "--episodes", "2"],
+                      ["--sections", "2", "--variation", "7"], ["--master-seed", "-1"],
+                      ["--sections", "2", "--variations", "7"],
                       ["--duration=7200"], ["--period", "1.5"], ["--end", "13500"]):
             with self.subTest(extra=extra), redirect_stderr(io.StringIO()) as errors:
                 self.assertEqual(runner.main(base + extra), 1)
@@ -212,7 +223,7 @@ class MetaSettranRunnerTests(unittest.TestCase):
         for day, start in (("tuesday", "15:00"), ("friday", "21:00"), ("sunday", "21:00")):
             with self.subTest(day=day):
                 previous = self.simulate.call_count
-                batch = self.run_batch(day=day, start=start, sections=2, variation=7)
+                batch = self.run_batch(day=day, start=start, sections=2, variations=[7, 7])
                 self.assertEqual(self.simulate.call_count, previous + 1)
                 self.assertEqual(self.simulate.call_args.kwargs["end"], 24300)
                 _, metrics, execution = self.results(batch)[0]
@@ -226,6 +237,124 @@ class MetaSettranRunnerTests(unittest.TestCase):
         self.assertEqual(len(results), 10)
         self.assertEqual([e["generation"]["variation"] for _, _, e in results], list(range(1, 11)))
         self.assertEqual(len({m["seed"] for _, m, _ in results}), 10)
+
+    def test_master_seed_resolves_once_and_records_exact_choices_before_generation(self):
+        batch = self.run_batch(day="tuesday", start="00:00", sections=7, master_seed=123456789)
+        _, metrics, execution = self.results(batch)[0]
+        selection = execution["context_selection"]
+        chosen = [item["variation"] for item in selection["contexts"]]
+        self.assertEqual(selection["master_seed"], 123456789)
+        self.assertEqual(len(chosen), 7)
+        self.assertTrue(all(1 <= item <= 25 for item in chosen))
+        self.assertGreater(len(set(chosen)), 1)
+        self.assertEqual(self.generate.call_args.kwargs["variations"], chosen)
+        self.assertIsNone(self.generate.call_args.kwargs["variation"])
+        self.assertEqual(metrics["seed"], selection["seed"])
+        self.assertLess(metrics["seed"], 2**31)
+        self.assertEqual(self.simulate.call_count, 1)
+        self.assertEqual(self.simulate.call_args.kwargs["end"], 78300)
+
+    def test_missing_master_seed_is_drawn_once_and_can_be_replayed(self):
+        with patch.object(runner.secrets, "randbits", return_value=789) as entropy:
+            first = self.run_batch(sections=8)
+        entropy.assert_called_once_with(63)
+        second = self.run_batch(sections=8, master_seed=789)
+        selections = [self.results(batch)[0][2]["context_selection"] for batch in (first, second)]
+        self.assertEqual(selections[0], selections[1])
+        self.assertEqual(len(selections[0]["contexts"]), 8)
+
+    def test_explicit_sequence_reproduces_master_selection_under_different_observation_profile(self):
+        first = self.run_batch(day="sunday", start="21:00", sections=2, master_seed=456)
+        _, first_metrics, first_execution = self.results(first)[0]
+        chosen = [item["variation"] for item in first_execution["context_selection"]["contexts"]]
+        second = self.run_batch(day="sunday", start="21:00", sections=2,
+                                variations=chosen, metrics_profile="full")
+        _, second_metrics, second_execution = self.results(second)[0]
+        self.assertEqual(first_metrics["seed"], second_metrics["seed"])
+        self.assertEqual(first_execution["context_selection"]["contexts"],
+                         second_execution["context_selection"]["contexts"])
+        self.assertEqual(first_execution["generation"]["routes_sha256"],
+                         second_execution["generation"]["routes_sha256"])
+
+    def test_long_selections_use_one_simulation_with_clearance_only_at_end(self):
+        for sections, horizon in ((7, 78300), (8, 89100), (16, 175500), (56, 607500)):
+            with self.subTest(sections=sections):
+                previous = self.simulate.call_count
+                batch = self.run_batch(day="monday", start="00:00", sections=sections, master_seed=42)
+                _, metrics, execution = self.results(batch)[0]
+                self.assertEqual(self.simulate.call_count, previous + 1)
+                self.assertEqual(self.simulate.call_args.kwargs["end"], horizon)
+                self.assertEqual(metrics["demand_duration_seconds"], sections * 10800)
+                self.assertEqual(execution["generation"]["clearance_limit_seconds"], 2700)
+                self.assertEqual(len(execution["context_selection"]["contexts"]), sections)
+
+    def test_ten_multisection_epochs_have_recorded_reproducible_master_seeds(self):
+        first = self.run_batch(sections=2, master_seed=31415, episodes=10)
+        second = self.run_batch(sections=2, master_seed=31415, episodes=10)
+        selections = [[execution["context_selection"] for _, _, execution in self.results(batch)]
+                      for batch in (first, second)]
+        self.assertEqual(selections[0], selections[1])
+        self.assertEqual(selections[0][0]["master_seed"], 31415)
+        self.assertEqual(len({item["master_seed"] for item in selections[0]}), 10)
+        self.assertTrue(all(item["batch_master_seed"] == 31415 for item in selections[0]))
+        self.assertEqual([item["batch_episode"] for item in selections[0]], list(range(1, 11)))
+
+    def test_explicit_sequence_is_not_silently_changed_between_episodes(self):
+        with patch.object(runner.secrets, "randbits", side_effect=AssertionError("explicit replay draws no entropy")):
+            batch = self.run_batch(sections=2, variations=[25, 1], episodes=2)
+        choices = [[item["variation"] for item in execution["context_selection"]["contexts"]]
+                   for _, _, execution in self.results(batch)]
+        self.assertEqual(choices, [[25, 1], [25, 1]])
+        for _, _, execution in self.results(batch):
+            self.assertIsNone(execution["context_selection"]["master_seed"])
+            self.assertIsNone(execution["context_selection"]["batch_master_seed"])
+            self.assertEqual(execution["context_selection"]["method"], "explicit_sequence")
+
+    def test_master_seed_single_section_is_one_available_context_variation(self):
+        batch = self.run_batch(master_seed=987654321)
+        _, metrics, execution = self.results(batch)[0]
+        selection = execution["context_selection"]
+        self.assertEqual(len(selection["contexts"]), 1)
+        chosen = selection["contexts"][0]["variation"]
+        self.assertIn(chosen, range(1, 26))
+        self.assertEqual(metrics["seed"], demand.effective_seed(chosen))
+        self.assertEqual(self.generate.call_args.kwargs["variations"], [chosen])
+
+    def test_multiple_section_choices_are_independent_of_signal_and_metrics_profiles(self):
+        signal_selection = {"plan_id": "explicit-test-plan", "intersections": ["synthetic intersection"],
+                            "tls_ids": ["synthetic_tls"], "current_tls_ids": [], "document_snapshot": {}}
+        executions = []
+        for signal, profile in (("current", "core"), ("settran", "full")):
+            with self.subTest(signal=signal, profile=profile):
+                with patch.object(runner, "_validate_signal_profile",
+                                  return_value=signal_selection if signal == "settran" else None):
+                    batch = self.run_batch(sections=2, master_seed=42, signal_profile=signal,
+                                           metrics_profile=profile,
+                                           settran_plan=signal_selection["plan_id"] if signal == "settran" else None)
+                executions.append(self.results(batch)[0][2])
+        self.assertEqual(executions[0]["context_selection"], executions[1]["context_selection"])
+        self.assertEqual(executions[0]["generation"]["routes_sha256"],
+                         executions[1]["generation"]["routes_sha256"])
+
+    def test_resolved_master_and_sequence_survive_generation_failure(self):
+        self.generate.side_effect = ValueError("native routing unavailable")
+        with self.assertRaisesRegex(ValueError, "native routing unavailable"):
+            self.run_batch(sections=2, master_seed=123)
+        path, = self.output_dir.glob("*/*/metrics.json")
+        document = json.loads(path.read_text())
+        selection = document["execution"]["context_selection"]
+        self.assertEqual(selection["master_seed"], 123)
+        self.assertEqual(len(selection["contexts"]), 2)
+        self.assertEqual(document["execution"]["status"], "failed")
+
+    def test_cli_dispatches_master_and_explicit_sequence(self):
+        with patch.object(runner, "run_episodes") as run:
+            code = runner.main(["--demand-profile", "metasettran", "--day", "friday",
+                                "--start", "21:00", "--sections", "2", "--master-seed", "123",
+                                "--variations", "4", "17"])
+        self.assertEqual(code, 0)
+        self.assertEqual(run.call_args.kwargs["master_seed"], 123)
+        self.assertEqual(run.call_args.kwargs["variations"], [4, 17])
 
     def test_cli_dispatches_independent_demand_signal_and_metrics_options(self):
         with patch.object(runner, "run_episodes") as run:

@@ -1,7 +1,7 @@
 {
   "schema_version": 4,
-  "version": "boundary-regional-integrated-v4.2",
-  "status": "experimental_integrated_OD_not_empirically_calibrated",
+  "version": "boundary-regional-integrated-v4.3.1",
+  "status": "experimental_spatial_improvement_confirmed_regional_calibration_pending",
   "network_sha256": "f30b0807fa46e3d4fb65c573be68f6544d75a64e44a2c32fee71389fd4106d56",
   "vehicle_class": "passenger",
   "count_column": "car",
@@ -2773,7 +2773,8 @@
     "Forma temporal arterial/local e escolha OD são hipóteses; não há OD semanal medido.",
     "Viagens internas ausentes não são compensadas elevando entradas.",
     "Somente carros/passenger; motocicletas, ônibus, caminhões, bicicletas e pedestres não representados.",
-    "Qualificação dos portais é cartográfica e topológica, não levantamento operacional em campo."
+    "Qualificação dos portais é cartográfica e topológica, não levantamento operacional em campo.",
+    "Timestamps interpretados como UTC e convertidos para America/Sao_Paulo por decisão metodológica; equipamento sem metadado de fuso confirmado. A conversão não comprova a origem temporal."
   ],
   "corridors": [
     {
@@ -4834,7 +4835,8 @@
       "start": "15:00",
       "seconds": 10800,
       "kind": "hypothesis",
-      "basis": "Escala do experimento anterior, preservada para isolar distribuição espacial. Não confirma volume regional e não é recalculada somando VMD ou sensores."
+      "basis": "Referência histórica v4.3.1 usada somente para fixar o coeficiente 17864.7156/(1614.7760+6151.8448). Após UTC não é o total da terça 15–18. O total regional e a redução experimental de 15% não são medições.",
+      "source_time_convention": "legacy_civil"
     },
     "destination_hierarchy_weights": {
       "highway.primary": 4,
@@ -4846,7 +4848,7 @@
       "highway.residential": 1,
       "": 1
     },
-    "weight_status": "Prior de oportunidade por acesso físico orientado: faixas passenger × peso ordinal da hierarquia × evidência VMD relativa quando disponível. Representações no mesmo boundary_group repartem a maior oportunidade do grupo. Extremidades opostas da mesma avenida não dividem massa por nome de rua. Hipótese espacial, não capacidade semafórica nem orçamento de veículos; normalização global conserva população. Alternativas do mesmo OD repartem oportunidade por eficiência relativa de tempo livre.",
+    "weight_status": "Oportunidade por entrada física orientada: faixas passenger × hierarquia × VMD relativo quando disponível; ramos do mesmo acesso repartem oportunidade. Cada entrada distribui sua massa pelos ramos dos percursos nativos, usando faixas de origem permitidas e ângulo da conversão. Destinos adicionais a jusante não multiplicam peso de um movimento. Hipótese de escolha, não capacidade semafórica nem volume medido.",
     "relative_corridor_evidence": {
       "avenida_joao_naves_de_avila": "joao_naves",
       "avenida_monsenhor_eduardo": "monsenhor",
@@ -4941,8 +4943,39 @@
       "Projeção de tempo livre não modela filas/inserção/sinais; somente passagens físicas SUMO avaliam o fluxo realizado.",
       "Fontes externas modulam priors relativos de outras seções e classes; não medem a demanda destes portais.",
       "Forma temporal arterial/local e escolha OD são hipóteses; não há OD semanal medido.",
-      "Viagens internas ausentes não são compensadas elevando entradas."
-    ]
+      "Viagens internas ausentes não são compensadas elevando entradas.",
+      "Comparações pareadas v4.3.1 reduzem saturação da v4.2 sem alterar volume, mas não comprovam escala regional, posições dos sensores ou adequação integral de current.",
+      "Alternativas de continuidade da Niterói ampliam origens possíveis sem cotas; destinos e movimentos permanecem hipóteses, sujeitos a conflitos reais."
+    ],
+    "route_choice": {
+      "method": "native_path_branch_opportunities",
+      "angular_cost": 1.0,
+      "kind": "hypothesis_geometric_route_choice",
+      "formula": "At each divergence in existing native paths: distinct permitted source lanes / (1 + absolute heading change / (pi/2)); normalized among available continuations, separately for each origin. Origin opportunities normalized once.",
+      "rationale": "Elimina a multiplicação da atratividade de conversões pelo número de destinos a jusante. Prioriza continuidade geométrica sem proibir retornos, viagens curtas ou selecionar caminhos por desempenho simulado. Custo angular unitário é hipótese dimensional explícita; não é proporção medida de conversão.",
+      "sensitivity": "angular_cost=0 is lane-only; angular_cost=2 doubles geometric turn aversion; neither changes volumes, signals or route validity."
+    },
+    "scale_assessment": {
+      "status": "not_identified_from_available_counts",
+      "central_kind": "controlled_experimental_hypothesis",
+      "measured_constraint": "car curves at two unconfirmed local cross-sections; route incidence may overlap",
+      "external_constraint": "UFU directional ratios and SETTRAN relative lane-normalized VMD; neither identifies boundary entry totals",
+      "decision": "Keep the v4.3.1 coefficient fixed while converting UTC; then apply a single 15% experimental moderation, fixed before simulation. Do not tune this percentage to eliminate congestion or interpret it as an observed coverage correction.",
+      "sensitivity_kind": "Observed weekday-day bootstrap varies intensity and local spatial targets jointly; it is not an identified confidence interval for unknown regional OD demand.",
+      "additional_sources_reviewed": "Levantamentos adicionais de João Naves nº529 (2025) e Rondon×Olegário (2023) não forneceram uma estimativa transferível de entradas neste perímetro. Nenhum orçamento novo foi derivado deles."
+    },
+    "frozen_scale_reference_cars": {
+      "5": 1614.7760416666667,
+      "6": 6151.844791666666
+    },
+    "volume_recalibration": {
+      "retained_fraction": 0.85,
+      "baseline": "v4.3.1 spatial model and fixed legacy scale, source timestamps interpreted UTC then converted to America/Sao_Paulo",
+      "decision": "15% experimental moderation fixed before simulation; project requires strictly more than 10% in every realization. No independent regional count identifies this percentage.",
+      "method": "Keep floor(0.85*N) systematically spaced positions of the unreduced stochastic departure agenda. Retained IDs, departure times and OD routes are unchanged; no repeated scaling.",
+      "scale_reference": "Freeze original v4.3.1 car reference values to prevent UTC relabeling from silently changing the regional coefficient.",
+      "observations": "Raw car curves remain unchanged comparison references; reduced passages are not empirically calibrated counts."
+    }
   },
   "route_templates": [
     {
@@ -5037,6 +5070,61 @@
       ],
       "native_validation": "Três caminhos contínuos passenger, sem edges repetidos, U-turn ou retorno ao mesmo acesso; tempo livre relativo ao shortest: Ivaldo 1.004, Monsenhor 1.133, Itumbiara 1.148. Não comprova intensidade real.",
       "require_junction_simple": true
+    },
+    {
+      "id": "niteroi_regional_continuity",
+      "origins": [
+        "142719720#0",
+        "152937004#0",
+        "152937010#0",
+        "261301884#0",
+        "261533405#0",
+        "261533408",
+        "30620737#0",
+        "30620978#0",
+        "30621940#0",
+        "30621947#0",
+        "30621954#0",
+        "30628244#0",
+        "30664522#0",
+        "30664642#0",
+        "30665257#0",
+        "30665265#0",
+        "307156125#0",
+        "421572935",
+        "602306707",
+        "602306713#0",
+        "658279138#0",
+        "665897565#0",
+        "789705871#0"
+      ],
+      "destinations": [
+        "-154562663#north",
+        "-616180216",
+        "-659117881",
+        "-659117933#west",
+        "261432318",
+        "303790003#4",
+        "30648910#6",
+        "30648920#5",
+        "30649088#1",
+        "403166940#4",
+        "602306725#east",
+        "602306733#west",
+        "602306745#west",
+        "616971268#west",
+        "647043774#1",
+        "659117933#east",
+        "665897609#1",
+        "82009805#1"
+      ],
+      "via": [
+        "30622933#11",
+        "1156717177#1"
+      ],
+      "require_junction_simple": true,
+      "status": "Geographic alternative, not a sensor-exclusive population or a mandatory route.",
+      "geographic_basis": "Origins behind the initial Niteroi point and destinations ahead of its final point projected onto the oriented 30622933#11→1156717177#1 axis. Native paths must not revisit junctions. Extends the previously Jeronimo-only through alternative to geographically compatible origins; no quotas or prescribed route count."
     }
   ],
   "observation_movements": [
@@ -5144,6 +5232,8 @@
       24,
       25
     ],
-    "organization": "MetaSettran / day / [start,start+03:00) / variation; shared parameters, routes only on demand"
+    "organization": "MetaSettran / day / [start,start+03:00) / variation; shared parameters, routes only on demand",
+    "source_time_convention": "utc",
+    "timezone_status": "project_methodological_hypothesis_not_device_confirmation"
   }
 }

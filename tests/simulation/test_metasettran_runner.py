@@ -336,6 +336,164 @@ class MetaSettranRunnerTests(unittest.TestCase):
         self.assertEqual(executions[0]["generation"]["routes_sha256"],
                          executions[1]["generation"]["routes_sha256"])
 
+    def test_free_groups_repeat_in_episode_order_with_their_own_results_and_clearance(self):
+        selected = [55, 30, 0, 5, 29, 1, 4]
+        choices = [4, 17, 9, 23, 2, 14, 6]
+        groups = [
+            ("monday", "12:00", 2, [4, 17],
+             [{"day": "monday", "start": "12:00"}, {"day": "monday", "start": "15:00"}]),
+            ("thursday", "15:00", 2, [9, 23],
+             [{"day": "thursday", "start": "15:00"}, {"day": "thursday", "start": "18:00"}]),
+            ("sunday", "21:00", 3, [2, 14, 6],
+             [{"day": "sunday", "start": "21:00"}, {"day": "monday", "start": "00:00"},
+              {"day": "monday", "start": "03:00"}]),
+        ]
+        with patch.object(runner.secrets, "randbits", side_effect=AssertionError("manual replay draws no entropy")):
+            batch = self.run_batch(selected_sections=selected, consecutive_grouping_enabled=True,
+                                   variations=choices, episodes=2, gui=True)
+        results = self.results(batch)
+        self.assertEqual(len(results), 6)
+        self.assertEqual(self.generate.call_count, 6)
+        self.assertEqual(self.simulate.call_count, 6)
+        self.configuration.assert_called_once()
+        for index, (directory, metrics, execution) in enumerate(results):
+            repetition, group_index = divmod(index, 3)
+            day, start, sections, variations, identities = groups[group_index]
+            with self.subTest(repetition=repetition + 1, group=group_index + 1):
+                self.assertTrue(directory.name.startswith(f"episode-{repetition + 1:04d}_group-{group_index + 1:02d}_"))
+                self.assertEqual(directory.parent, batch)
+                generated = self.generate.call_args_list[index].kwargs
+                self.assertEqual({key: generated[key] for key in ("day", "start", "sections", "variations")},
+                                 {"day": day, "start": start, "sections": sections, "variations": variations})
+                simulated = self.simulate.call_args_list[index].kwargs
+                self.assertTrue(simulated["gui"])
+                self.assertEqual(simulated["end"], sections * 10800 + 2700)
+                self.assertEqual(metrics["demand_duration_seconds"], sections * 10800)
+                self.assertEqual(metrics["vehicles_requested"], 2)
+                self.assertEqual(execution["selection_mode"], "free")
+                self.assertIs(execution["consecutive_grouping_enabled"], True)
+                self.assertEqual(execution["execution_type"], "consecutive_group")
+                self.assertEqual(execution["selected_sections"], identities)
+                self.assertEqual(execution["selection_group_index"], group_index + 1)
+                self.assertEqual(execution["selection_group_count"], 3)
+                context = execution["context_selection"]
+                self.assertEqual(context["batch_episode"], repetition + 1)
+                self.assertIsNone(context["master_seed"])
+                self.assertIsNone(context["batch_master_seed"])
+                self.assertEqual([item["variation"] for item in context["contexts"]], variations)
+
+    def test_free_default_keeps_adjacent_sections_independent_including_week_boundary(self):
+        batch = self.run_batch(selected_sections=[55, 1, 0], variations=[3, 11, 25])
+        results = self.results(batch)
+        self.assertEqual(len(results), 3)
+        for index, (day, start, choice) in enumerate((
+                ("monday", "00:00", 3), ("monday", "03:00", 11), ("sunday", "21:00", 25))):
+            _, metrics, execution = results[index]
+            self.assertEqual(execution["selection_mode"], "free")
+            self.assertIs(execution["consecutive_grouping_enabled"], False)
+            self.assertEqual(execution["execution_type"], "independent")
+            self.assertEqual(execution["selected_sections"], [{"day": day, "start": start}])
+            self.assertEqual(execution["context_selection"]["contexts"][0]["variation"], choice)
+            self.assertEqual(metrics["simulation_end_requested_seconds"], 13500)
+            self.assertEqual(self.generate.call_args_list[index].kwargs["sections"], 1)
+
+    def test_free_grouping_checkbox_keeps_an_isolated_section_independent(self):
+        batch = self.run_batch(selected_sections=[18], consecutive_grouping_enabled=True, variations=[8])
+        _, _, execution = self.results(batch)[0]
+        self.assertEqual(self.simulate.call_count, 1)
+        self.assertEqual(execution["selection_mode"], "free")
+        self.assertIs(execution["consecutive_grouping_enabled"], True)
+        self.assertEqual(execution["execution_type"], "independent")
+        self.assertEqual(execution["selected_sections"], [{"day": "wednesday", "start": "06:00"}])
+
+    def test_free_day_and_full_week_only_form_one_process_when_grouping_is_enabled(self):
+        for selected in (list(range(16, 24)), list(range(56))):
+            for grouping in (False, True):
+                with self.subTest(sections=len(selected), grouping=grouping):
+                    with patch.object(runner, "_run_episode") as run:
+                        self.run_batch(selected_sections=selected, consecutive_grouping_enabled=grouping,
+                                       variations=[7] * len(selected))
+                    self.assertEqual(run.call_count, 1 if grouping else len(selected))
+                    options = [call.args[-1] for call in run.call_args_list]
+                    contexts = [context for option in options for context in option["_context_selection"]["contexts"]]
+                    self.assertEqual(len(contexts), len(selected))
+                    identities = [(item["day"], item["start"]) for item in contexts]
+                    self.assertEqual(len(set(identities)), len(selected))
+                    first_day = "wednesday" if len(selected) == 8 else "monday"
+                    self.assertEqual(identities[0], (first_day, "00:00"))
+                    self.assertEqual([option["sections"] for option in options],
+                                     [len(selected)] if grouping else [1] * len(selected))
+
+    def test_invalid_free_selection_fails_before_outputs_or_entropy(self):
+        invalid = [
+            {"selected_sections": []}, {"selected_sections": [0, 0]},
+            {"selected_sections": [-1]}, {"selected_sections": [56]},
+            {"selected_sections": [True]}, {"selected_sections": ["0"]},
+            {"selected_sections": "0,1"}, {"selected_sections": [0], "day": "monday"},
+            {"selected_sections": [0], "start": "00:00"},
+            {"selected_sections": [0], "sections": 1},
+            {"selected_sections": [0], "variation": 7},
+            {"selected_sections": [0, 1], "variations": [7]},
+            {"selected_sections": [0, 1], "variations": [7, 8, 9]},
+            {"selected_sections": [0], "variations": [0]},
+            {"selected_sections": [0], "variations": [26]},
+            {"selected_sections": [0], "variations": [True]},
+            {"selected_sections": [0], "consecutive_grouping_enabled": "true"},
+            {"selected_sections": [0], "demand_profile": "random"},
+        ]
+        with patch.object(runner.secrets, "randbits", side_effect=AssertionError("invalid input must not draw entropy")):
+            for options in invalid:
+                with self.subTest(options=options), self.assertRaises(ValueError):
+                    self.run_batch(**options)
+        self.assertFalse(self.output_root.exists())
+        self.generate.assert_not_called()
+        self.simulate.assert_not_called()
+        self.configuration.assert_not_called()
+
+    def test_free_automatic_choices_replay_across_signal_and_metrics_profiles(self):
+        options = {"selected_sections": [2, 3, 20, 55, 0],
+                   "consecutive_grouping_enabled": True, "episodes": 2}
+        with patch.object(runner.secrets, "randbits", return_value=7823) as entropy:
+            first = self.run_batch(**options)
+        entropy.assert_called_once_with(63)
+        signal_selection = {"plan_id": "explicit-test-plan", "intersections": ["synthetic intersection"],
+                            "tls_ids": ["synthetic_tls"], "current_tls_ids": [], "document_snapshot": {}}
+        with patch.object(runner, "_validate_signal_profile", return_value=signal_selection), \
+                patch.object(runner.secrets, "randbits", side_effect=AssertionError("replay draws no entropy")):
+            second = self.run_batch(**options, master_seed=7823, signal_profile="settran", metrics_profile="full",
+                                    settran_plan=signal_selection["plan_id"])
+        self.assertNotEqual(first, second)
+        first_results, second_results = self.results(first), self.results(second)
+        self.assertEqual(len(first_results), 6)
+        self.assertEqual(len(second_results), 6)
+        selections = []
+        for (_, first_metrics, original), (_, second_metrics, replayed) in zip(first_results, second_results):
+            self.assertEqual(original["context_selection"], replayed["context_selection"])
+            self.assertEqual(original["selected_sections"], replayed["selected_sections"])
+            self.assertEqual(original["generation"]["routes_sha256"], replayed["generation"]["routes_sha256"])
+            self.assertEqual(first_metrics["seed"], second_metrics["seed"])
+            self.assertEqual(first_metrics["simulation_end_requested_seconds"],
+                             second_metrics["simulation_end_requested_seconds"])
+            context = original["context_selection"]
+            self.assertEqual(context["batch_master_seed"], 7823)
+            self.assertTrue(all(1 <= item["variation"] <= 25 for item in context["contexts"]))
+            selections.append(context)
+        self.assertEqual([item["batch_episode"] for item in selections], [1, 1, 1, 2, 2, 2])
+        self.assertEqual(len({item["master_seed"] for item in selections}), 6)
+
+    def test_consecutive_mode_records_selection_without_changing_contexts(self):
+        for sections in (1, 2):
+            with self.subTest(sections=sections):
+                batch = self.run_batch(day="sunday", start="21:00", sections=sections,
+                                       variations=[7] * sections)
+                _, _, execution = self.results(batch)[0]
+                self.assertEqual(execution["selection_mode"], "consecutive")
+                self.assertIs(execution["consecutive_grouping_enabled"], True)
+                self.assertEqual(execution["execution_type"], "independent" if sections == 1 else "consecutive_group")
+                identities = [{"day": item["day"], "start": item["start"]}
+                              for item in execution["context_selection"]["contexts"]]
+                self.assertEqual(execution["selected_sections"], identities)
+
     def test_resolved_master_and_sequence_survive_generation_failure(self):
         self.generate.side_effect = ValueError("native routing unavailable")
         with self.assertRaisesRegex(ValueError, "native routing unavailable"):

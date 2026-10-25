@@ -32,7 +32,7 @@ from SistemaDeSemaforos.demand.random_demand_generator import (
 )
 
 
-MODEL_VERSION = "metasettran-regional-integrated-v4.3.2-utc"
+MODEL_VERSION = "metasettran-regional-integrated-v4.3.2-utc-lateral-10"
 SEED_NAMESPACE = "metasettran-prototype-v1"
 ROUTING_SEED = 0
 COMPOSITION_VERSION = "metasettran-chronological-v1"
@@ -202,7 +202,7 @@ def _routes_root():
     return root
 
 
-def _route_pairs(model, net_file, directory, seed, log_file):
+def _route_pairs(model, net_file, directory, log_file):
     """Descobre caminhos nativos; filtra candidatos antes de sortear viagens."""
     edges, connections, returns, connection_costs = _read_network(net_file)
     # A lane changing into several destination lanes remains ONE opportunity.
@@ -371,7 +371,7 @@ def _movement_angle(source, target):
     return math.acos(max(-1.0, min(1.0, sum(x*y for x,y in zip(incoming,outgoing)) / denominator))) if denominator else 0.0
 
 
-def _mapping_sensitivity(pairs, model, calibration):
+def _mapping_sensitivity(pairs, model):
     """Projeta a MESMA demanda nos candidatos; nunca reescala o total."""
     sensors = {str(s["sensor_id"]): s for s in model["sensors"]}
     alternatives = [sorted({sensors[s]["selected_observation_edge"]} |
@@ -546,7 +546,8 @@ def _directional_ratio(config, week_second):
     raise ValueError("Prior direcional deve cobrir o dia civil completo.")
 
 
-def _observation_projection(pairs, model, calibration, begin, duration, knots, fixed_schedule=None, curve_key="knots"):
+def _observation_projection(pairs, model, calibration, begin, duration, knots, fixed_schedule=None, curve_key="knots",
+                            origin_factors=None):
     """Raking de probabilidades com partidas fixas e atraso livre explícito.
 
     A matriz integra a base linear de escolha OD e a passagem no probe em
@@ -638,12 +639,18 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
                 weights[index] = [value / denominator for value in weights[index]]
         if greatest_error < .001:
             break
+    if origin_factors is None:
+        origin_factors = _origin_retention_factors(model)
+    route_factors = [origin_factors[pair["origin"]] for pair in routes]
+    retained_rows = [sum(value * factor for value, factor in zip(row, route_factors)) for row in weights]
     observations = []
     for sensor, observed_bin, target, terms in constraints:
         estimated = sum(weights[i][r] * coefficient for i, r, coefficient in terms)
         observations.append({"observation_id": sensor, "bin": observed_bin, "target_passages": target,
                              "target_kind": "estimated_external_direction_transfer" if sensor == "rondon_reverse_estimate" else "measured_car_curve_conditional_on_mapping",
-                             "projected_freeflow_passages": estimated, "residual": estimated - target})
+                             "projected_freeflow_passages": estimated, "residual": estimated - target,
+                             "origin_retained_projected_freeflow_passages": sum(
+                                 weights[i][r] * coefficient * route_factors[r] for i, r, coefficient in terms)})
     for route_index, pair in enumerate(routes):
         pair.update(expected_departures=sum(masses[index] * weights[index][route_index] for index in range(bins)),
                     generated_departures=0, generated_departures_per_bin=[0] * bins)
@@ -652,6 +659,9 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
         "operator": "continuous_linear_OD_probability; passage=departure+native_freeflow_time_to_probe_entry",
         "iterations": iteration + 1, "maximum_iterations": maximum_iterations,
         "total_fixed": sum(masses), "target_basis": curve_key + "_car_passages_assuming_boundary_to_boundary_representation",
+        "origin_retained_departures_per_bin": [sum(
+            retained_rows[i] * weighted_basis(i, quarter * 900, (quarter + 1) * 900)
+            for i in range(bins)) for quarter in range(bins)],
         "observations": observations,
         "mean_prior_relative_entropy": sum(masses[i] * sum(p * math.log(p / q) for p, q in zip(row, base[i]) if p > 0 and q > 0)
                                            for i, row in enumerate(weights)) / max(sum(masses), 1),
@@ -690,6 +700,47 @@ def _retained_indices(count, fraction, seed):
     rng = random.Random(_stream_seed(seed, "regional", "volume_retention"))
     offset = rng.random()
     return {math.floor((index + offset) * count / retained) for index in range(retained)}
+
+
+def _origin_retention_factors(model):
+    """A redução por origem sucede a escolha OD; nunca renormaliza suas cotas."""
+    policy = model["regional_demand"].get("lateral_origin_reduction")
+    entries = model["portals"]["entries"]
+    if policy is None:
+        return {portal["edge"]: 1.0 for portal in entries}
+    fraction = policy.get("retained_fraction")
+    groups = policy.get("protected_boundary_groups")
+    available = {portal["boundary_group"] for portal in entries}
+    if (isinstance(fraction, bool) or not isinstance(fraction, (int, float)) or
+            not math.isfinite(fraction) or not 0 < fraction <= 1):
+        raise ValueError("Retenção das origens laterais deve estar em (0, 1].")
+    if (not isinstance(groups, list) or not groups or
+            any(not isinstance(group, str) or group not in available for group in groups)):
+        raise ValueError("Redução lateral requer grupos periféricos protegidos cadastrados.")
+    return {portal["edge"]: 1.0 if portal["boundary_group"] in groups else fraction for portal in entries}
+
+
+def _reduce_lateral_schedule(schedule, route_indices, routes, retained_indices, contexts, factors):
+    """Retém floor(0,9*N_lateral) por faixa após a redução regional de 15%.
+
+    A amostra sistemática percorre somente partidas laterais já selecionadas,
+    ordenadas no tempo. Não sorteia novamente OD nem modifica veículos retidos.
+    """
+    kept = set(retained_indices)
+    candidates = [[] for _ in contexts]
+    for index in sorted(kept):
+        if factors[routes[route_indices[index]]["origin"]] < 1:
+            candidates[int(float(schedule[index]["depart"]) // DEFAULT_DURATION)].append(index)
+    fraction = min(factors.values())
+    for context, lateral in zip(contexts, candidates):
+        seed = _stream_seed(context["effective_seed"], "lateral_origins", "volume_retention")
+        selected = _retained_indices(len(lateral), fraction, seed)
+        kept.difference_update(index for position, index in enumerate(lateral) if position not in selected)
+        reference = context["reference_programmed"]
+        context.update(lateral_reference_programmed=len(lateral), lateral_programmed=len(selected),
+                       protected_origin_programmed=reference - len(lateral),
+                       programmed=reference - len(lateral) + len(selected))
+    return kept
 
 
 def _regional_knots(calibration, scale, curve_key):
@@ -741,7 +792,11 @@ def _compose_sections(pairs, model, components, contexts, scale, retention):
     # Simpson integra exatamente o produto quadrático, subdividindo tanto nos
     # nós da ponte quanto nos centros das probabilidades OD aprovadas.
     masses = [0.0] * len(weights)
-    breaks = sorted({0, duration} | set(range(450, duration, 900)) |
+    factors = _origin_retention_factors(model)
+    retained_rows = [sum(value * factors[pair["origin"]] for value, pair in zip(row, pairs.values()))
+                     for row in weights]
+    retained_bins = [0.0] * len(weights)
+    breaks = sorted(set(range(0, duration + 1, 900)) | set(range(450, duration, 900)) |
                     {row["week_second"] - begin for row in knots if begin < row["week_second"] < begin + duration})
     for left, right in zip(breaks, breaks[1:]):
         for timestamp, coefficient in ((left, (right - left) / 6),
@@ -754,6 +809,8 @@ def _compose_sections(pairs, model, components, contexts, scale, retention):
             mass = coefficient * interpolate_rate(knots, begin + timestamp)
             masses[lo] += mass * (1 - fraction)
             masses[hi] += mass * fraction
+            retained_bins[min(int(left // 900), len(weights) - 1)] += mass * (
+                retained_rows[lo] * (1 - fraction) + retained_rows[hi] * fraction)
     total = integrate_rate(knots, begin, begin + duration)
     normalization = total / sum(masses) if sum(masses) else 1.0
     for index, pair in enumerate(pairs.values()):
@@ -791,6 +848,7 @@ def _compose_sections(pairs, model, components, contexts, scale, retention):
             row[key] *= retention
     projection = {"method": "composition_of_approved_individual_context_projections",
                   "total_fixed": total, "observations": observations,
+                  "origin_retained_departures_per_bin": retained_bins,
                   "status": "individual_projection_references_not_recomputed_passages_after_harmonization",
                   "limits": ["Passage predictions below refer to individual contexts before boundary transport.",
                              "Combined physical passages are measured by the shared SUMO collector."]}
@@ -829,6 +887,7 @@ def generate_metasettran_demand(
     network_sha256 = _sha256(net_file)
     if model.get("network_sha256") != network_sha256:
         raise ValueError("O cadastro de portais pertence a outra versão da rede.")
+    origin_factors = _origin_retention_factors(model)
     reference_total = model["regional_demand"]["reference_expected_departures"]
     if isinstance(reference_total, bool) or not isinstance(reference_total, (float, int)) or not math.isfinite(reference_total) or reference_total <= 0:
         raise ValueError("Volume regional de referência deve ser finito e positivo.")
@@ -839,6 +898,8 @@ def generate_metasettran_demand(
     # Agenda pareada é um contrato de população fixa; não reduzir novamente.
     if schedule_file is not None:
         retention = 1.0
+        origin_factors = {edge: 1.0 for edge in origin_factors}
+    lateral_reduction_applied = any(factor < 1 for factor in origin_factors.values())
     weekly = calibrate_weekly(csv_file, variation=selection["contexts"][0]["variation"], seed=selection["contexts"][0]["effective_seed"],
                               source_time_convention=source_time_convention)
     calibration = weekly_window(weekly, begin, duration)
@@ -915,7 +976,7 @@ def generate_metasettran_demand(
     try:
         with TemporaryDirectory(prefix=".metasettran-", dir=output_dir) as temporary:
             directory = Path(temporary)
-            pairs, command, catalog, network_edges = _route_pairs(model, net_file, directory, seed, log_file)
+            pairs, command, catalog, network_edges = _route_pairs(model, net_file, directory, log_file)
             metadata["command"] = command
             _regional_prior(pairs, model)
             if sections > 1:
@@ -924,7 +985,9 @@ def generate_metasettran_demand(
                 metadata["chronological_composition"] = transition
                 retained_indices = range(len(schedule))
             else:
-                weights, projection = _observation_projection(pairs, model, calibration, begin, duration, knots, fixed_schedule, curve_key)
+                weights, projection = _observation_projection(
+                    pairs, model, calibration, begin, duration, knots, fixed_schedule, curve_key,
+                    origin_factors=origin_factors)
                 temporal_rng = random.Random(_stream_seed(seed, "regional", "departures"))
                 schedule = fixed_schedule if fixed_schedule is not None else [
                     {"id": f"ms_{index:06d}", "type": "metasettran_car",
@@ -945,6 +1008,16 @@ def generate_metasettran_demand(
                     routes.append(deepcopy(item))
             route_list = list(pairs.values())
             cumulative_weights = [list(accumulate(row)) for row in weights] if sections > 1 else None
+            # Escolher todos os percursos antes de retirar partidas laterais
+            # conserva exatamente o sorteio OD e os IDs da referência aprovada.
+            route_indices = [_choose_route(weights, float(attrs["depart"]), od_rng,
+                attrs.pop("_od_uniforms", None), cumulative_weights) for attrs in schedule]
+            regional_programmed = len(retained_indices)
+            if lateral_reduction_applied:
+                retained_indices = _reduce_lateral_schedule(schedule, route_indices, route_list,
+                    retained_indices, selection["contexts"], origin_factors)
+            if not retained_indices:
+                raise ValueError("A redução lateral não deixou viagens nesta realização; não forçar inserções.")
             used_lengths, generated_bins = [], [0] * bins
             new_trips, new_routes = directory / trips_file.name, directory / routes_file.name
             with ExitStack() as stack:
@@ -956,11 +1029,9 @@ def generate_metasettran_demand(
                         streams.append(stream)
                 for schedule_index, attributes in enumerate(schedule):
                     timestamp = float(attributes["depart"])
-                    pair = route_list[_choose_route(weights, timestamp, od_rng, attributes.pop("_od_uniforms", None), cumulative_weights)]
-                    # Consumir a escolha OD também nas viagens removidas mantém o
-                    # percurso de cada ID retido idêntico ao da referência UTC.
                     if schedule_index not in retained_indices:
                         continue
+                    pair = route_list[route_indices[schedule_index]]
                     bin_index = min(int(timestamp // 900), bins - 1)
                     pair["generated_departures"] += 1
                     pair["generated_departures_per_bin"][bin_index] += 1
@@ -979,25 +1050,50 @@ def generate_metasettran_demand(
                 for stream in streams:
                     stream.write(b"</routes>")
             schedule = [attrs for index, attrs in enumerate(schedule) if index in retained_indices]
+            regional_expected = projection["total_fixed"] * retention
             for pair in pairs.values():
-                pair["expected_departures"] *= retention
+                pair["expected_departures"] *= retention * origin_factors[pair["origin"]]
             projection["unreduced_total_fixed"] = projection["total_fixed"]
-            projection["total_fixed"] *= retention
+            projection["total_fixed"] = sum(pair["expected_departures"] for pair in pairs.values())
             for observation in projection["observations"]:
                 observation["unreduced_projected_freeflow_passages"] = observation["projected_freeflow_passages"]
-                observation["projected_freeflow_passages"] *= retention
+                observation["projected_freeflow_passages"] = retention * observation.pop(
+                    "origin_retained_projected_freeflow_passages", observation["projected_freeflow_passages"])
                 observation["experimental_target_passages"] = observation["target_passages"] * retention
                 observation["residual"] = observation["projected_freeflow_passages"] - observation["target_passages"]
-            projection["retention_note"] = "OD fitted at unreduced reference; measured targets unchanged. Reduced projections are experimental, not a recalibration of observed counts."
+            projection["retention_note"] = "OD fitted at unreduced reference; regional and origin retention applied afterwards, without redistribution. Measured targets unchanged; reduced projections remain experimental."
             used_lengths.sort()
-            new_trips, new_routes = directory / trips_file.name, directory / routes_file.name
             if sections == 1:
                 _write_xml(new_trips, trips)
                 _write_xml(new_routes, routes)
             expected_bins = [retention * integrate_rate(knots, begin + index * 900, begin + (index + 1) * 900) for index in range(bins)]
+            if lateral_reduction_applied:
+                expected_bins = [retention * value for value in projection["origin_retained_departures_per_bin"]]
+                # As duas quadraturas partilham a mesma massa; só corrigir erro
+                # numérico de soma, sem alterar o orçamento do modelo.
+                normalization = projection["total_fixed"] / sum(expected_bins)
+                expected_bins = [value * normalization for value in expected_bins]
+                if sections > 1:
+                    transition = metadata["chronological_composition"]
+                    transition["pre_lateral_standalone_programmed_sum"] = transition.pop("standalone_programmed_sum")
+                    transition["reference_combined_programmed"] = transition["combined_programmed"]
+                    transition.update(context_programmed_sum=sum(c["programmed"] for c in selection["contexts"]),
+                        combined_programmed=len(schedule), programmed_difference=0,
+                        rate_diagnostics_basis="regional_reference_before_lateral_origin_reduction",
+                        origin_retained_expected=projection["total_fixed"],
+                        origin_retained_expected_departures_per_bin=expected_bins,
+                        origin_retained_rate="reference_rate(t) * sum(OD_probability_r(t) * origin_retention_r); continuous, no renormalization")
+                    timestamps = [float(attrs["depart"]) for attrs in schedule]
+                    for boundary in transition["boundaries"]:
+                        relative = boundary["week_second"] - begin
+                        for window in boundary["windows"]:
+                            width = window["seconds"]
+                            window["programmed_left"] = bisect_left(timestamps, relative) - bisect_left(timestamps, relative - width)
+                            window["programmed_right"] = bisect_left(timestamps, relative + width) - bisect_left(timestamps, relative)
+            projection.pop("origin_retained_departures_per_bin", None)
             groups = [{"id": "regional", "sensor_ids": [], "basis": {"kind": "fixed_regional_scale_hypothesis",
                        "reference_expected_departures": reference_total,
-                       "scale": "retention * frozen_v4.3.1_coefficient * (car5(t)+car6(t)); not sensor coverage",
+                       "scale": "regional_retention * frozen_v4.3.1_coefficient * (car5(t)+car6(t)) * OD-weighted origin retention; not sensor coverage",
                        "unreduced_coefficient": scale, "frozen_reference_cars": reference_counts},
                        "expected_departures": projection["total_fixed"], "generated_departures": len(schedule),
                        "expected_departures_per_bin": ([sum(1 for attrs in schedule if index * 900 <= float(attrs['depart']) < (index + 1) * 900)
@@ -1033,14 +1129,29 @@ def generate_metasettran_demand(
                          for label in ("5", "6", "both", "neither")}
             metadata.update(
                 volume_recalibration={"retained_fraction": retention,
-                    "reference_programmed": reference_count, "retained_programmed": len(schedule),
-                    "actual_reduction_fraction": 1 - len(schedule) / reference_count,
+                    "reference_programmed": reference_count, "retained_programmed": regional_programmed,
+                    "actual_reduction_fraction": 1 - regional_programmed / reference_count,
+                    "final_programmed_after_origin_reduction": len(schedule),
                     "method": ("per_context_fixed_count_subset_then_mass_conserving_time_transport" if sections > 1
                                else "fixed_count_systematic_subset_of_reference_schedule"),
                     "paired_schedule_bypasses_reduction": fixed_schedule is not None,
                     "preserved": (["context_vehicle_budgets", "individual_context_probability_rows", "vehicle_attributes"] if sections > 1
                                   else ["retained_vehicle_ids", "departure_times", "routes", "vehicle_attributes"]),
                     "status": "project_experimental_reduction_not_measured_percentage"},
+                lateral_origin_reduction={
+                    "policy": model["regional_demand"].get("lateral_origin_reduction"),
+                    "applied": lateral_reduction_applied,
+                    "paired_schedule_bypasses_reduction": fixed_schedule is not None,
+                    "reference_programmed_after_regional_reduction": regional_programmed,
+                    "retained_programmed": len(schedule), "removed_programmed": regional_programmed - len(schedule),
+                    "reference_expected_after_regional_reduction": regional_expected,
+                    "retained_expected": projection["total_fixed"],
+                    "per_context": [{key: context[key] for key in (
+                        "index", "day", "start", "variation", "effective_seed", "reference_programmed", "programmed",
+                        "lateral_reference_programmed", "lateral_programmed", "protected_origin_programmed") if key in context}
+                        for context in selection["contexts"]],
+                    "rounding": "floor(retained_fraction * lateral_count) per context; no positive-count exception",
+                    "status": "experimental_reduction_not_measured_boundary_flows"},
                 vehicles_requested=len(schedule), vehicles_generated=len(schedule), trips_generated=len(schedule),
                 groups=groups, routes_sha256=_sha256(new_routes), trips_sha256=_sha256(new_trips),
                 spatial_distribution={"scenario": spatial_scenario, "method": "integrated_OD_shared_observations",
@@ -1049,7 +1160,7 @@ def generate_metasettran_demand(
                     "routes": [{key: value for key, value in pair.items() if key != "route"} for pair in pairs.values()],
                     "portals": portal_counts, "observation_incidence_generated": incidence,
                     "observation_projection": projection,
-                    "sensor_mapping_sensitivity": _mapping_sensitivity(pairs, model, calibration),
+                    "sensor_mapping_sensitivity": _mapping_sensitivity(pairs, model),
                     "corridors": corridors, "corridor_counts_overlap": True, "catalog": catalog, "coverage": coverage,
                     "distance_distribution": {"min": used_lengths[0], "p25": percentile(.25), "median": percentile(.5),
                          "p75": percentile(.75), "max": used_lengths[-1], "mean": sum(used_lengths) / len(used_lengths)},

@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projeto DIEGO — Semáforos</title>
+  <style>
+    body { background: white; color: black; font-family: "Times New Roman", serif; }
+    input, select, button { font-family: inherit; color: black; }
+    a { color: black; }
+    iframe { width: 100%; height: 32rem; box-sizing: border-box; }
+  </style>
+</head>
+<body>
+<h1>EXECUTOR DE DEMANDAS INTEGRADO</h1>
+<h2>Configuração da simulação</h2>
+<noscript>Ative o JavaScript para configurar e executar simulações. Os resultados continuam acessíveis abaixo.</noscript>
+<form id="simulation-form">
+  <p><label>Perfil semafórico:
+    <select name="signal_profile"><option value="current">current — disponível</option></select>
+  </label></p>
+  <p><label>Perfil de demanda:
+    <select name="demand_profile" id="demand-profile">
+      <option value="random">random</option>
+      <option value="metasettran">MetaSettran</option>
+    </select>
+  </label></p>
+
+  <fieldset id="random-options">
+    <legend>Configurações da demanda Random</legend>
+    <p><label>Duração da geração de veículos (segundos):
+      <input name="duration" type="number" step="any" min="0" value="7200" required>
+    </label></p>
+    <p>Período durante o qual novas partidas são programadas. A simulação pode durar mais.</p>
+    <p><label>Intervalo entre partidas (segundos):
+      <input name="period" type="number" step="any" min="0" value="1.5" required>
+    </label></p>
+    <p>Corresponde ao parâmetro period do gerador.</p>
+    <p><label>Encerramento da simulação:
+      <select name="termination" id="termination">
+        <option value="natural">Encerramento natural</option>
+        <option value="defined">Encerramento em tempo definido</option>
+      </select>
+    </label></p>
+    <p>O encerramento natural permite ao SUMO terminar as viagens conforme seu funcionamento existente.</p>
+    <p id="end-options" hidden><label>Instante final (segundos simulados):
+      <input name="end" id="end" type="number" step="any" min="0" required disabled>
+    </label></p>
+  </fieldset>
+
+  <fieldset id="meta-options" hidden disabled>
+    <legend>Configurações da demanda MetaSettran</legend>
+    <p>Demanda experimental; não representa definitivamente o trânsito real.</p>
+    <p><label>Modo de execução MetaSettran:
+      <select name="selection_mode" id="selection-mode">
+        <option value="consecutive" selected>Consecutiva (padrão)</option>
+        <option value="free">Seleção livre de faixas</option>
+      </select>
+    </label></p>
+    <div id="consecutive-options">
+    <p><label>Dia inicial:
+      <select name="day" id="day">
+        <option value="monday">segunda-feira</option>
+        <option value="tuesday" selected>terça-feira</option>
+        <option value="wednesday">quarta-feira</option>
+        <option value="thursday">quinta-feira</option>
+        <option value="friday">sexta-feira</option>
+        <option value="saturday">sábado</option>
+        <option value="sunday">domingo</option>
+      </select>
+    </label></p>
+    <p><label>Horário inicial:
+      <select name="start" id="start">
+        <option>00:00</option><option>03:00</option><option>06:00</option><option>09:00</option>
+        <option>12:00</option><option selected>15:00</option><option>18:00</option><option>21:00</option>
+      </select>
+    </label></p>
+    <p><label>Quantidade de faixas consecutivas (3 horas cada):
+      <input name="sections" id="sections" type="number" min="1" max="56" step="1" value="1" required>
+    </label></p>
+    <p><button type="button" id="whole-day">Dia inteiro</button>
+       <button type="button" id="whole-week">Semana inteira</button></p>
+    <p id="selected-period" aria-live="polite"></p>
+    </div>
+    <div id="free-options" hidden>
+      <p><label><input type="checkbox" id="group-consecutive" disabled> Agrupar faixas consecutivas</label></p>
+      <p>Desmarcado: cada faixa é uma execução independente. Marcado: somente faixas imediatamente
+         adjacentes são executadas juntas, inclusive de domingo para segunda-feira.</p>
+      <p><button type="button" id="select-all-sections" disabled>Selecionar todas as faixas</button>
+         <button type="button" id="clear-sections" disabled>Limpar seleção</button></p>
+      <table id="weekly-selection" border="1">
+        <caption>Faixas semanais de três horas</caption>
+        <thead id="weekly-head"></thead>
+        <tbody id="weekly-body"></tbody>
+      </table>
+      <input type="hidden" name="selected_sections" id="selected-sections" disabled>
+      <input type="hidden" name="consecutive_grouping_enabled" id="grouping-enabled" value="false" disabled>
+      <div id="free-summary" aria-live="polite">
+        <p>Faixas selecionadas: <span id="selected-count">0</span>.</p>
+        <p>Execuções independentes por episódio: <span id="group-count">0</span>.</p>
+        <p>Grupos identificados e ordem numerada das faixas para informar as variações:</p>
+        <ol id="selected-groups"></ol>
+      </div>
+      <p id="selection-error" role="alert"></p>
+    </div>
+    <p>Horário civil de Brasília. Escoamento de até 45 minutos somente depois da última faixa de cada execução ou grupo.</p>
+    <p><label>Variações por faixa (opcional):
+      <input name="variations" id="variations" type="text" placeholder="Exemplo: 3, 12, 7, 21"
+             aria-describedby="variations-help variations-count variations-error">
+    </label></p>
+    <p id="variations-help"></p>
+    <p id="variations-count" aria-live="polite"></p>
+    <p id="variations-error" role="alert"></p>
+    <p>Separe os valores por vírgula. Deixe vazio para manter o sorteio automático.
+       Com sequência manual e vários episódios, a mesma realização será repetida em todos eles.
+       As seeds continuam registradas nos resultados.</p>
+  </fieldset>
+
+  <p><label>Quantidade de simulações (episódios):
+    <input name="episodes" type="number" min="1" step="1" value="1" required>
+  </label></p>
+  <p>Cada episódio executa toda a configuração selecionada de forma independente.</p>
+  <p><label>Exibir interface gráfica do SUMO:
+    <select name="gui">
+      <option value="no" selected>Não</option>
+      <option value="yes">Sim</option>
+    </select>
+  </label></p>
+  <p><label>Perfil de métricas:
+    <select name="metrics_profile"><option>core</option><option>full</option></select>
+  </label></p>
+  <p><button id="run" type="submit" disabled>Run</button></p>
+</form>
+<p id="form-error" role="alert"></p>
+<p role="status" id="status">Status: Aguardando execução.</p>
+<p><a id="batch-link" target="outputs-frame" hidden>Consultar resultados e logs da execução</a></p>
+<hr>
+<h2>Outputs</h2>
+<p>
+  <button type="button" id="outputs-random" aria-pressed="true">Random</button>
+  <button type="button" id="outputs-metasettran" aria-pressed="false">MetaSettran</button>
+</p>
+<iframe id="outputs-frame" name="outputs-frame" title="Arquivos de outputs" src="/results/outputs-random/"></iframe>
+<p><button type="button" id="delete-results" disabled>Apagar resultados</button></p>
+<p id="delete-message" role="status"></p>
+
+<script>
+const get = id => document.getElementById(id);
+const form = get('simulation-form');
+let submitting = false;
+let deleting = false;
+let connected = false;
+let serverState = null;
+let variationError = '';
+let selectionError = '';
+let outputProfile = 'outputs-random';
+let revision = 0;
+
+function isFreeSelection() {
+  return get('demand-profile').value === 'metasettran' && get('selection-mode').value === 'free';
+}
+
+function groupSelectedSections(selected, grouping) {
+  const ordered = [...new Set(selected)].sort((a, b) => a - b);
+  if (!grouping) return ordered.map(index => [index]);
+  if (ordered.length === 56) return [ordered];
+  const included = new Set(ordered);
+  return ordered.filter(index => !included.has((index + 55) % 56)).map(start => {
+    const group = [];
+    for (let index = start; included.has(index); index = (index + 1) % 56) group.push(index);
+    return group;
+  });
+}
+
+function selectedSectionIndices() {
+  return [...document.querySelectorAll('[data-section]:checked')].map(input => Number(input.dataset.section));
+}
+
+function sectionSpan(start, count) {
+  const end = start + count;
+  const days = get('day').options;
+  const startDay = days[Math.floor(start / 8) % 7].text;
+  const endDay = days[Math.floor(end / 8) % 7].text;
+  const startTime = String(start % 8 * 3).padStart(2, '0') + ':00';
+  const endTime = String(end % 8 * 3).padStart(2, '0') + ':00';
+  const endLabel = Math.floor(start / 8) === Math.floor(end / 8) ? endTime : `${endDay}, ${endTime}`;
+  return `${startDay}, ${startTime}–${endLabel}${end >= 56 ? ' (semana seguinte)' : ''}`;
+}
+
+function buildWeeklyGrid() {
+  const header = document.createElement('tr');
+  const corner = document.createElement('th');
+  corner.textContent = 'Horário';
+  header.append(corner);
+  [...get('day').options].forEach((day, index) => {
+    const cell = document.createElement('th');
+    cell.scope = 'col';
+    const label = document.createElement('label');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.disabled = true;
+    checkbox.dataset.day = index;
+    checkbox.setAttribute('aria-label', `Selecionar todas as faixas de ${day.text}`);
+    checkbox.addEventListener('input', () => {
+      for (const input of document.querySelectorAll('[data-section]')) {
+        if (Math.floor(Number(input.dataset.section) / 8) === index) input.checked = checkbox.checked;
+      }
+      updateFields();
+    });
+    label.append(checkbox, ` ${day.text}`);
+    cell.append(label);
+    header.append(cell);
+  });
+  get('weekly-head').append(header);
+  for (let section = 0; section < 8; section += 1) {
+    const row = document.createElement('tr');
+    const heading = document.createElement('th');
+    const period = `${String(section * 3).padStart(2, '0')}:00–${String(section * 3 + 2).padStart(2, '0')}:59`;
+    heading.scope = 'row';
+    heading.textContent = period;
+    row.append(heading);
+    [...get('day').options].forEach((day, index) => {
+      const cell = document.createElement('td');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.disabled = true;
+      checkbox.dataset.section = index * 8 + section;
+      checkbox.setAttribute('aria-label', `${day.text}, ${period}`);
+      cell.append(checkbox);
+      row.append(cell);
+    });
+    get('weekly-body').append(row);
+  }
+}
+
+function updateSelection() {
+  const selected = selectedSectionIndices();
+  const grouping = get('group-consecutive').checked;
+  const groups = groupSelectedSections(selected, grouping);
+  get('selected-sections').value = selected.slice().sort((a, b) => a - b).join(',');
+  get('grouping-enabled').value = String(grouping);
+  get('selected-count').textContent = selected.length;
+  get('group-count').textContent = groups.length;
+  get('selected-groups').replaceChildren();
+  let number = 1;
+  for (const group of groups) {
+    const item = document.createElement('li');
+    item.append(`${sectionSpan(group[0], group.length)} (${group.length} faixa(s)).`);
+    const order = document.createElement('ol');
+    order.start = number;
+    for (let offset = 0; offset < group.length; offset += 1) {
+      const entry = document.createElement('li');
+      entry.textContent = sectionSpan(group[0] + offset, 1);
+      order.append(entry);
+      number += 1;
+    }
+    item.append(order);
+    get('selected-groups').append(item);
+  }
+  for (const input of document.querySelectorAll('[data-day]')) {
+    const count = selected.filter(index => Math.floor(index / 8) === Number(input.dataset.day)).length;
+    input.checked = count === 8;
+    input.indeterminate = count > 0 && count < 8;
+  }
+  selectionError = isFreeSelection() && !selected.length ? 'Selecione pelo menos uma faixa.' : '';
+  get('selection-error').textContent = selectionError;
+}
+
+function updateButtons() {
+  const busy = !connected || submitting || deleting || serverState?.status === 'running';
+  get('run').disabled = busy || Boolean(variationError) || Boolean(selectionError);
+  get('delete-results').disabled = busy;
+}
+
+function updateVariations() {
+  const free = isFreeSelection();
+  const sections = free ? selectedSectionIndices().length : Number(get('sections').value);
+  const text = get('variations').value.trim();
+  const values = text ? text.split(',').map(value => value.trim()) : [];
+  const count = values.filter(value => value !== '').length;
+  const validSections = Number.isInteger(sections) && sections >= 1 && sections <= 56;
+  get('variations-help').textContent = free
+    ? `Você selecionou ${sections} faixas. Informe exatamente ${sections} variações entre 1 e 25, na ordem numerada acima, ou deixe vazio para sorteio automático.`
+    : validSections ? (sections === 1
+    ? 'Informe 1 variação, com valor entre 1 e 25.'
+    : `Informe ${sections} variações, cada uma entre 1 e 25.`) : 'Selecione de 1 a 56 faixas.';
+  get('variations-count').textContent = `Variações informadas: ${count} de ${validSections ? sections : '?'}.`;
+  variationError = '';
+  if (get('demand-profile').value === 'metasettran' && text) {
+    if (values.some(value => !/^[0-9]+$/.test(value))) {
+      variationError = 'Informe somente números inteiros de 1 a 25 separados por vírgula, sem campos vazios.';
+    } else {
+      const invalid = values.find(value => Number(value) < 1 || Number(value) > 25);
+      if (invalid !== undefined) variationError = `A variação ${invalid} é inválida. Utilize valores entre 1 e 25.`;
+      else if (validSections && values.length !== sections) {
+        variationError = `Você selecionou ${sections} faixa(s), mas informou ${values.length} variação(ões). Informe exatamente ${sections} valores entre 1 e 25.`;
+      }
+    }
+  }
+  get('variations').setCustomValidity(variationError);
+  get('variations-error').textContent = variationError;
+  updateButtons();
+}
+
+function updateFields() {
+  const meta = get('demand-profile').value === 'metasettran';
+  get('random-options').hidden = meta;
+  get('random-options').disabled = meta;
+  get('meta-options').hidden = !meta;
+  get('meta-options').disabled = !meta;
+  const free = isFreeSelection();
+  get('consecutive-options').hidden = free;
+  get('free-options').hidden = !free;
+  for (const input of get('consecutive-options').querySelectorAll('input, select, button')) input.disabled = !meta || free;
+  for (const input of get('free-options').querySelectorAll('input, button')) input.disabled = !free;
+  const defined = !meta && get('termination').value === 'defined';
+  get('end-options').hidden = !defined;
+  get('end').disabled = !defined;
+  updateSelection();
+  updateVariations();
+
+  const sections = Number(get('sections').value);
+  if (!Number.isInteger(sections) || sections < 1 || sections > 56) {
+    get('selected-period').textContent = 'Informe de 1 a 56 faixas.';
+    return;
+  }
+  const day = get('day');
+  const start = get('start').value;
+  const end = day.selectedIndex * 24 + Number(start.slice(0, 2)) + sections * 3;
+  const endDay = day.options[Math.floor(end / 24) % 7].text;
+  const endTime = String(end % 24).padStart(2, '0') + ':00';
+  const nextWeek = end >= 168 ? ' (semana seguinte)' : '';
+  get('selected-period').textContent = `Período selecionado: ${day.selectedOptions[0].text} ${start} até ${endDay} ${endTime}${nextWeek}; ${sections * 3} horas de geração por episódio.`;
+}
+
+function refreshOutputs(url = `/results/${outputProfile}/`) {
+  const profile = url.split('/')[2];
+  if (['outputs-random', 'outputs-metasettran'].includes(profile)) outputProfile = profile;
+  for (const name of ['outputs-random', 'outputs-metasettran']) {
+    get(name).setAttribute('aria-pressed', String(name === outputProfile));
+  }
+  get('outputs-frame').src = url;
+}
+for (const name of ['outputs-random', 'outputs-metasettran']) {
+  get(name).addEventListener('click', () => refreshOutputs(`/results/${name}/`));
+}
+get('batch-link').addEventListener('click', event => {
+  event.preventDefault();
+  refreshOutputs(get('batch-link').getAttribute('href'));
+});
+form.addEventListener('input', updateFields);
+form.addEventListener('change', updateFields);
+for (const [id, checked] of [['select-all-sections', true], ['clear-sections', false]]) {
+  get(id).addEventListener('click', () => {
+    for (const input of document.querySelectorAll('[data-section]')) input.checked = checked;
+    updateFields();
+  });
+}
+for (const [id, sections] of [['whole-day', 8], ['whole-week', 56]]) {
+  get(id).addEventListener('click', () => {
+    get('start').value = '00:00';
+    get('sections').value = sections;
+    updateFields();
+  });
+}
+
+function showState(state) {
+  const changed = !serverState || serverState.status !== state.status || serverState.results_url !== state.results_url;
+  serverState = state;
+  connected = true;
+  const messages = {
+    idle: 'Aguardando execução.',
+    running: 'Carregando... Simulação em execução',
+    completed: 'Simulação concluída',
+    failed: 'Erro na simulação: ' + (state.error || ''),
+    interrupted: 'Simulação interrompida: ' + (state.error || '')
+  };
+  get('status').textContent = 'Status: ' + messages[state.status];
+  updateButtons();
+  get('batch-link').hidden = state.status === 'idle';
+  get('batch-link').href = state.results_url;
+  if (changed && state.status !== 'idle') refreshOutputs(state.results_url);
+}
+
+async function poll() {
+  const version = revision;
+  try {
+    const response = await fetch('/status', {cache: 'no-store'});
+    if (!response.ok) throw new Error('Falha ao consultar estado.');
+    const state = await response.json();
+    if (!submitting && !deleting && version === revision) showState(state);
+  } catch (error) {
+    if (!submitting && !deleting && version === revision) {
+      connected = false;
+      updateButtons();
+      get('status').textContent = 'Sem conexão com o servidor. Consultando novamente...';
+    }
+  } finally {
+    setTimeout(poll, 1500);
+  }
+}
+
+form.addEventListener('submit', async event => {
+  event.preventDefault();
+  updateSelection();
+  updateVariations();
+  if (submitting || get('run').disabled) return;
+  get('form-error').textContent = '';
+  submitting = true;
+  revision += 1;
+  updateButtons();
+  get('status').textContent = 'Validando e iniciando simulação...';
+  try {
+    const response = await fetch('/run', {
+      method: 'POST', body: new URLSearchParams(new FormData(form))
+    });
+    const state = await response.json();
+    if (!response.ok) get('form-error').textContent = state.error;
+    else showState(state);
+  } catch (error) {
+    get('form-error').textContent = 'Falha de comunicação. Aguarde a consulta de estado antes de tentar novamente.';
+  } finally {
+    submitting = false;
+    connected = false;
+    updateButtons();
+    // O polling confirma o estado antes de liberar outra submissão.
+  }
+});
+
+get('delete-results').addEventListener('click', async () => {
+  if (get('delete-results').disabled) return;
+  if (!confirm('Os resultados anteriores de Random e MetaSettran serão excluídos permanentemente. Deseja apagar os resultados?')) return;
+  deleting = true;
+  revision += 1;
+  updateButtons();
+  get('delete-message').textContent = 'Apagando resultados...';
+  try {
+    const response = await fetch('/delete-results', {
+      method: 'POST', body: new URLSearchParams({confirmation: 'delete'})
+    });
+    const result = await response.json();
+    get('delete-message').textContent = response.ok ? result.message : result.error;
+  } catch (error) {
+    get('delete-message').textContent = 'Falha de comunicação ao apagar resultados. Consulte os arquivos antes de tentar novamente.';
+  } finally {
+    deleting = false;
+    connected = false;
+    updateButtons();
+    refreshOutputs();
+  }
+});
+buildWeeklyGrid();
+updateFields();
+poll();
+</script>
+</body>
+</html>

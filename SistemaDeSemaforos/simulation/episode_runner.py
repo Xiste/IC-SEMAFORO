@@ -31,6 +31,7 @@ from ..demand.random_demand_generator import (
 )
 from ..metrics.metrics_storage import save_entities, save_episode
 from ..metrics.sumo_output_configuration import prepare_outputs
+from .metasettran_selection import group_sections
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -218,13 +219,29 @@ def run_episodes(
     variations: list[int] | None = None,
     drain_limit: float | None = None,
     spatial_scenario: str | None = None,
+    selected_sections: list[int] | None = None,
+    consecutive_grouping_enabled: bool = False,
 ) -> Path:
-    """Gera episódios em um lote exclusivo e grava os resultados de cada um."""
+    """Gera episódios num lote exclusivo; seleção livre repete seus grupos em ordem."""
     # Validar antes de sortear seed, gerar demanda ou criar qualquer episódio.
     selection = _validate_signal_profile(signal_profile, settran_plan, net_file,
                                          settran_intersections)
     if demand_profile not in {"random", "metasettran"}:
         raise ValueError("demand_profile deve ser random ou metasettran.")
+    if not isinstance(consecutive_grouping_enabled, bool):
+        raise ValueError("consecutive_grouping_enabled deve ser booleano.")
+    groups = None
+    if selected_sections is not None:
+        if demand_profile != "metasettran" or any(
+                value is not None for value in (day, start, sections, variation)):
+            raise ValueError("Seleção livre exige MetaSettran e não aceita dia/início/faixas consecutivas ou variation.")
+        groups = group_sections(selected_sections, consecutive_grouping_enabled)
+        if variations is not None and (not isinstance(variations, (list, tuple))
+                                       or len(variations) != len(selected_sections)):
+            raise ValueError("Informe exatamente uma variação para cada faixa selecionada.")
+        day, start, sections = (groups[0][key] for key in ("day", "start", "sections"))
+    elif consecutive_grouping_enabled:
+        raise ValueError("O controle de agrupamento exige uma seleção livre.")
     demand_options = None
     if demand_profile == "random":
         if any(value is not None for value in (day, start, sections, variation, master_seed,
@@ -236,10 +253,11 @@ def run_episodes(
                           "start": "15:00" if start is None else start,
                           "sections": 1 if sections is None else sections,
                           "variation": variation,
-                          "master_seed": master_seed, "variations": variations}
+                          "master_seed": master_seed,
+                          "variations": (variations[:sections] if groups and variations is not None else variations)}
         # Uma faixa sem opções mantém a variação histórica; uma sequência sorteia
         # cada contexto. A validação não consome aleatoriedade nem cria saídas.
-        if demand_options["sections"] == 1 and all(
+        if groups is None and demand_options["sections"] == 1 and all(
                 value is None for value in (variation, master_seed, variations)):
             demand_options["variation"] = 1
         validation_options = dict(demand_options)
@@ -258,6 +276,20 @@ def run_episodes(
             raise ValueError("drain_limit deve ser um número inteiro de segundos, finito e não negativo.")
         duration = 10800.0 * demand_options["sections"]
         end = duration + drain_limit
+    plans = [demand_options]
+    if groups is not None:
+        plans = []
+        offset = 0
+        for group in groups:
+            plan = {**demand_options, **{key: group[key] for key in ("day", "start", "sections")}}
+            plan["variations"] = None if variations is None else variations[offset:offset + group["sections"]]
+            offset += group["sections"]
+            validation = {key: plan[key] for key in (
+                "day", "start", "sections", "variation", "master_seed", "variations")}
+            if master_seed is None and variations is None:
+                validation["master_seed"] = 0
+            resolve_contexts(**validation)
+            plans.append(plan)
     if isinstance(episodes, bool) or not isinstance(episodes, int) or episodes < 1:
         raise ValueError("episodes deve ser um inteiro maior que zero.")
     if (demand_options is not None and demand_options["variation"] is not None
@@ -290,28 +322,45 @@ def run_episodes(
     batch_dir.mkdir(parents=True, exist_ok=False)
     context = {}
     for episode in range(1, episodes + 1):
-        episode_demand = None
-        if demand_options is not None:
-            episode_demand = dict(demand_options)
-            if demand_options["variation"] is not None:
-                episode_demand["variation"] += episode - 1
-            else:
-                # A primeira execução usa a seed informada. As demais recebem
-                # seeds derivadas, sem depender de estado global ou de semáforos.
-                episode_master = batch_master_seed
-                if episode > 1 and variations is None:
-                    digest = hashlib.sha256(
-                        f"metasettran-batch-v1:{batch_master_seed}:{episode}".encode()).digest()
-                    episode_master = int.from_bytes(digest[:8], "big") & (2**63 - 1)
-                episode_demand["master_seed"] = episode_master
-            resolved = resolve_contexts(**{key: episode_demand[key] for key in (
-                "day", "start", "sections", "variation", "master_seed", "variations")})
-            if episode_demand["variation"] is None:
-                episode_demand["variations"] = [item["variation"] for item in resolved["contexts"]]
-            episode_demand["_context_selection"] = {
-                **resolved, "batch_master_seed": batch_master_seed, "batch_episode": episode}
-        _run_episode(net_file, batch_dir, episode, episodes, gui, duration, period,
-                     end, metrics_profile, context, signal_profile, selection, episode_demand)
+        for group_index, plan in enumerate(plans, 1):
+            episode_demand = None
+            if plan is not None:
+                episode_demand = dict(plan)
+                if plan["variation"] is not None:
+                    episode_demand["variation"] += episode - 1
+                else:
+                    # Mantém a derivação histórica entre episódios. Grupos livres
+                    # adicionais recebem suas próprias seeds, sempre registradas.
+                    episode_master = batch_master_seed
+                    if episode > 1 and variations is None:
+                        digest = hashlib.sha256(
+                            f"metasettran-batch-v1:{batch_master_seed}:{episode}".encode()).digest()
+                        episode_master = int.from_bytes(digest[:8], "big") & (2**63 - 1)
+                    if groups is not None and group_index > 1 and variations is None:
+                        digest = hashlib.sha256(
+                            f"metasettran-group-v1:{episode_master}:{group_index}".encode()).digest()
+                        episode_master = int.from_bytes(digest[:8], "big") & (2**63 - 1)
+                    episode_demand["master_seed"] = episode_master
+                resolved = resolve_contexts(**{key: episode_demand[key] for key in (
+                    "day", "start", "sections", "variation", "master_seed", "variations")})
+                if plan["variation"] is None:
+                    episode_demand["variations"] = [item["variation"] for item in resolved["contexts"]]
+                episode_demand["_context_selection"] = {
+                    **resolved, "batch_master_seed": batch_master_seed, "batch_episode": episode}
+                episode_demand["_execution_selection"] = {
+                    "selection_mode": "free" if groups is not None else "consecutive",
+                    "consecutive_grouping_enabled": consecutive_grouping_enabled if groups is not None else True,
+                    "execution_type": "consecutive_group" if plan["sections"] > 1 else "independent",
+                    "selected_sections": [{"day": item["day"], "start": item["start"]}
+                                          for item in resolved["contexts"]],
+                }
+                if groups is not None:
+                    episode_demand["_execution_selection"].update(
+                        selection_group_index=group_index, selection_group_count=len(groups))
+                    duration = 10800.0 * plan["sections"]
+                    end = duration + drain_limit
+            _run_episode(net_file, batch_dir, episode, episodes, gui, duration, period,
+                         end, metrics_profile, context, signal_profile, selection, episode_demand)
     return batch_dir
 
 
@@ -331,6 +380,11 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
         seed = demand_options["_context_selection"]["seed"]
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     episode_id = f"{timestamp}_seed-{seed}_{uuid4().hex[:8]}"
+    if demand_options is not None:
+        execution_selection = demand_options.get("_execution_selection", {})
+        if execution_selection.get("selection_mode") == "free":
+            episode_id = (f"episode-{episode:04d}_group-{execution_selection['selection_group_index']:02d}_"
+                          f"{episode_id}")
     directory = output_dir / episode_id
     # exist_ok=False também protege contra a improvável colisão de identificadores.
     directory.mkdir(parents=True, exist_ok=False)
@@ -359,6 +413,7 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
     entities = {}
     if demand_options is not None:
         execution["context_selection"] = demand_options["_context_selection"]
+        execution.update(demand_options.get("_execution_selection", {}))
     if selection is not None:
         execution["signal_configuration"] = {
             "mode": "explicit_fixed_plan", "plan_id": selection["plan_id"],

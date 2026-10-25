@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 import gzip
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -12,6 +13,8 @@ from SistemaDeSemaforos.metrics.episode_metrics_collector import (
     _metasettran_boundary_continuity,
 )
 from SistemaDeSemaforos.metrics.sumo_output_configuration import prepare_outputs
+from SistemaDeSemaforos.metrics.metrics_storage import save_entities
+from scripts.audit_results import records_valid
 
 
 class MetaSettranValidationTests(unittest.TestCase):
@@ -319,8 +322,32 @@ class MetaSettranValidationTests(unittest.TestCase):
         self.assertEqual(vehicles["incomplete"]["scheduled_departure_seconds"], 0)
         self.assertEqual(vehicles["incomplete"]["actual_departure_seconds"], 10801)
         self.assertEqual(vehicles["incomplete"]["insertion_delay_seconds"], 10801)
-        self.assertIsNone(vehicles["undeparted"]["actual_departure_seconds"])
-        self.assertIsNone(vehicles["undeparted"]["insertion_delay_seconds"])
+        self.assertNotIn("actual_departure_seconds", vehicles["undeparted"])
+        self.assertNotIn("insertion_delay_seconds", vehicles["undeparted"])
+
+    def test_full_entities_persist_uninserted_trips_without_inventing_measurements(self):
+        expected_validation = self.collect()
+        vehicles = {}
+        validation = self.collect(vehicles=vehicles)
+        self.assertEqual(validation, expected_validation)
+        save_entities(self.directory, {"vehicles": vehicles})
+        with gzip.open(self.directory / "entities.json.gz", "rt", encoding="utf-8") as stream:
+            document = json.load(stream)
+        self.assertEqual(document["schema_version"], 1)
+        restored = {}
+        for identifier, records in document["entities"]["vehicles"].items():
+            records_valid(records, set())
+            restored[identifier] = {record["metric_name"]: record["value"] for record in records}
+        self.assertEqual(restored, vehicles)
+        self.assertEqual(restored["undeparted"], {
+            "metasettran_trip_status": "not_inserted", "experienced_teleport": False,
+            "scheduled_departure_seconds": 0,
+        })
+        for identifier, departure in (("natural", 0), ("teleported", 1),
+                                      ("incomplete", 10801), ("removed", 5)):
+            with self.subTest(identifier=identifier):
+                self.assertEqual(restored[identifier]["actual_departure_seconds"], departure)
+                self.assertEqual(restored[identifier]["insertion_delay_seconds"], departure)
 
     def test_route_incidence_counts_overlapping_observations_as_unique_trips(self):
         self.add_timed_sensor_routes()

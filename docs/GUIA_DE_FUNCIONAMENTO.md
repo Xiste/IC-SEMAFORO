@@ -21,8 +21,122 @@ sumo --version
 make test
 ```
 
-Para abrir a interface visual, instale também `sumo-gui` e use uma sessão gráfica.
+Para abrir a interface visual do SUMO, instale também `sumo-gui` e use uma sessão gráfica.
 Todos os targets Make impedem a criação de caches Python.
+
+### Interface local no navegador
+
+Na raiz do projeto, execute `make interface` e abra <http://127.0.0.1:8000>.
+O endereço também aparece no terminal. `make web` continua como alias.
+Também é possível usar
+`python3 -B -m SistemaDeSemaforos.simulation.web_interface --port 8000`.
+A interface usa somente a biblioteca padrão Python e HTML/JavaScript simples;
+não precisa de `sumo-gui`, instalação de pacotes, login ou banco de dados.
+
+Escolha a demanda, configure seus campos, a quantidade de episódios e `core/full`,
+então pressione **Run**. Só `current` está disponível. `random` mantém 7200 s de
+partidas, período 1,5 s e término natural por padrão; o instante final só é enviado
+quando escolhido. MetaSettran aceita dia, início e 1–56 faixas consecutivas.
+**Dia inteiro** e **Semana inteira** preenchem 00:00 e 8/56 faixas, mantendo o dia
+selecionado. O período mostrado é a janela civil de geração de cada episódio;
+o executor mantém 2700 s de escoamento apenas no final da seleção combinada.
+
+**Modo de execução MetaSettran** mantém **Consecutiva** como padrão, com os mesmos
+campos e limites. **Seleção livre de faixas** apresenta a grade de sete dias e oito
+faixas, com seleção de todas, limpeza e seleção por dia. **Agrupar faixas
+consecutivas** começa desmarcado: cada faixa marcada é uma execução independente,
+mesmo quando adjacente a outra. Marcado, reúne somente faixas imediatamente
+adjacentes, inclusive domingo 21h → segunda 00h. Faixas no mesmo horário em dias
+diferentes não são adjacentes. O resumo mostra os grupos e numera todas as faixas
+na ordem utilizada para associar as variações manuais.
+
+No agrupamento, os grupos são ordenados pelo início na semana; dentro de cada
+grupo segue-se a cronologia, incluindo a virada semanal. Por exemplo, segunda
+06h/09h e domingo 21h/segunda 00h aparecem como dois grupos, nessa ordem, com quatro
+variações manuais. Uma semana completa agrupada começa segunda 00h e usa uma única
+execução de 168h; desmarcado o agrupamento, são 56 execuções independentes.
+Cada episódio repete todos os grupos em sequência: três grupos e dois episódios
+resultam em seis execuções. Cada execução usa o runner existente e recebe seus
+próprios 45 minutos finais de escoamento. Veículos e transições permanecem somente
+dentro de um grupo; não são geradas partidas para preencher lacunas da seleção.
+
+Em **Exibir interface gráfica do SUMO**, **Não** (padrão) executa `sumo` e
+**Sim** executa a janela nativa `sumo-gui`, que requer uma sessão gráfica.
+A escolha vale para todos os episódios do lote; o executor existente inicia a
+simulação automaticamente e fecha a janela ao término de cada execução, incluindo
+todos os grupos da seleção livre.
+
+MetaSettran sorteia uma seed mestra com `secrets.randbits(63)`, o mesmo mecanismo
+do runner, e a envia a `run_episodes`, inclusive para uma única faixa. Isso evita
+o default legado V1 e deixa o sorteio e a derivação das seeds de cada episódio
+inteiramente no executor. A seed mestra do lote, as de cada episódio, as variações
+e as seeds efetivas ficam no `metrics.json` existente. A página não oferece
+entrada manual de seed mestra. Em **Variações por faixa (opcional)**, informe
+exatamente um inteiro 1–25 por faixa, separado por vírgula. A página indica a
+quantidade exigida e a quantidade digitada. Sequências inválidas bloqueiam o Run;
+o backend também valida quantidade, faixa dos valores e separadores.
+No modo livre, a quantidade é o total de faixas marcadas, não o número de grupos;
+siga a ordem numerada do resumo, que pode mudar ao marcar o agrupamento.
+Com lista explícita e vários episódios, o executor repete a mesma realização.
+Com o campo vazio, cada lote recebe uma nova seed mestra. O suporte a seed explícita
+no backend Python permanece disponível, sem controle na página. MetaSettran continua
+experimental, com as limitações científicas descritas neste guia.
+
+O agrupador isolado `simulation/metasettran_selection.py` converte a grade em
+`day/start/sections`. O runner percorre episódio → grupo, sem alterar geração,
+transições ou coleta. Mantém a derivação histórica das seeds entre episódios;
+grupos livres adicionais recebem seeds derivadas da seed do episódio e do índice
+do grupo, registradas em `execution.context_selection`. Os parâmetros científicos
+e as 25 variações não são modificados.
+
+O módulo `simulation/web_interface.py` valida o formulário e chama a função pública
+`run_episodes` numa thread. Há somente um lote ativo por servidor, sem fila;
+`/status` é consultado a cada 1,5 s. Mantenha apenas uma instância do servidor.
+O status mostra execução/conclusão/erro, sem porcentagem ou episódio presumido.
+Fechar a aba não cancela o lote; reabri-la recupera o estado enquanto o servidor
+continua ativo. Ctrl+C encerra o atendimento HTTP e aguarda o lote terminar.
+Não há cancelamento pela interface nem recuperação do estado em memória após
+reiniciar o processo. Uma interrupção forçada pode deixar `running` nos registros;
+esse valor permanece consultável no JSON, sem declarar uma conclusão.
+
+**Outputs** tem duas abas simples, **Random** e **MetaSettran**, que navegam pelas
+árvores `outputs/outputs-random/` e `outputs/outputs-metasettran/`:
+lote → episódio → arquivos, incluindo lotes anteriores e arquivos parciais.
+No modo livre, as pastas de execução incluem `episode-0001_group-01_…`, preservando
+timestamp, seed e identificador exclusivo. Cada pasta possui seu `metrics.json`.
+Em `execution`, os metadados `selection_mode`, `consecutive_grouping_enabled`,
+`execution_type` e `selected_sections` identificam o modo e os dias/inícios
+efetivamente executados juntos. Uma faixa isolada tem tipo `independent`, mesmo
+com agrupamento marcado; duas ou mais faixas contínuas têm `consecutive_group`.
+O modo tradicional registra `selection_mode: "consecutive"` e agrupamento
+habilitado. O modo livre também registra `selection_group_index` e
+`selection_group_count`; `context_selection.batch_episode` identifica a repetição.
+As métricas de grupos independentes não são agregadas entre si.
+No sucesso há link direto para o lote devolvido pelo executor. Em erro, o link
+leva ao perfil de demanda: procure o lote recente e seus logs, pois o runner não
+retorna o diretório quando lança uma exceção. Não se atribuem pastas por heurística.
+A listagem é atualizada ao terminar a execução. JSONs de qualquer schema são
+mostrados completos e indentados, em texto com rolagem dentro da própria página,
+sem tabelas ou cálculos. Logs e outros textos UTF-8 também podem ser consultados;
+binários são baixados. **Baixar original** conserva os bytes do arquivo em disco.
+JSON inválido ou incompleto é exibido como texto original, com uma indicação.
+
+**Apagar resultados** pede confirmação explícita da exclusão permanente nos dois
+perfis. A limpeza é manual e fica bloqueada durante um lote ativo neste servidor;
+usa o mesmo lock do início de execução. O backend aceita apenas a confirmação,
+sem caminhos enviados pelo navegador. Preserva as duas pastas-base, arquivos
+versionados no índice ou no HEAD do Git, links simbólicos e todos os arquivos fora
+dessas árvores. Não percorre links e recusa pastas-base simbólicas. Se não conseguir
+consultar o Git, recusa a exclusão antes de remover arquivos. Após a limpeza,
+atualiza a listagem. Os testes de exclusão usam somente repositórios temporários.
+
+A leitura fica restrita às duas árvores previstas; links simbólicos não são
+publicados. O servidor escuta apenas em `127.0.0.1`, verifica a origem local das
+requisições e não aceita comandos, opções extras ou caminhos de execução no formulário.
+Arquivos não podem ser editados. A exclusão exige o botão e sua confirmação;
+não existe limpeza automática. O runner mantém a criação de
+diretórios exclusivos e a política existente de retenção. Os testes HTTP, de
+validação e de integração da interface fazem parte de `make test`, sem SUMO real.
 
 ### Comandos do dia a dia
 
@@ -49,7 +163,8 @@ Esse comando serve para conferir a instalação. Os experimentos padrão continu
 com janela de demanda de **7.200 s**, período de partidas de **1,5 s** e término
 natural. Escolher `core` ou `full` altera somente as observações.
 
-A interface Make tem três comandos: `run-random` executa; `test` verifica;
+A interface Make tem cinco comandos: `interface` e seu alias `web` abrem o servidor local;
+`run-random` executa pelo terminal; `test` verifica;
 `demand-random` gera somente viagens/rotas quando elas forem necessárias
 separadamente. As opções estão no mesmo runner:
 
@@ -167,15 +282,19 @@ rede física única + random/metasettran + current/settran + core/full
 | `SistemaDeSemaforos/demand/random_demand_generator.py` | Geração de viagens e rotas. |
 | `SistemaDeSemaforos/demand/metasettran_calibration.py` | Auditoria das contagens `car`, curvas temporais e separação de datas. |
 | `SistemaDeSemaforos/demand/metasettran_demand_generator.py` | Partidas reproduzíveis, duarouter e verificação das rotas entre portais. |
+| `SistemaDeSemaforos/demand/metasettran_transitions.py` | Harmonização temporal e conservação entre faixas consecutivas. |
 | `SistemaDeSemaforos/demand/metasettran_spatial.json` | Cadastro geográfico de portais e corredores, pesos iniciais e hipóteses dos sensores. |
 | `SistemaDeSemaforos/simulation/episode_runner.py` | Episódios, comandos, ciclo de vida e resultados. |
+| `SistemaDeSemaforos/simulation/metasettran_selection.py` | Ordenação e agrupamento opcional da seleção semanal livre. |
+| `SistemaDeSemaforos/simulation/web_interface.py`, `web_interface.html` | Servidor local e formulário; execução, acompanhamento e consulta dos outputs. |
 | `SistemaDeSemaforos/simulation/settran_configuration.py` | Validação e conversão de planos SETTRAN. |
 | `SistemaDeSemaforos/metrics/sumo_output_configuration.py` | Fontes nativas solicitadas por perfil. |
 | `SistemaDeSemaforos/metrics/episode_metrics_collector.py` | Leitura XML e cálculos das métricas. |
 | `SistemaDeSemaforos/metrics/metric_presentation.py` | Significados, unidades e apresentação. |
 | `SistemaDeSemaforos/metrics/metrics_storage.py` | Contrato e gravação dos resultados. |
 | `docs/settran_programs.json` | Planos normalizados e contrato operacional SETTRAN. |
-| `scripts/`, `tests/` | Manutenção e validação, fora do caminho normal de execução. |
+| `scripts/` | Auditorias e benchmark; `audit_settran.py` também valida a fonte no caminho de execução SETTRAN. |
+| `tests/` | Testes automatizados de demanda, simulação, interface e métricas. |
 | `outputs/` | Lotes de resultados gerados. |
 
 O fluxo usa **CLI e XML**, com processos aguardados via `subprocess.run`.
@@ -455,6 +574,51 @@ Os alvos medidos permanecem intactos; `experimental_target_passages` e projeçõ
 reduzidas ficam separados. Não se reajustam pesos para recuperar artificialmente
 a contagem completa com menos veículos.
 
+**Redução lateral compartilhada (2026-10-24).** O modelo
+`v4.3.2-utc-lateral-10` aplica a hipótese experimental autorizada de redução de
+10% das partidas com origem lateral em todos os 56 contextos e suas 25 variações,
+inclusive nas seleções cronológicas. A configuração única é
+`regional_demand.lateral_origin_reduction` em `metasettran_spatial.json`.
+Os grupos periféricos `rondon_sudoeste` e `rondon_nordeste` ficam protegidos;
+todas as demais origens são laterais para essa regra, mesmo quando o percurso
+posteriormente utiliza a Rondon. A classificação é por portal de origem,
+independente de travessia integral/parcial e da incidência dos sensores.
+
+Primeiro ocorre a retenção regional de 85% já aprovada e a escolha OD original.
+Depois cada faixa retém `floor(0.9 * N_lateral)` partidas laterais mediante amostra
+sistemática determinística na agenda ordenada. As partidas das extremidades da
+Rondon permanecem completas; IDs, horários, atributos e percursos das demais viagens
+retidas também são preservados. Viagens removidas não são redistribuídas nem
+regeneradas para compensar contagens. O percentual é uma decisão experimental,
+não uma medição de excesso nos acessos ou garantia de melhora operacional.
+
+Terminal, interface web e execução de dez épocas usam o mesmo gerador. O manifesto
+`lateral_origin_reduction` registra referência, total retido e orçamento lateral
+por contexto; `volume_recalibration` continua descrevendo separadamente a etapa de
+15%. Expectativas por rota, portal, intervalo e observação incluem a retenção por
+origem. Nas execuções combinadas a intensidade efetiva esperada é
+`taxa_referência(t) * soma(probabilidade_rota(t) * retenção_origem)`, contínua porque
+a interpolação OD é preservada. Os diagnósticos de conservação da ponte temporal
+permanecem identificados como referência anterior à redução lateral; contagens nas
+fronteiras e totais finais refletem as viagens efetivamente retidas.
+
+Agendas pareadas explícitas preservam sua população e não recebem nova redução;
+reutilizar o XML entre controladores também não o modifica. Resultados e XMLs
+anteriores mantêm sua versão original. A regra vale para novas gerações, sem
+materializar 1.400 XMLs nem modificar os dados-fonte.
+
+Validação desta regra: **343 testes aprovados** (109 de demanda, 157 de simulação,
+77 de métricas). O contrato de seleção foi exercitado em 56×25 agendas de teste,
+incluindo reprodução e preservação temporal. Na rede real foram comparadas as
+gerações terça 15–18 V7/V8 e a semana completa com seed mestra `20261022`.
+Nesta semana, 449.170 partidas passaram a 432.463: origens laterais
+166.812→150.105, extremidades da Rondon 282.358→282.358. As 56 faixas respeitaram
+individualmente o arredondamento; todos os IDs, horários e percursos retidos
+coincidiram com a referência, com zero rotas geradas inválidas.
+São verificações de geração, **sem nova execução SUMO** ou comprovação de melhora
+operacional. XMLs, configuração de referência e demais temporários desses testes
+foram removidos; resultados anteriores foram preservados.
+
 Esse ajuste é uma projeção de planejamento: não conhece filas, atraso de inserção
 ou espera nos sinais. Somente as passagens físicas SUMO podem validar o fluxo realizado.
 O ajuste considera a janela inteira: uma seção isolada pode receber escolhas OD
@@ -569,7 +733,12 @@ fluxos nas vias sem medição e operação real de `current` continuam incertos.
 Aprovação científica exige distribuição justificável, resultados interpretáveis e
 verificação independente, não ausência artificial de filas ou 100% de chegadas.
 
-**Validação vigente — UTC e redução experimental de 15% (22/10/2026).**
+**Validação de referência — UTC e redução experimental de 15% (22/10/2026).**
+Os números e hashes desta comparação e da integração cronológica abaixo antecedem
+a redução lateral de 24/10/2026. São registros metodológicos dessas versões, não
+valores esperados para novas gerações. Os links de episódios dependem dos outputs
+locais, que não são versionados; a ausência de um arquivo impede sua reconferência.
+
 A referência A conserva relógio e escala da v4.3.1; B converte UTC sem mudar o
 coeficiente regional; C acrescenta a redução de 15%. Não foram alterados rede,
 sinais oficiais, parâmetros físicos ou regras de teleporte. A reprodução de A
@@ -1016,7 +1185,11 @@ cobertura da coleta. Os resultados não dependem de outro arquivo de configuraç
 No `core`, `entity_metrics_file` é `null`. No `full`, aponta para
 `entities.json.gz` (schema 1), com `vehicles`, `lanes`, `edges`, `traffic_lights`,
 `approaches` e `intersections` sob `entities`; identifique cada medida por
-escopo + ID + chave. Os arquivos em `raw/` guardam as observações nativas,
+escopo + ID + chave. Em MetaSettran, veículos não inseridos conservam
+`metasettran_trip_status: "not_inserted"` e `scheduled_departure_seconds`;
+`actual_departure_seconds` e `insertion_delay_seconds` ficam ausentes porque não
+houve inserção observada. Não se atribui zero a essas medidas ausentes.
+Os arquivos em `raw/` guardam as observações nativas,
 incluindo rotas realizadas com tempos de saída. O CSV de métricas indica onde
 encontrar os 80 indicadores selecionados; o coletor também produz outros
 agregados e registros de amostragem. Em falhas, consulte o erro e os logs;
@@ -1059,6 +1232,10 @@ do pipeline, não a calibração do cenário.
 - A fila global soma comprimentos por faixa em cada passo; não é uma fila
   física única. Passos observados sem fila contribuem zero. Não some medidas
   de vias às das próprias faixas: representam o mesmo tráfego.
+- Pendência de amostragem no `full`: um comprimento de fila inválido é excluído
+  do agregado global, mas pode entrar como zero nos agregados de faixa/interseção.
+  Revisar esse caso exige definir o tratamento de observações inválidas e comparar
+  as métricas; resultados existentes não são recalculados.
 - No `full`, velocidade ponderada usa veículo-segundos; ruído usa média
   energética e direção usa média circular. Estados/sinais são categorias.
   Durações de fase podem incluir fragmentos nas bordas do episódio. Emissões
@@ -1085,8 +1262,10 @@ python3 -B scripts/audit_results.py --episodes outputs/outputs-random/LOTE
 ```
 
 Os testes cobrem demanda, runner, armazenamento, contrato SETTRAN, infraestrutura e
-métricas; não abrem episódios SUMO. Os checks de manutenção usam a instalação
-SUMO. A auditoria de resultados verifica contratos, tipos e completude; não substitui a interpretação científica. Para validar a execução
+métricas; não abrem episódios SUMO. Os dois comandos `--check` acima conferem os
+arquivos existentes sem regravá-los nem iniciar SUMO. Regenerar as correções físicas
+é uma operação separada que exige `netconvert` da versão indicada no script.
+A auditoria de resultados verifica contratos, tipos e completude; não substitui a interpretação científica. Para validar a execução
 real, use a prova curta explicitamente parametrizada da seção 1.
 
 O check SETTRAN verifica a fonte e o contrato; não declara planos reais prontos.

@@ -4975,6 +4975,15 @@
       "method": "Keep floor(0.85*N) systematically spaced positions of the unreduced stochastic departure agenda. Retained IDs, departure times and OD routes are unchanged; no repeated scaling.",
       "scale_reference": "Freeze original v4.3.1 car reference values to prevent UTC relabeling from silently changing the regional coefficient.",
       "observations": "Raw car curves remain unchanged comparison references; reduced passages are not empirically calibrated counts."
+    },
+    "lateral_origin_reduction": {
+      "version": "lateral-origins-v1",
+      "retained_fraction": 0.9,
+      "protected_boundary_groups": ["rondon_sudoeste", "rondon_nordeste"],
+      "scope": "All 56 contexts, all 25 variations and chronological selections; all origins outside the two protected Rondon boundary groups, including routes that later use Rondon.",
+      "method": "After the existing 15% regional reduction and OD selection, retain floor(0.9*N_lateral) systematically spaced lateral departures per context. Never redistribute removed trips or redraw retained routes.",
+      "basis": "User-authorized experimental sensitivity reduction. Local sensor observations do not identify boundary inflows or establish this percentage as measured.",
+      "paired_schedule": "Explicit paired agendas bypass both reductions to preserve their fixed population. Existing route files reused between controllers are never reduced again."
     }
   },
   "route_templates": [

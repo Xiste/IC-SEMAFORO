@@ -4,7 +4,7 @@ export PYTHONDONTWRITEBYTECODE := 1
 DEMAND_ARGS ?=
 RUN_ARGS ?=
 
-.PHONY: demand-random run-random test
+.PHONY: demand-random run-random web interface test
 
 # Prepara viagens/rotas avulsas, sem iniciar SUMO.
 demand-random:
@@ -13,6 +13,10 @@ demand-random:
 # Gera demanda, simula e grava resultados; RUN_ARGS aceita --episodes e --metrics-profile.
 run-random:
 	@$(PYTHON) -m SistemaDeSemaforos.simulation.episode_runner $(RUN_ARGS)
+
+# Interface local no navegador, com execução em segundo plano.
+web interface:
+	@$(PYTHON) -m SistemaDeSemaforos.simulation.web_interface
 
 # Testes automatizados sem iniciar episódios SUMO.
 test:

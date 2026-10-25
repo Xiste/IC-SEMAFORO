@@ -415,6 +415,135 @@ class MetaSettranTests(unittest.TestCase):
                 for cut in range(0, count, max(1, count//20)):
                     self.assertLess(abs(sum(i < cut for i in selected) - cut*len(selected)/count), 1.000001)
 
+    def enable_lateral_reduction(self):
+        self.model["regional_demand"]["volume_recalibration"] = {"retained_fraction": .85}
+        self.model["regional_demand"]["lateral_origin_reduction"] = {
+            "retained_fraction": .9, "protected_boundary_groups": ["entry_a"]}
+        self.write_model()
+
+    def test_lateral_reduction_preserves_protected_trips_and_every_retained_route_and_time(self):
+        self.model["regional_demand"]["volume_recalibration"] = {"retained_fraction": .85}
+        self.write_model()
+        before, after = {}, {}
+        original = ET.parse(self.generate(output="before-lateral", variation=7, metadata=before)).getroot()
+        self.enable_lateral_reduction()
+        revised_file = self.generate(output="after-lateral", variation=7, metadata=after)
+        revised = ET.parse(revised_file).getroot()
+        originals = {v.get("id"): ET.tostring(v) for v in original.findall("vehicle")}
+        protected = lambda root: {v.get("id") for v in root.findall("vehicle")
+                                 if v.find("route").get("edges").split()[0] == "entry_a"}
+        self.assertEqual(protected(original), protected(revised))
+        old_lateral = len(originals) - len(protected(original))
+        new_lateral = len(revised.findall("vehicle")) - len(protected(revised))
+        self.assertEqual(new_lateral, math.floor(.9 * old_lateral))
+        for vehicle in revised.findall("vehicle"):
+            self.assertEqual(ET.tostring(vehicle), originals[vehicle.get("id")])
+        self.assertEqual(revised_file.read_bytes(), self.generate(output="repeat-lateral", variation=7).read_bytes())
+        self.assertEqual(after["calibration"], before["calibration"])
+        self.assertEqual(after["volume_recalibration"]["retained_programmed"], len(originals))
+        reduction = after["lateral_origin_reduction"]
+        self.assertTrue(reduction["applied"])
+        self.assertEqual(reduction["removed_programmed"], old_lateral - new_lateral)
+        for old, new in zip(before["spatial_distribution"]["routes"], after["spatial_distribution"]["routes"]):
+            factor = 1 if old["origin"] == "entry_a" else .9
+            self.assertAlmostEqual(new["expected_departures"], old["expected_departures"] * factor)
+        old_observations = before["spatial_distribution"]["observation_projection"]["observations"]
+        new_observations = after["spatial_distribution"]["observation_projection"]["observations"]
+        for old, new in zip(old_observations, new_observations):
+            self.assertEqual(old["target_passages"], new["target_passages"])
+            self.assertLessEqual(new["projected_freeflow_passages"], old["projected_freeflow_passages"] + 1e-9)
+            self.assertGreaterEqual(new["projected_freeflow_passages"], .9 * old["projected_freeflow_passages"] - 1e-9)
+            if old["observation_id"] == "5":
+                self.assertAlmostEqual(new["projected_freeflow_passages"], old["projected_freeflow_passages"])
+        self.assertAlmostEqual(sum(after["groups"][0]["expected_departures_per_bin"]),
+                               sum(p["expected_departures"] for p in after["spatial_distribution"]["routes"]))
+
+    def test_lateral_rule_covers_all_56_contexts_and_25_variations(self):
+        routes, factors = [{"origin": "rondon"}, {"origin": "side"}], {"rondon": 1, "side": .9}
+        checked = 0
+        for day in demand.DAYS:
+            for start in range(0, 24, 3):
+                for variation in range(1, 26):
+                    contexts = demand.resolve_contexts(day=day, start=f"{start:02}:00", variation=variation)["contexts"]
+                    count = 110 + start + variation
+                    schedule = [{"id": str(i), "depart": str(i * 10800 / count)} for i in range(count)]
+                    route_indices = [int((i + variation) % 3 != 0) for i in range(count)]
+                    initial = demand._retained_indices(count, .85, contexts[0]["effective_seed"])
+                    contexts[0]["reference_programmed"] = len(initial)
+                    kept = demand._reduce_lateral_schedule(schedule, route_indices, routes, initial, contexts, factors)
+                    self.assertEqual(kept, demand._reduce_lateral_schedule(
+                        schedule, route_indices, routes, initial, contexts, factors))
+                    protected = {i for i in initial if route_indices[i] == 0}
+                    lateral = sorted(initial - protected)
+                    self.assertTrue(protected <= kept <= initial)
+                    self.assertEqual(len(kept - protected), math.floor(.9 * len(lateral)))
+                    self.assertEqual(contexts[0]["programmed"], len(kept))
+                    for cut in range(len(lateral) + 1):
+                        self.assertLess(abs(sum(i in kept for i in lateral[:cut]) -
+                                            cut * math.floor(.9 * len(lateral)) / len(lateral)), 1.000001)
+                    checked += 1
+        self.assertEqual(checked, 1400)
+
+    def test_lateral_reduction_applies_once_per_context_across_week_boundary_and_replays(self):
+        self.model["regional_demand"]["volume_recalibration"] = {"retained_fraction": .85}
+        self.write_model()
+        before, after = {}, {}
+        baseline = ET.parse(self.generate(output="baseline-week", day="sunday", start="21:00",
+                                         sections=2, master_seed=42, metadata=before)).getroot()
+        self.enable_lateral_reduction()
+        revised = self.generate(output="revised-week", day="sunday", start="21:00",
+                                sections=2, master_seed=42, metadata=after)
+        root = ET.parse(revised).getroot()
+        originals = {v.get("id"): ET.tostring(v) for v in baseline.findall("vehicle")}
+        for vehicle in root.findall("vehicle"):
+            self.assertEqual(ET.tostring(vehicle), originals[vehicle.get("id")])
+        for context in after["context_selection"]["contexts"]:
+            old = [v for v in baseline.findall("vehicle") if context["begin"] <= float(v.get("depart")) < context["end"]]
+            new = [v for v in root.findall("vehicle") if context["begin"] <= float(v.get("depart")) < context["end"]]
+            lateral = lambda vs: [v for v in vs if v.find("route").get("edges").split()[0] != "entry_a"]
+            self.assertEqual(len(lateral(new)), math.floor(.9 * len(lateral(old))))
+            self.assertEqual(context["programmed"], len(new))
+        replay = self.generate(output="replay-week", day="sunday", start="21:00", sections=2,
+                               variations=after["context_selection"]["variations"])
+        self.assertEqual(revised.read_bytes(), replay.read_bytes())
+        transition = after["chronological_composition"]
+        self.assertEqual(transition["combined_programmed"], len(root.findall("vehicle")))
+        self.assertEqual(transition["context_programmed_sum"], transition["combined_programmed"])
+        for window in transition["boundaries"][0]["windows"]:
+            self.assertEqual(window["programmed_left"], sum(
+                10800 - window["seconds"] <= float(v.get("depart")) < 10800 for v in root.findall("vehicle")))
+        self.assertAlmostEqual(sum(after["groups"][0]["expected_departures_per_bin"]),
+                               after["groups"][0]["expected_departures"])
+        for old, new in zip(before["groups"][0]["expected_departures_per_bin"],
+                            after["groups"][0]["expected_departures_per_bin"]):
+            self.assertLessEqual(new, old + 1e-8)
+            self.assertGreaterEqual(new, .9 * old - 1e-8)
+
+    def test_explicit_paired_schedule_is_not_reduced_again_by_lateral_policy(self):
+        self.enable_lateral_reduction()
+        original = self.generate(output="reduced-once")
+        metadata = {}
+        paired = self.generate(output="paired-lateral", schedule_file=original, metadata=metadata)
+        attrs = lambda path: [v.attrib for v in ET.parse(path).getroot().findall("vehicle")]
+        self.assertEqual(attrs(original), attrs(paired))
+        self.assertFalse(metadata["lateral_origin_reduction"]["applied"])
+        self.assertEqual(metadata["lateral_origin_reduction"]["removed_programmed"], 0)
+
+    def test_invalid_lateral_policy_is_rejected_before_generation(self):
+        self.enable_lateral_reduction()
+        policy = self.model["regional_demand"]["lateral_origin_reduction"]
+        for value in (0, -1, 1.1, True, float("nan"), float("inf")):
+            policy["retained_fraction"] = value
+            self.write_model()
+            with self.assertRaisesRegex(ValueError, "laterais"):
+                self.generate()
+        policy["retained_fraction"] = .9
+        for groups in ([], None, "entry_a", ["internal_unknown"], [True]):
+            policy["protected_boundary_groups"] = groups
+            self.write_model()
+            with self.assertRaisesRegex(ValueError, "grupos periféricos"):
+                self.generate()
+
     def test_frozen_scale_is_not_renormalized_by_a_new_clock_reference(self):
         reference = {s: p["baseline_reference_cars_15_18"] for s,p in self.calibration["sensors"].items()}
         self.model["regional_demand"]["frozen_scale_reference_cars"] = reference

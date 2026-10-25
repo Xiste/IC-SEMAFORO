@@ -494,8 +494,11 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
             record["metasettran_trip_status"] = status
             record["experienced_teleport"] = identifier in teleported
             record["scheduled_departure_seconds"] = scheduled[identifier]
-            record["actual_departure_seconds"] = depart if depart >= 0 else None
-            record["insertion_delay_seconds"] = max(0.0, depart - scheduled[identifier]) if depart >= 0 else None
+            # Sem inserção não há partida ou atraso medido; entidades aceitam
+            # somente escalares, como os demais resultados sem amostra.
+            if depart >= 0:
+                record["actual_departure_seconds"] = depart
+                record["insertion_delay_seconds"] = max(0.0, depart - scheduled[identifier])
     # Toda partida programada antecede o horizonte; ausência de Tripinfo é
     # falha de observação, e não evidência de veículo não inserido.
     if seen != set(planned) or inserted != summary_metrics["vehicles_inserted"]:

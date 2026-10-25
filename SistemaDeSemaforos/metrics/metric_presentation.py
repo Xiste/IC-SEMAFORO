@@ -86,7 +86,7 @@ _DIRECT = {
 }
 
 _TIMERS = {
-    "execution": ("Tempo total de execução", "Tempo real de preparação, geração, simulação, coleta e exportação de entidades; exclui a escrita final de metrics.json/CSV e a limpeza de temporários."),
+    "execution": ("Tempo total de execução", "Tempo real de preparação, geração, simulação, coleta e exportação de entidades; exclui a escrita final de metrics.json e a limpeza de temporários."),
     "generation": ("Tempo de geração da demanda", "Tempo real gasto na geração e validação da demanda."),
     "simulation_execution": ("Tempo de execução do processo SUMO", "Tempo real gasto executando o processo SUMO com as saídas de observação habilitadas."),
     "sumo_configuration": ("Tempo de preparação da configuração SUMO", "Tempo real gasto preparando e registrando a configuração efetiva do SUMO."),

@@ -1,4 +1,4 @@
-"""MetaSettran regional: viagens entre portais e observações compartilhadas.
+"""MetaSettran regional: viagens entre portais, atividades e observações compartilhadas.
 
 Os dados medidos definem taxas; uma seed sorteia partidas e pares OD. O
 duarouter calcula os percursos e o gerador verifica todos os endpoints antes
@@ -32,7 +32,7 @@ from SistemaDeSemaforos.demand.random_demand_generator import (
 )
 
 
-MODEL_VERSION = "metasettran-regional-integrated-v4.3.2-utc-lateral-10"
+MODEL_VERSION = "metasettran-regional-integrated-v4.4-urban-activities"
 SEED_NAMESPACE = "metasettran-prototype-v1"
 ROUTING_SEED = 0
 COMPOSITION_VERSION = "metasettran-chronological-v1"
@@ -202,29 +202,71 @@ def _routes_root():
     return root
 
 
+def _demand_endpoints(model, role):
+    """Portais periféricos e acessos de atividade conservam identidades distintas."""
+    endpoints = [dict(portal, endpoint_kind="boundary",
+                      zone_id=portal.get("zone_id", portal["boundary_group"]),
+                      position_xy_m=portal.get("position_xy_m", portal.get("boundary_xy_m")))
+                 for portal in model["portals"][role]]
+    activity_role = "origins" if role == "entries" else "destinations"
+    for zone in model.get("activity_zones", []):
+        if not zone.get("references") or not zone.get("id") or not zone.get("kind"):
+            raise ValueError("Zona de atividade exige identificação, uso e referências geográficas.")
+        for access in zone.get(activity_role, []):
+            endpoints.append(dict(access, endpoint_kind="activity", zone_id=zone["id"],
+                                  activity_role=zone["kind"], name=zone["name"],
+                                  boundary_group="activity:" + zone["id"],
+                                  corridor=access.get("corridor", "activity:" + zone["id"])))
+    if len({item["edge"] for item in endpoints}) != len(endpoints):
+        raise ValueError("Um acesso não pode pertencer a vários extremos de demanda do mesmo papel.")
+    return endpoints
+
+
 def _route_pairs(model, net_file, directory, log_file):
     """Descobre caminhos nativos; filtra candidatos antes de sortear viagens."""
     edges, connections, returns, connection_costs = _read_network(net_file)
     # A lane changing into several destination lanes remains ONE opportunity.
     # These are geometric priors, never green times or observed discharge rates.
-    movement_lanes = {}
+    movement_lanes, receiving_lanes = {}, {}
     for connection in ET.parse(net_file).getroot().findall("connection"):
         source, target = connection.get("from"), connection.get("to")
         if (source, target) in connections:
             if (connection.get("fromLane") in edges[source]["lanes"] and
                     connection.get("toLane") in edges[target]["lanes"]):
                 movement_lanes.setdefault((source, target), set()).add(connection.get("fromLane"))
-    entries = {portal["edge"]: portal for portal in model["portals"]["entries"]}
-    exits = {portal["edge"]: portal for portal in model["portals"]["exits"]}
+                receiving_lanes.setdefault((source, target), set()).add(connection.get("toLane"))
+    entries = {portal["edge"]: portal for portal in _demand_endpoints(model, "entries")}
+    exits = {portal["edge"]: portal for portal in _demand_endpoints(model, "exits")}
     if not entries or not exits or not (entries.keys() | exits.keys()) <= edges.keys():
         raise ValueError("Portais ausentes ou sem permissão passenger na rede selecionada.")
-    if len(entries) != len(model["portals"]["entries"]) or len(exits) != len(model["portals"]["exits"]):
-        raise ValueError("Portal duplicado no cadastro.")
-    if entries.keys() & {target for _, target in connections} or exits.keys() & {source for source, _ in connections}:
+    boundary_entries = {p["edge"] for p in model["portals"]["entries"]}
+    boundary_exits = {p["edge"] for p in model["portals"]["exits"]}
+    if boundary_entries & {target for _, target in connections} or boundary_exits & {source for source, _ in connections}:
         raise ValueError("Cadastro contém portais internos à conectividade passenger.")
     for portal in (*entries.values(), *exits.values()):
         if portal["passenger_lanes"] != len(edges[portal["edge"]]["lanes"]):
             raise ValueError("Faixas passenger do portal divergem da rede usada no prior.")
+        if portal["endpoint_kind"] == "activity":
+            coordinates = portal.get("position_xy_m")
+            if (not isinstance(coordinates, list) or len(coordinates) != 2 or
+                    any(isinstance(value, bool) or not isinstance(value, (int, float)) or
+                        not math.isfinite(value) for value in coordinates)):
+                raise ValueError("Acesso de atividade exige posição geográfica válida na rede.")
+            if portal["edge"] in boundary_entries | boundary_exits:
+                raise ValueError("Acesso interno de atividade não pode ser também portal periférico.")
+            edge = edges[portal["edge"]]
+            shape = edge["shape"] or [edge["from_xy"], edge["to_xy"]]
+            distances = []
+            for left, right in zip(shape, shape[1:]):
+                if left is None or right is None:
+                    continue
+                dx, dy = right[0] - left[0], right[1] - left[1]
+                fraction = max(0.0, min(1.0, ((coordinates[0] - left[0]) * dx +
+                    (coordinates[1] - left[1]) * dy) / max(dx * dx + dy * dy, 1e-12)))
+                distances.append(math.dist(coordinates, (left[0] + fraction * dx, left[1] + fraction * dy)))
+            if not distances or min(distances) > 5:
+                raise ValueError("Posição do acesso de atividade diverge do trecho viário cadastrado.")
+            continue
         if (portal.get("status") != "geographically_audited_boundary" or
                 not portal.get("references") or not portal.get("boundary_evidence")):
             raise ValueError("Portal exige qualificação cartográfica explícita além da conectividade.")
@@ -251,6 +293,10 @@ def _route_pairs(model, net_file, directory, log_file):
     trips = _routes_root()
     for origin, entry in sorted(entries.items()):
         for destination, exit_portal in sorted(exits.items()):
+            if (origin == destination or
+                    entry["endpoint_kind"] == exit_portal["endpoint_kind"] == "activity" and
+                    entry["zone_id"] == exit_portal["zone_id"]):
+                continue
             identifier = f"od_{len(pairs):04d}"
             pairs[identifier] = {"id": identifier, "origin": origin, "destination": destination}
             ET.SubElement(trips, "trip", {
@@ -288,8 +334,53 @@ def _route_pairs(model, net_file, directory, log_file):
         log_file.parent.mkdir(parents=True, exist_ok=True)
         with log_file.open("w", encoding="utf-8") as log:
             subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
+    route_outputs = [template_routes]
+    urban = model["regional_demand"].get("route_choice", {}).get("method") == "urban_activity_od"
+    cost_factors = model["regional_demand"].get("urban_activity_model", {}).get("road_cost_factors", {})
+    overrides = model["regional_demand"].get("road_hierarchy_overrides", {})
+    if any(edge not in edges or not isinstance(hierarchy, str) or not hierarchy
+           for edge, hierarchy in overrides.items()):
+        raise ValueError("Classificação funcional aponta para via ausente da rede passenger.")
+    if any(isinstance(value, bool) or not isinstance(value, (int, float)) or
+           not math.isfinite(value) or value < 1 for value in cost_factors.values()):
+        raise ValueError("Custos de uso viário devem ser finitos e maiores ou iguais a um.")
+    if urban:
+        # Um segundo roteamento oferece a todos os pares uma alternativa que
+        # considera a função viária. O roteador nativo continua calculando os
+        # caminhos; opções idênticas são removidas na validação abaixo.
+        weighted_trips = _routes_root()
+        for pair in list(pairs.values()):
+            if "template" in pair:
+                continue
+            identifier = f"od_{len(pairs):04d}"
+            pairs[identifier] = dict(pair, id=identifier, template="urban_functional_road_cost")
+            ET.SubElement(weighted_trips, "trip", id=identifier, type="metasettran_car", depart="0",
+                          **{"from": pair["origin"], "to": pair["destination"],
+                             "departPos": "0", "arrivalPos": "max"})
+        weights = ET.Element("meandata")
+        interval = ET.SubElement(weights, "interval", begin="0", end="86400")
+        for identifier, edge in edges.items():
+            hierarchy = overrides.get(identifier, edge["hierarchy"])
+            ET.SubElement(interval, "edge", id=identifier,
+                          traveltime=str(edge["time"] * cost_factors.get(hierarchy, 1.0)))
+        costs_file = directory / "urban-costs.xml"
+        trips_file = directory / "urban-alternatives.trips.xml"
+        routes_file = directory / "urban-alternatives.rou.xml"
+        _write_xml(costs_file, weights)
+        _write_xml(trips_file, weighted_trips)
+        alternative_command = [binary, "--net-file", str(net_file), "--route-files", str(trips_file),
+                               "--weight-files", str(costs_file), "--output-file", str(routes_file),
+                               "--alternatives-output", str(directory / "urban-alternatives.xml"),
+                               "--seed", str(ROUTING_SEED), "--ignore-errors", "true", "--no-step-log", "true"]
+        if log_file is None:
+            subprocess.run(alternative_command, check=True)
+        else:
+            with log_file.open("a", encoding="utf-8") as log:
+                subprocess.run(alternative_command, check=True, stdout=log, stderr=subprocess.STDOUT)
+        route_outputs.append(routes_file)
     found, accepted, distinct = set(), {}, set()
-    for vehicle in ET.parse(template_routes).getroot().findall("vehicle"):
+    vehicles = (vehicle for output in route_outputs for vehicle in ET.parse(output).getroot().findall("vehicle"))
+    for vehicle in vehicles:
         identifier = vehicle.get("id")
         if identifier not in pairs or identifier in found:
             raise ValueError("duarouter produziu identificador OD inesperado ou duplicado.")
@@ -333,7 +424,16 @@ def _route_pairs(model, net_file, directory, log_file):
             if position + 1 < len(route):
                 elapsed += connection_costs[edge, route[position + 1]][1]
         pair.update(route=route, sensor_ids=sensor_ids,
+                    origin_kind=entry["endpoint_kind"], destination_kind=exit_portal["endpoint_kind"],
+                    origin_zone=entry["zone_id"], destination_zone=exit_portal["zone_id"],
+                    urban_edge_lengths_m=[edges[edge]["length"] for edge in route],
+                    urban_generalized_cost_s=sum(edges[edge]["time"] * cost_factors.get(
+                        overrides.get(edge, edges[edge]["hierarchy"]), 1.0)
+                        for edge in route) + sum(connection_costs[c][1] for c in zip(route, route[1:])),
                     movement_opportunities=[len(movement_lanes[c]) for c in zip(route, route[1:])],
+                    movement_receiving_lanes=[len(receiving_lanes[c]) for c in zip(route, route[1:])],
+                    movement_target_hierarchies=[overrides.get(edge, exits.get(edge, {}).get("prior_road_type", edges[edge]["hierarchy"]))
+                                                 for edge in route[1:]],
                     movement_angles=[_movement_angle(edges[a], edges[b]) for a, b in zip(route, route[1:])],
                     observation_freeflow_delay_s=passage_delays,
                     observation_movements={sensor: {"edge": sensors[sensor],
@@ -352,9 +452,14 @@ def _route_pairs(model, net_file, directory, log_file):
         raise ValueError("Nenhum percurso contínuo entre os portais de entrada e saída.")
     catalog = {"candidate_pairs": len(pairs), "distinct_endpoint_pairs": len(entries) * len(exits), "routed_candidates": len(pairs),
                "accepted_pairs": len(accepted), "rejected_by_reason": rejected,
-               "entry_portals_available": len(entries), "exit_portals_available": len(exits),
+               "entry_portals_available": len(boundary_entries), "exit_portals_available": len(boundary_exits),
+               "activity_origin_accesses": len(entries) - len(boundary_entries),
+               "activity_destination_accesses": len(exits) - len(boundary_exits),
                "entries_without_admissible_route": sorted(entries.keys() - {p["origin"] for p in accepted.values()}),
                "exits_without_admissible_route": sorted(exits.keys() - {p["destination"] for p in accepted.values()})}
+    if urban:
+        catalog["alternative_routing_command"] = alternative_command
+        catalog["alternative_routing_basis"] = "native_freeflow_and_functional_road_cost; no_congestion_fitting"
     if len(accepted) + sum(rejected.values()) != catalog["candidate_pairs"]:
         raise ValueError("Auditoria de pares OD não conserva todos os candidatos.")
     return accepted, command, catalog, edges
@@ -429,6 +534,10 @@ def _regional_prior(pairs, model):
     """Um prior OD; alternativas não multiplicam a oportunidade de um par."""
     config = model["regional_demand"]
     importance = config["destination_hierarchy_weights"]
+    urban = config.get("route_choice", {}).get("method") == "urban_activity_od"
+    endpoint_lists = ({role: _demand_endpoints(model, role) for role in ("entries", "exits")}
+                      if urban else model["portals"])
+    hierarchy_overrides = config.get("road_hierarchy_overrides", {})
     relative_evidence = config.get("relative_corridor_evidence", {})
     observed_vmd = model.get("sources", {}).get("regional_counts", {})
     source_values = sorted(observed_vmd[key]["vmd"] / observed_vmd[key]["monitored_lanes"]
@@ -446,7 +555,8 @@ def _regional_prior(pairs, model):
             # Representações alternativas do mesmo acesso repartem sua massa.
             opportunities = []
             for portal in members:
-                hierarchy = portal.get("prior_road_type", portal.get("road_type", ""))
+                hierarchy = hierarchy_overrides.get(portal["edge"],
+                    portal.get("prior_road_type", portal.get("road_type", "")))
                 value = importance.get(hierarchy, 1.0) * portal["passenger_lanes"]
                 if portal["corridor"] in relative_evidence:
                     source = observed_vmd[relative_evidence[portal["corridor"]]]
@@ -457,11 +567,15 @@ def _regional_prior(pairs, model):
                 result[portal["edge"]] = mass * value / denominator
         return result
 
-    entries = portal_weights(model["portals"]["entries"])
-    exits = portal_weights(model["portals"]["exits"])
-    origin_portals = {p["edge"]: p for p in model["portals"]["entries"]}
-    if config.get("route_choice", {}).get("method") == "native_path_branch_opportunities":
-        _branch_prior(pairs, entries, origin_portals, config["route_choice"])
+    entries = portal_weights(endpoint_lists["entries"])
+    exits = portal_weights(endpoint_lists["exits"])
+    origin_portals = {p["edge"]: p for p in endpoint_lists["entries"]}
+    if urban:
+        _urban_prior(pairs, model, endpoint_lists, entries, exits)
+        return
+    if config.get("route_choice", {}).get("method") in (
+            "native_path_branch_opportunities", "native_path_contextual_opportunities"):
+        _branch_prior(pairs, entries, origin_portals, config["route_choice"], hierarchy_weights=importance)
         return
     alternatives = {}
     for pair in pairs.values():
@@ -479,16 +593,197 @@ def _regional_prior(pairs, model):
         pair["prior_weight"] /= total
 
 
-def _branch_prior(pairs, entries, portals, config):
+def _urban_zones(config):
+    """Validate relative activity assumptions once, before sampling trips."""
+    zones = {}
+    for zone in config.get("zones", []):
+        identifier = zone.get("id")
+        if not isinstance(identifier, str) or not identifier or identifier in zones:
+            raise ValueError("Zonas urbanas exigem identificadores únicos e não vazios.")
+        opportunity = zone.get("opportunity", 1.0)
+        if isinstance(opportunity, bool) or not isinstance(opportunity, (int, float)) or not math.isfinite(opportunity) or opportunity <= 0:
+            raise ValueError("Oportunidade da zona deve ser finita e positiva.")
+        for day_kind in ("weekday", "saturday", "sunday"):
+            profile = zone.get("profiles", {}).get(day_kind, {})
+            hours = profile.get("hours", [])
+            if (len(hours) < 2 or any(isinstance(value, bool) or not isinstance(value, (int, float)) or
+                                    not math.isfinite(value) for value in hours) or
+                    hours[0] != 0 or hours[-1] != 24 or any(a >= b for a, b in zip(hours, hours[1:]))):
+                raise ValueError("Perfil urbano deve cobrir 0–24 h com horas únicas e ordenadas.")
+            for role in ("origin", "destination"):
+                values = profile.get(role, [])
+                if len(values) != len(hours) or any(isinstance(value, bool) or not isinstance(value, (int, float)) or
+                        not math.isfinite(value) or value < 0 for value in values):
+                    raise ValueError("Perfil urbano requer multiplicadores finitos e não negativos por hora.")
+        zones[identifier] = zone
+    if not zones:
+        raise ValueError("O modelo urbano requer zonas de produção e atração.")
+    for key, default, positive, upper in (("distance_scale_m", 2000.0, True, None),
+            ("detour_sensitivity", 4.0, False, None), ("path_size_exponent", 1.0, False, None),
+            ("same_access_penalty", .05, True, 1.0), ("uturn_penalty", .5, True, 1.0)):
+        value = config.get(key, default)
+        if (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or
+                value < 0 or (positive and value == 0) or (upper is not None and value > upper)):
+            raise ValueError(f"Parâmetro urbano inválido: {key}.")
+    return zones
+
+
+def _urban_endpoint_weights(endpoints, physical_weights, zones):
+    """A zone's opportunity is shared by its gates, never repeated per gate."""
+    by_zone, result = {}, physical_weights.copy()
+    for endpoint in endpoints:
+        zone_id = endpoint.get("zone_id")
+        if zone_id not in zones:
+            raise ValueError("Todo extremo urbano deve pertencer a uma zona cadastrada.")
+        by_zone.setdefault(zone_id, []).append(endpoint)
+    for zone_id, members in by_zone.items():
+        if "opportunity" not in zones[zone_id]:
+            continue
+        denominator = sum(physical_weights[endpoint["edge"]] for endpoint in members)
+        for endpoint in members:
+            result[endpoint["edge"]] = zones[zone_id]["opportunity"] * physical_weights[endpoint["edge"]] / denominator
+    return result
+
+
+def _urban_prior(pairs, model, endpoint_lists, entries, exits):
+    """Choose a destination first, then a cost/overlap-aware native path to it.
+
+    Through trips favour geographical progress, rather than the first nearby
+    boundary exit. Activity trips use a distance deterrence between real access
+    areas. Neither rule supplies an additional population or measured OD table.
+    """
+    config = model["regional_demand"].get("urban_activity_model", {})
+    zones = _urban_zones(config)
+    endpoints = {role: {endpoint["edge"]: endpoint for endpoint in endpoint_lists[role]}
+                 for role in ("entries", "exits")}
+    entries = _urban_endpoint_weights(endpoint_lists["entries"], entries, zones)
+    exits = _urban_endpoint_weights(endpoint_lists["exits"], exits, zones)
+    alternatives, destination_totals = {}, {}
+    for pair in pairs.values():
+        alternatives.setdefault((pair["origin"], pair["destination"]), []).append(pair)
+    for (origin, destination), members in alternatives.items():
+        entry, exit_portal = endpoints["entries"][origin], endpoints["exits"][destination]
+        shortest_length = min(pair["length_m"] for pair in members)
+        shortest_cost = min(pair.get("urban_generalized_cost_s", pair["freeflow_time_s"]) for pair in members)
+        if not math.isfinite(shortest_cost) or shortest_cost <= 0 or not math.isfinite(shortest_length) or shortest_length <= 0:
+            raise ValueError("Percursos urbanos exigem distância e custo finitos e positivos.")
+        through = entry.get("endpoint_kind", "boundary") == exit_portal.get("endpoint_kind", "boundary") == "boundary"
+        if through:
+            chord = math.dist(entry["position_xy_m"], exit_portal["position_xy_m"])
+            # The one-metre floor is numerical, not a minimum number of trips.
+            affinity = min(1.0, max(chord, 1.0) / shortest_length) ** 2
+        else:
+            affinity = math.exp(-shortest_length / config.get("distance_scale_m", 2000.0))
+        if all(pair.get("returns_to_same_access", False) for pair in members):
+            affinity *= config.get("same_access_penalty", .05)
+        if all(pair.get("has_uturn", False) for pair in members):
+            affinity *= config.get("uturn_penalty", .5)
+        destination_weight = exits[destination] * affinity
+        destination_totals[origin] = destination_totals.get(origin, 0.0) + destination_weight
+        edge_use, utilities = {}, []
+        for pair in members:
+            for edge in set(pair["route"]):
+                edge_use[edge] = edge_use.get(edge, 0) + 1
+        for pair in members:
+            lengths = pair.get("urban_edge_lengths_m", [1.0] * len(pair["route"]))
+            if len(lengths) != len(pair["route"]) or any(not math.isfinite(value) or value <= 0 for value in lengths):
+                raise ValueError("Comprimentos dos trechos urbanos devem cobrir todo o percurso.")
+            path_size = sum(length / edge_use[edge] for edge, length in zip(pair["route"], lengths)) / sum(lengths)
+            cost = pair.get("urban_generalized_cost_s", pair["freeflow_time_s"])
+            if not math.isfinite(cost) or cost <= 0:
+                raise ValueError("Custo de percurso urbano deve ser finito e positivo.")
+            utility = path_size ** config.get("path_size_exponent", 1.0) * math.exp(max(-700.0,
+                -config.get("detour_sensitivity", 4.0) * (cost / shortest_cost - 1)))
+            if pair.get("has_uturn", False):
+                utility *= config.get("uturn_penalty", .5)
+            utilities.append(utility)
+            pair["urban_path_size"] = path_size
+        utility_total = sum(utilities)
+        hierarchy = model["regional_demand"].get("road_hierarchy_overrides", {}).get(origin,
+            entry.get("prior_road_type", entry.get("road_type", "")))
+        for pair, utility in zip(members, utilities):
+            pair.update(urban_origin_opportunity=entries[origin], urban_destination_weight=destination_weight,
+                        urban_route_probability=utility / utility_total,
+                        urban_origin_zone_id=entry["zone_id"], urban_destination_zone_id=exit_portal["zone_id"],
+                        demand_eligible=True, temporal_role="arterial" if hierarchy.startswith(("highway.primary", "highway.secondary")) else "local")
+    origin_total = sum(entries[origin] for origin in destination_totals)
+    for pair in pairs.values():
+        pair["prior_weight"] = (pair["urban_origin_opportunity"] / origin_total *
+            pair["urban_destination_weight"] / destination_totals[pair["origin"]] * pair["urban_route_probability"])
+
+
+def _urban_profile(zone, role, week_second):
+    day = int(week_second % 604800 // 86400)
+    day_kind = "weekday" if day < 5 else "saturday" if day == 5 else "sunday"
+    profile = zone["profiles"][day_kind]
+    clock = week_second % 86400 / 3600
+    right = bisect_right(profile["hours"], clock)
+    left = right - 1
+    fraction = (clock - profile["hours"][left]) / (profile["hours"][right] - profile["hours"][left])
+    return profile[role][left] * (1 - fraction) + profile[role][right] * fraction
+
+
+def _route_prior_row(routes, model, week_second, relative):
+    if model["regional_demand"].get("route_choice", {}).get("method") != "urban_activity_od":
+        row = [pair["prior_weight"] * relative["6" if pair["temporal_role"] == "arterial" else "5"] for pair in routes]
+    else:
+        zones = {zone["id"]: zone for zone in model["regional_demand"]["urban_activity_model"]["zones"]}
+        origin_profiles = {key: _urban_profile(zone, "origin", week_second) for key, zone in zones.items()}
+        destination_profiles = {key: _urban_profile(zone, "destination", week_second) for key, zone in zones.items()}
+        row, origin_denominators, origin_opportunities = [], {}, {}
+        for pair in routes:
+            origin = pair["origin"]
+            mass = pair["urban_destination_weight"] * destination_profiles[pair["urban_destination_zone_id"]] * pair["urban_route_probability"]
+            row.append(mass)
+            origin_denominators[origin] = origin_denominators.get(origin, 0.0) + mass
+            origin_opportunities[origin] = (pair["urban_origin_opportunity"] * origin_profiles[pair["urban_origin_zone_id"]] *
+                relative["6" if pair["temporal_role"] == "arterial" else "5"])
+        row = [value * origin_opportunities[pair["origin"]] / origin_denominators[pair["origin"]]
+               if origin_denominators[pair["origin"]] else 0.0 for pair, value in zip(routes, row)]
+    denominator = sum(row)
+    return [value / denominator for value in row] if denominator else [pair["prior_weight"] for pair in routes]
+
+
+def _urban_prior_drift(routes, base, weights, masses):
+    """Expose the spatial changes required by the observation fit, without quotas."""
+    result = {"basis": "planned_probabilities_before_volume_and_origin_retention", "zones": {}}
+    for label, key in (("origins", "origin"), ("destinations", "destination"),
+                       ("origin_zones", "urban_origin_zone_id"), ("destination_zones", "urban_destination_zone_id")):
+        maximum, prior_totals, fitted_totals = 0.0, {}, {}
+        for index, (prior, fitted) in enumerate(zip(base, weights)):
+            prior_groups, fitted_groups = {}, {}
+            for pair, before, after in zip(routes, prior, fitted):
+                identifier = pair[key]
+                prior_groups[identifier] = prior_groups.get(identifier, 0.0) + before
+                fitted_groups[identifier] = fitted_groups.get(identifier, 0.0) + after
+            maximum = max(maximum, sum(abs(prior_groups[key] - fitted_groups[key]) for key in prior_groups) / 2)
+            if label.endswith("zones"):
+                for identifier in prior_groups:
+                    prior_totals[identifier] = prior_totals.get(identifier, 0.0) + masses[index] * prior_groups[identifier]
+                    fitted_totals[identifier] = fitted_totals.get(identifier, 0.0) + masses[index] * fitted_groups[identifier]
+        result["maximum_" + label + "_total_variation"] = maximum
+        if label.endswith("zones"):
+            result["zones"][label] = [{"zone_id": key, "prior_expected_departures": prior_totals[key],
+                "projected_expected_departures": fitted_totals[key]} for key in sorted(prior_totals)]
+    return result
+
+
+def _branch_prior(pairs, entries, portals, config, hierarchy_weights=None):
     """Distribute an origin's mass across native path branches, not OD counts.
 
     Adding downstream destinations must not multiply the attractiveness of a
     turn upstream. The trie only samples existing duarouter paths; it does not
-    find paths, inspect queues or change any permitted connection.
+    find paths, inspect queues or change any permitted connection. The contextual
+    method combines receiving lanes and road hierarchy with geometric continuity.
     """
     angular_cost = float(config.get("angular_cost", 1.0))
     if not math.isfinite(angular_cost) or angular_cost < 0:
         raise ValueError("Custo angular deve ser finito e não negativo.")
+    contextual = config.get("method") == "native_path_contextual_opportunities"
+    hierarchy_weights = {} if hierarchy_weights is None else hierarchy_weights
+    if contextual and any(isinstance(value, bool) or not isinstance(value, (int, float)) or
+                          not math.isfinite(value) or value <= 0 for value in hierarchy_weights.values()):
+        raise ValueError("Pesos de hierarquia devem ser finitos e positivos.")
     by_origin = {}
     for pair in pairs.values():
         by_origin.setdefault(pair["origin"], []).append(pair)
@@ -498,7 +793,15 @@ def _branch_prior(pairs, entries, portals, config):
         for pair in members:
             node = root
             for index, edge in enumerate(pair["route"][1:]):
-                weight = pair["movement_opportunities"][index] / (1 + angular_cost * pair["movement_angles"][index] / (math.pi / 2))
+                opportunity = pair["movement_opportunities"][index]
+                hierarchy = 1.0
+                if contextual:
+                    # Conexões de várias faixas para uma única chegada não
+                    # equivalem a várias continuações. A classe da via informa
+                    # atratividade, sem transformar este prior em capacidade.
+                    opportunity = min(opportunity, pair["movement_receiving_lanes"][index])
+                    hierarchy = hierarchy_weights.get(pair["movement_target_hierarchies"][index], 1.0)
+                weight = opportunity * hierarchy / (1 + angular_cost * pair["movement_angles"][index] / (math.pi / 2))
                 node = node.setdefault(edge, {"weight": weight, "children": {}})["children"]
             node["__route__"] = pair
 
@@ -587,10 +890,7 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
                     max(reference.get(sensor, 1.0) / DEFAULT_DURATION, 1e-12) for sensor in ("5", "6")}
         # Sem contagens transversais semanais, classes de via usam priors de
         # forma distintos explicitamente hipotéticos, nunca intensidade copiada.
-        row = [pair["prior_weight"] * relative["6" if pair["temporal_role"] == "arterial" else "5"]
-               for pair in routes]
-        denominator = sum(row)
-        row = [value / denominator for value in row] if denominator else [p["prior_weight"] for p in routes]
+        row = _route_prior_row(routes, model, timestamp, relative)
         base.append(row)
         weights.append(row.copy())
     constraints = []
@@ -665,6 +965,8 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
         "observations": observations,
         "mean_prior_relative_entropy": sum(masses[i] * sum(p * math.log(p / q) for p, q in zip(row, base[i]) if p > 0 and q > 0)
                                            for i, row in enumerate(weights)) / max(sum(masses), 1),
+        **({"urban_prior_drift": _urban_prior_drift(routes, base, weights, masses)}
+           if model["regional_demand"].get("route_choice", {}).get("method") == "urban_activity_od" else {}),
         "status": "planning_projection_not_empirical_calibration",
         "limits": ["Sensor geography remains hypothetical.", "Freeflow excludes insertion queues and signal delays.",
                    "Empty start excludes pre-window vehicles; late passages remain outside the civil window.",
@@ -705,7 +1007,7 @@ def _retained_indices(count, fraction, seed):
 def _origin_retention_factors(model):
     """A redução por origem sucede a escolha OD; nunca renormaliza suas cotas."""
     policy = model["regional_demand"].get("lateral_origin_reduction")
-    entries = model["portals"]["entries"]
+    entries = _demand_endpoints(model, "entries")
     if policy is None:
         return {portal["edge"]: 1.0 for portal in entries}
     fraction = policy.get("retained_fraction")
@@ -862,8 +1164,13 @@ def generate_metasettran_demand(
     master_seed=None, variations=None,
     spatial_scenario="regional-integrated", metadata=None, log_file=None,
     schedule_file=None, source_time_convention="utc", volume_retention=None,
+    include_route_details=True,
 ):
-    """Gera viagens regionais; schedule_file isola a distribuição espacial."""
+    """Gera viagens regionais; schedule_file isola a distribuição espacial.
+
+    include_route_details controla apenas o catálogo diagnóstico nos metadados;
+    viagens, rotas XML, cálculos e agregados são os mesmos nos dois casos.
+    """
     from SistemaDeSemaforos.demand.metasettran_calibration import calibrate_weekly, weekly_window
 
     selection = resolve_contexts(day, start, sections, variation, seed, master_seed, variations)
@@ -1106,6 +1413,17 @@ def generate_metasettran_demand(
                     "expected_departures": sum(p["expected_departures"] for p in pairs.values() if p[endpoint] == portal["edge"]),
                     "generated_departures": sum(p["generated_departures"] for p in pairs.values() if p[endpoint] == portal["edge"])}
                     for portal in model["portals"][role]]
+            activity_counts = []
+            for zone in model.get("activity_zones", []):
+                counts = {"zone_id": zone["id"], "name": zone["name"], "kind": zone["kind"]}
+                for role, endpoint in (("origins", "origin"), ("destinations", "destination")):
+                    counts[role] = [{"edge": access["edge"],
+                        "expected_departures": sum(p["expected_departures"] for p in pairs.values()
+                                                   if p[endpoint] == access["edge"]),
+                        "generated_departures": sum(p["generated_departures"] for p in pairs.values()
+                                                    if p[endpoint] == access["edge"])}
+                        for access in zone.get(role, [])]
+                activity_counts.append(counts)
             corridors = [{"id": corridor["id"], "label": corridor["label"], "direction": corridor["direction"],
                 "expected_departures": sum(p["expected_departures"] for p in pairs.values() if corridor["id"] in p["corridors"]),
                 "generated_departures": sum(p["generated_departures"] for p in pairs.values() if corridor["id"] in p["corridors"])}
@@ -1156,16 +1474,28 @@ def generate_metasettran_demand(
                 groups=groups, routes_sha256=_sha256(new_routes), trips_sha256=_sha256(new_trips),
                 spatial_distribution={"scenario": spatial_scenario, "method": "integrated_OD_shared_observations",
                     "total_equation": "one regional vehicle population; observations are route incidences, never independent trip budgets",
-                    "expected_network_departures": projection["total_fixed"], "groups": groups,
-                    "routes": [{key: value for key, value in pair.items() if key != "route"} for pair in pairs.values()],
-                    "portals": portal_counts, "observation_incidence_generated": incidence,
+                    "expected_network_departures": projection["total_fixed"],
+                    # Core conserva groups no nível superior e não constrói a
+                    # cópia detalhada do catálogo; full mantém o contrato anterior.
+                    **({"groups": groups,
+                        "routes": [{key: value for key, value in pair.items() if key != "route"}
+                                   for pair in pairs.values()]} if include_route_details else {}),
+                    "portals": portal_counts, "activity_locations": activity_counts,
+                    "trip_populations": {origin + "_to_" + destination: sum(p["generated_departures"]
+                        for p in pairs.values() if p["origin_kind"] == origin and p["destination_kind"] == destination)
+                        for origin in ("boundary", "activity") for destination in ("boundary", "activity")},
+                    "observation_incidence_generated": incidence,
                     "observation_projection": projection,
                     "sensor_mapping_sensitivity": _mapping_sensitivity(pairs, model),
                     "corridors": corridors, "corridor_counts_overlap": True, "catalog": catalog, "coverage": coverage,
                     "distance_distribution": {"min": used_lengths[0], "p25": percentile(.25), "median": percentile(.5),
                          "p75": percentile(.75), "max": used_lengths[-1], "mean": sum(used_lengths) / len(used_lengths)},
                     "limitations": model["regional_demand"]["limitations"]},
-                route_validation={"generated": len(schedule), "valid_boundary_routes": len(schedule), "invalid": 0,
+                route_validation={"generated": len(schedule), "valid_routes": len(schedule),
+                    "valid_boundary_routes": sum(p["generated_departures"] for p in pairs.values()
+                        if p["origin_kind"] == p["destination_kind"] == "boundary"),
+                    "valid_activity_routes": sum(p["generated_departures"] for p in pairs.values()
+                        if "activity" in (p["origin_kind"], p["destination_kind"])), "invalid": 0,
                     "routed_pairs": len(pairs), "used_pairs": sum(p["generated_departures"] > 0 for p in pairs.values()),
                     "entry_portals_used": used_entries, "exit_portals_used": used_exits,
                     "minimum_length_m": used_lengths[0], "maximum_length_m": used_lengths[-1],

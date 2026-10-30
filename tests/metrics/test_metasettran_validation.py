@@ -584,6 +584,24 @@ class MetaSettranValidationTests(unittest.TestCase):
         self.assertEqual(arrivals["status"], "teleport_affected")
         self.assertEqual(arrivals["arrivals_not_observed_at_exit"], 1)
 
+    def test_native_teleport_arrival_reconciles_without_becoming_a_physical_completion(self):
+        self.add_spatial_observations(arrivals=1)
+        self.trips[1].set("vaporized", "teleport")
+        self.write_gz("trips.xml.gz", self.trips)
+        result = self.collect()
+        self.assertEqual(result["metrics"]["vehicles_completed_without_teleport"], 1)
+        self.assertEqual(result["metrics"]["vehicles_completed_after_teleport"], 1)
+        arrivals = result["spatial_observation"]["endpoint_reconciliation"]["arrivals"]
+        self.assertEqual(arrivals["tripinfo_arrived"], 2)
+        self.assertEqual(arrivals["edge_data_arrived"], 1)
+        self.assertEqual(arrivals["arrivals_not_observed_at_exit"], 1)
+
+    def test_native_teleport_arrival_requires_a_logged_teleport(self):
+        self.trips[0].set("vaporized", "teleport")
+        self.write_gz("trips.xml.gz", self.trips)
+        with self.assertRaisesRegex(ValueError, "teleporte sem evento"):
+            self.collect()
+
     def test_portal_counts_must_reconcile_and_never_hide_missing_attributes(self):
         self.add_spatial_observations()
         original = deepcopy(self.counts)
@@ -600,6 +618,118 @@ class MetaSettranValidationTests(unittest.TestCase):
                 self.write_gz("metasettran_counts.xml.gz", counts)
                 with self.assertRaises(ValueError):
                     self.collect()
+
+    def add_activity_trips(self):
+        paths = {
+            "through": "entry middle exit",
+            "to_shopping": "entry middle activity_destination",
+            "from_home": "activity_origin middle exit",
+            "home_to_shopping": "activity_origin middle activity_destination",
+        }
+        self.spatial["portals"] = {"entries": [{"edge": "entry"}], "exits": [{"edge": "exit"}]}
+        self.spatial["activity_zones"] = [
+            {"id": "home", "name": "Bairro", "kind": "residential",
+             "origins": [{"edge": "activity_origin"}], "destinations": []},
+            {"id": "shopping", "name": "Shopping", "kind": "retail",
+             "origins": [], "destinations": [{"edge": "activity_destination"}]},
+        ]
+        routes, native_routes, trips = ET.Element("routes"), ET.Element("routes"), ET.Element("tripinfos")
+        for identifier, edges in paths.items():
+            vehicle = ET.SubElement(routes, "vehicle", id=identifier, depart="0", departPos="0", arrivalPos="max")
+            ET.SubElement(vehicle, "route", edges=edges)
+            native = ET.SubElement(native_routes, "vehicle", id=identifier, depart="0")
+            ET.SubElement(native, "route", edges=edges, exitTimes="20 40 100")
+            origin, _, destination = edges.split()
+            ET.SubElement(trips, "tripinfo", id=identifier, depart="0", arrival="100", duration="100",
+                          departLane=origin + "_0", departPos="0", arrivalLane=destination + "_0",
+                          arrivalPos="100", routeLength="300")
+        ET.ElementTree(routes).write(self.routes_path)
+        network = ET.Element("net")
+        for edge in ("entry", "middle", "exit", "activity_origin", "activity_destination"):
+            ET.SubElement(ET.SubElement(network, "edge", id=edge), "lane", id=edge + "_0", length="100")
+        ET.ElementTree(network).write(self.net_path)
+        self.write_gz("trips.xml.gz", trips)
+        self.write_gz("vehicle_routes.xml.gz", native_routes)
+        self.generation["vehicles_generated"] = 4
+        self.summary = {"teleports": 0, "vehicles_inserted": 4, "vehicles_completed": 4}
+        (self.directory / "sumo.log").write_text("")
+        for index, interval in enumerate(self.counts):
+            for edge, attribute in (("entry", "departed"), ("exit", "arrived"),
+                                    ("activity_origin", "departed"), ("activity_destination", "arrived")):
+                ET.SubElement(interval, "edge", id=edge, entered="99", **{attribute: "2" if index == 0 else "0"})
+        self.write_gz("metasettran_counts.xml.gz", self.counts)
+
+    def test_activity_trips_reconcile_peripheral_and_internal_extremities_separately(self):
+        self.add_activity_trips()
+        result = self.collect()
+        integrity = result["boundary_integrity"]
+        self.assertEqual(integrity["insertions_at_expected_portal_start"], 2)
+        self.assertEqual(integrity["insertions_at_expected_activity_start"], 2)
+        self.assertEqual(integrity["natural_arrivals_at_expected_portal_end"], 2)
+        self.assertEqual(integrity["natural_arrivals_at_expected_activity_end"], 2)
+        self.assertEqual(integrity["insertions_at_expected_endpoint_start"], 4)
+        self.assertEqual(integrity["natural_arrivals_at_expected_endpoint_end"], 4)
+        self.assertEqual(result["metrics"]["vehicles_completed_without_teleport"], 4)
+        spatial = result["spatial_observation"]
+        self.assertEqual(spatial["portal_reconciliation"]["departures"]["tripinfo_inserted"], 2)
+        self.assertEqual(spatial["portal_reconciliation"]["arrivals"]["tripinfo_arrived"], 2)
+        self.assertEqual(spatial["activity_reconciliation"]["departures"]["tripinfo_inserted"], 2)
+        self.assertEqual(spatial["activity_reconciliation"]["arrivals"]["tripinfo_arrived"], 2)
+        self.assertEqual(spatial["endpoint_reconciliation"]["departures"]["edge_data_departed"], 4)
+        self.assertEqual(spatial["endpoint_reconciliation"]["arrivals"]["edge_data_arrived"], 4)
+        self.assertEqual(spatial["endpoint_totals"]["programmed_by_origin_kind"], {"boundary": 2, "activity": 2})
+        self.assertEqual(spatial["endpoint_totals"]["programmed_by_destination_kind"], {"boundary": 2, "activity": 2})
+        self.assertEqual(spatial["endpoint_totals"]["inserted_by_origin_kind"], {"boundary": 2, "activity": 2})
+        self.assertEqual(spatial["endpoint_totals"]["completed_by_destination_kind"], {"boundary": 2, "activity": 2})
+        locations = {zone["zone_id"]: zone for zone in spatial["activity_locations"]}
+        self.assertEqual(locations["home"]["origins"][0]["cars_total"], 2)
+        self.assertEqual(locations["shopping"]["destinations"][0]["cars_total"], 2)
+        self.assertEqual(locations["home"]["origins"][0]["programmed_trips"], 2)
+        accounting = spatial["portal_trip_accounting"]
+        self.assertEqual(sum(item["programmed"] for item in accounting["entries"]), 2)
+        self.assertEqual(sum(item["programmed"] for item in accounting["activity_origins"]), 2)
+        self.assertEqual(sum(item["inserted"] for item in accounting["entries"] + accounting["activity_origins"]), 4)
+
+    def test_activity_gate_counts_do_not_hide_swapped_boundary_and_activity_totals(self):
+        self.add_activity_trips()
+        # The global total remains four, but one insertion has the wrong origin.
+        for edge in self.counts[0]:
+            if edge.get("id") == "entry":
+                edge.set("departed", "1")
+            if edge.get("id") == "activity_origin":
+                edge.set("departed", "3")
+        self.write_gz("metasettran_counts.xml.gz", self.counts)
+        with self.assertRaisesRegex(ValueError, "Inserções nos acessos"):
+            self.collect()
+
+    def test_activity_endpoints_keep_full_position_checks_and_core_full_results(self):
+        self.add_activity_trips()
+        core = self.collect()
+        vehicles = {}
+        self.assertEqual(core, self.collect(vehicles=vehicles))
+        self.assertEqual(len(vehicles), 4)
+        observed = metasettran_observation_edges(self.spatial)
+        self.assertEqual(len(observed), 8)
+        self.assertIn("activity_origin", observed)
+        self.assertIn("activity_destination", observed)
+        with gzip.open(self.directory / "raw" / "trips.xml.gz") as stream:
+            trips = ET.parse(stream).getroot()
+        trips.find("tripinfo[@id='home_to_shopping']").set("arrivalPos", "50")
+        self.write_gz("trips.xml.gz", trips)
+        with self.assertRaisesRegex(ValueError, "acesso de atividade previsto"):
+            self.collect()
+
+    def test_activity_gate_requires_unique_location_and_registered_extremities(self):
+        self.add_activity_trips()
+        self.spatial["activity_zones"].append({"id": "duplicate", "origins": [{"edge": "activity_origin"}]})
+        with self.assertRaisesRegex(ValueError, "múltiplas zonas"):
+            self.collect()
+        self.spatial["activity_zones"].pop()
+        routes = ET.parse(self.routes_path).getroot()
+        routes[0].find("route").set("edges", "unknown middle exit")
+        ET.ElementTree(routes).write(self.routes_path)
+        with self.assertRaisesRegex(ValueError, "não pertence"):
+            self.collect()
 
     def test_distances_keep_natural_teleported_and_unfinished_populations_separate(self):
         distances = self.collect()["spatial_observation"]["trip_distance_m"]

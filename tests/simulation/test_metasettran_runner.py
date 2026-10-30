@@ -40,7 +40,7 @@ class MetaSettranRunnerTests(unittest.TestCase):
         self.addCleanup(patcher.stop)
         return mocked
 
-    def fake_generate(self, *, output_dir, variation, metadata, **kwargs):
+    def fake_generate(self, *, output_dir, variation, metadata, include_route_details=True, **kwargs):
         route = output_dir / "metasettran.rou.xml"
         duration = 10800.0 * kwargs.get("sections", 1)
         route.write_text('<routes><vehicle id="a" depart="0.5"/>'
@@ -49,12 +49,49 @@ class MetaSettranRunnerTests(unittest.TestCase):
         selection = demand.resolve_contexts(
             day=kwargs["day"], start=kwargs["start"], sections=kwargs["sections"], variation=variation,
             master_seed=kwargs.get("master_seed"), variations=kwargs.get("variations"))
+        realization = {"variation": variation, "seed": selection["seed"],
+                       "sampled_days": [{"weekday": "tuesday", "date": "2026-07-21"}]}
+        spatial_model = {
+            "schema_version": 4, "version": "spatial-v4", "status": "experimental",
+            "network_sha256": "network-hash", "vehicle_class": "passenger", "count_column": "car",
+            "sensor_mapping_status": "unconfirmed", "scope": "synthetic scope",
+            "experimental_assumption": {"status": "synthetic"},
+            "regional_demand": {"road_hierarchy_overrides": {"edge": "primary"}},
+            "sensors": [{"candidates": [{"edge": "before"}, {"edge": "after"}]}],
+        }
+        calibration = {
+            "version": "calibration-v1", "source": {"name": "counts.csv", "sha256": "counts-hash",
+                                                      "count_column": "car"},
+            "time": {"timezone": "America/Sao_Paulo", "source_time_convention": "utc"},
+            "method": {"bin_seconds": 900, "estimator": "median"},
+            "selection": {"day": kwargs["day"], "start": kwargs["start"]},
+            "training_dates": ["2026-07-21"], "validation_dates": ["2026-08-25"],
+            "baseline_reference_cars_15_18": {"5": 10.0, "6": 20.0},
+            "realization": realization,
+            "sensors": {"5": {"expected_cars": 3.0, "target_counts": [1.0, 2.0], "knots": [[0, 1]],
+                                "training_support": {"dates": 1}},
+                        "6": {"expected_cars": 7.0, "target_counts": [3.0, 4.0],
+                                "training_support": {"dates": 1}}},
+            "limitations": ["synthetic limitation"],
+            "quality": {"rows": 100}, "training_clock_evidence": {"raw": "diagnostic"},
+        }
         metadata.update(
             seed=selection["seed"], variation=variation, contexts=selection["contexts"], vehicles_generated=2,
             trips_generated=2, duration=duration, duration_seconds=0.1, routes_file=str(route),
             routes_sha256=hashlib.sha256(route.read_bytes()).hexdigest(),
-            spatial_model={"sensors": [{"candidates": [{"edge": "before"}, {"edge": "after"}]}]},
+            spatial_model=spatial_model, calibration=calibration, variability=realization,
+            groups=[{"id": "regional", "generated_departures": 2}],
+            spatial_distribution={"expected_network_departures": 2.0,
+                                  "trip_populations": {"boundary_to_boundary": 2},
+                                  "portals": {"entries": [{"edge": "entry", "generated_departures": 2,
+                                                               "qualification": {"status": "synthetic"}}],
+                                              "exits": [{"edge": "exit", "generated_departures": 2,
+                                                          "qualification": {"status": "synthetic"}}]},
+                                  "limitations": ["static spatial limitation"]},
         )
+        if include_route_details:
+            metadata["spatial_distribution"].update(
+                routes=[{"id": "route_a", "generated_departures": 2}], groups=metadata["groups"])
         return route
 
     def fake_simulate(self, *, recording_dir, metadata, **kwargs):
@@ -75,8 +112,18 @@ class MetaSettranRunnerTests(unittest.TestCase):
     def fake_validation(self, directory, generation, *, summary_metrics, vehicles=None):
         if vehicles is not None:
             vehicles["a"]["metasettran_trip_status"] = "completed_without_teleport"
-        return {"metrics": {"vehicles_completed_without_teleport": 2, "vehicles_with_teleport": 0},
-                "status": "conditional_on_unconfirmed_sensor_mapping", "ready_for_weekly_expansion": False}
+        self.validation_result = {
+            "metrics": {"vehicles_completed_without_teleport": 2, "vehicles_with_teleport": 0},
+            "status": "conditional_on_unconfirmed_sensor_mapping", "ready_for_weekly_expansion": False,
+            "spatial_observation": {"portal_trip_accounting": {
+                "bin_seconds": 900,
+                "entries": [{"edge": "entry", "programmed": 2,
+                             "intervals": [{"begin": 0, "programmed": 2}]}],
+                "activity_origins": [{"edge": "activity", "programmed": 0,
+                                      "intervals": [{"begin": 0, "programmed": 0}]}],
+            }},
+        }
+        return self.validation_result
 
     def run_batch(self, **kwargs):
         options = {"net_file": self.net, "output_dir": self.output_dir, "demand_profile": "metasettran"}
@@ -165,6 +212,7 @@ class MetaSettranRunnerTests(unittest.TestCase):
                                  {"day": "tuesday", "start": "15:00", "sections": 1, "variation": 7})
                 self.assertNotIn("signal_profile", generated)
                 self.assertNotIn("metrics_profile", generated)
+                self.assertEqual(generated["include_route_details"], profile == "full")
                 _, _, execution = self.results(batch)[0]
                 hashes.append(execution["generation"]["routes_sha256"])
         self.assertEqual(hashes[0], hashes[1])
@@ -192,6 +240,39 @@ class MetaSettranRunnerTests(unittest.TestCase):
                 self.assertEqual(metrics["vehicles_completed_without_teleport"], 2)
                 self.assertFalse(execution["demand_validation"]["ready_for_weekly_expansion"])
                 self.assertEqual(self.validate.call_args.kwargs["vehicles"] is not None, profile == "full")
+                generation = execution["generation"]
+                self.assertEqual(generation["groups"], [{"id": "regional", "generated_departures": 2}])
+                spatial = generation["spatial_distribution"]
+                self.assertEqual(spatial["expected_network_departures"], 2.0)
+                self.assertEqual(spatial["trip_populations"], {"boundary_to_boundary": 2})
+                self.assertEqual("routes" in spatial, profile == "full")
+                self.assertEqual("groups" in spatial, profile == "full")
+                self.assertEqual("spatial_model" in generation, profile == "full")
+                self.assertEqual("calibration" in generation, profile == "full")
+                self.assertEqual("spatial_model_reference" in generation, profile == "core")
+                self.assertEqual("calibration_reference" in generation, profile == "core")
+                self.assertEqual("limitations" in spatial, profile == "full")
+                self.assertEqual("qualification" in spatial["portals"]["entries"][0], profile == "full")
+                if profile == "core":
+                    self.assertEqual(generation["spatial_model_reference"]["network_sha256"], "network-hash")
+                    calibration = generation["calibration_reference"]
+                    self.assertEqual(calibration["source"]["sha256"], "counts-hash")
+                    self.assertEqual(calibration["training_date_count"], 1)
+                    self.assertEqual(calibration["sensors"]["5"]["target_counts"], [1.0, 2.0])
+                    self.assertNotIn("knots", calibration["sensors"]["5"])
+                    self.assertEqual(generation["variability"]["sampled_days"][0]["date"], "2026-07-21")
+                accounting = execution["demand_validation"]["spatial_observation"]["portal_trip_accounting"]
+                self.assertEqual("intervals" in accounting["entries"][0], profile == "full")
+                self.assertEqual("intervals" in accounting["activity_origins"][0], profile == "full")
+                # A coleta recebe e conserva os dados completos; só a visão publicada é compactada.
+                collected_generation = self.validate.call_args.args[1]
+                self.assertIn("spatial_model", collected_generation)
+                self.assertIn("calibration", collected_generation)
+                self.assertIn("intervals", self.validation_result["spatial_observation"]
+                              ["portal_trip_accounting"]["entries"][0])
+                if profile == "full":
+                    self.assertEqual(spatial["routes"], [{"id": "route_a", "generated_departures": 2}])
+                    self.assertEqual(spatial["groups"], generation["groups"])
 
     def test_validation_failure_retains_route_raw_and_inputs_for_investigation(self):
         self.validate.side_effect = ValueError("teleport log incomplete")
@@ -205,6 +286,9 @@ class MetaSettranRunnerTests(unittest.TestCase):
         self.assertTrue((directory / "raw" / "metasettran_counts.xml.gz").is_file())
         document = json.loads(paths[0].read_text())
         self.assertEqual(document["execution"]["status"], "failed")
+        self.assertIn("spatial_model", document["execution"]["generation"])
+        self.assertIn("calibration", document["execution"]["generation"])
+        self.assertNotIn("spatial_model_reference", document["execution"]["generation"])
 
     def test_cli_rejects_ambiguous_contexts_and_conflicting_window_flags(self):
         base = ["--demand-profile", "metasettran", "--net-file", str(self.net),

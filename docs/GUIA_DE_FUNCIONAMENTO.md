@@ -281,9 +281,9 @@ rede física única + random/metasettran + current/settran + core/full
 | `SistemaDeSemaforos/network/` | Rede física compartilhada e programas `current`. |
 | `SistemaDeSemaforos/demand/random_demand_generator.py` | Geração de viagens e rotas. |
 | `SistemaDeSemaforos/demand/metasettran_calibration.py` | Auditoria das contagens `car`, curvas temporais e separação de datas. |
-| `SistemaDeSemaforos/demand/metasettran_demand_generator.py` | Partidas reproduzíveis, duarouter e verificação das rotas entre portais. |
+| `SistemaDeSemaforos/demand/metasettran_demand_generator.py` | Partidas reproduzíveis, escolha OD e rotas entre portais e áreas de atividade. |
 | `SistemaDeSemaforos/demand/metasettran_transitions.py` | Harmonização temporal e conservação entre faixas consecutivas. |
-| `SistemaDeSemaforos/demand/metasettran_spatial.json` | Cadastro geográfico de portais e corredores, pesos iniciais e hipóteses dos sensores. |
+| `SistemaDeSemaforos/demand/metasettran_spatial.json` | Portais, corredores, atividades urbanas, perfis de produção/atração e hipóteses dos sensores. |
 | `SistemaDeSemaforos/simulation/episode_runner.py` | Episódios, comandos, ciclo de vida e resultados. |
 | `SistemaDeSemaforos/simulation/metasettran_selection.py` | Ordenação e agrupamento opcional da seleção semanal livre. |
 | `SistemaDeSemaforos/simulation/web_interface.py`, `web_interface.html` | Servidor local e formulário; execução, acompanhamento e consulta dos outputs. |
@@ -427,10 +427,13 @@ não há 56 geradores nem 1.400 XMLs antecipados. Cada episódio gera e conserva
 rota sob demanda. `--episodes 10 --variation 1` executa dez realizações independentes,
 com índices 1–10. Isso não equivale a dez seções consecutivas.
 
-São representados somente carros (`passenger`), com extremos periféricos.
-Ônibus, caminhões, motocicletas, bicicletas, pedestres e deslocamentos com extremos
-internos estão excluídos. Não se aumenta a demanda periférica para compensá-los.
-O modelo não é uma reprodução integral do tráfego real nem uma matriz OD medida.
+São representados carros (`passenger`) em viagens entre portais periféricos e
+cinco áreas internas: Center Shopping, Centro Administrativo, UFU Educação Física
+e duas amostras de quadras residenciais/mistas nos bairros Brasil e Tibery.
+A população regional existente é repartida entre essas viagens, sem acrescentar
+um orçamento por polo. Ônibus, caminhões, motocicletas, bicicletas, pedestres e
+demais extremos internos continuam ausentes. O modelo não é uma reprodução
+integral do tráfego real nem uma matriz OD medida.
 
 **Relógio, dados e variações.** A versão `metasettran-regional-integrated-v4.3.2-utc`
 interpreta os timestamps originais como UTC e os converte explicitamente com
@@ -496,8 +499,9 @@ atender à decisão do projeto de reduzir mais de 10% em cada realização. É u
 moderação limitada da escala não identificável com dois sensores; nenhuma medição
 comprova especificamente esse percentual. Mantê-lo comum preserva diferenças
 relativas entre contextos e evita inventar reduções por horário ou portal sem dados.
-A distribuição espacial já desigual continua sendo a da v4.3.1. Não houve busca
-iterativa de um percentual que eliminasse congestionamentos.
+A distribuição espacial continua desigual; a escolha urbana v4.4 descrita
+abaixo não recalibra esse coeficiente. Não houve busca iterativa de um percentual
+que eliminasse congestionamentos.
 
 A soma de curvas define um índice temporal, não veículos únicos medidos. Não se
 divide por cobertura de 5,80%, não se somam VMD como novas viagens nem se aumenta
@@ -524,14 +528,76 @@ modulada por evidência externa relativa quando disponível. Ramos do mesmo
 `boundary_group` repartem a maior oportunidade desse grupo, sem somar representações
 do mesmo acesso. Extremos opostos da Rondon são acessos distintos; não dividem um
 orçamento pelo nome da avenida. Os pesos 4/3/2/1 são hipóteses de hierarquia,
-não capacidades semafóricas. Na v4.3.1, cada entrada reparte sua oportunidade pelos ramos dos caminhos nativos.
-Em cada divergência, o peso é `faixas de origem permitidas / (1 + ângulo / (π/2))`,
-normalizado entre as continuações disponíveis. Uma faixa com várias conexões de
-chegada conta uma vez no movimento. O custo angular unitário é hipótese geométrica,
-não proporção medida de conversão. Adicionar destinos depois de uma conversão não
-multiplica sua oportunidade a montante. Retornos mantêm peso positivo; não há
-quota de percursos ou preferência calculada por congestionamento. O algoritmo
-apenas distribui probabilidade entre caminhos já calculados pelo `duarouter`.
+não capacidades semafóricas. A classificação funcional foi conferida no
+[mapa municipal de setembro de 2026](https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf):
+301 segmentos de corredores estruturais e 144 de coletoras recebem um
+`road_hierarchy_overrides` para o cálculo da demanda. Brasil, Cesário Alvim e
+João Pinheiro, por exemplo, tinham trechos OSM residenciais apesar da função
+estrutural municipal. O proxy usa `primary` para estrutural e `tertiary` para
+coletora, sem alterar limites de velocidade, faixas, conexões ou a rede física.
+
+O modelo `metasettran-regional-integrated-v4.4-urban-activities`, método
+`urban_activity_od`, separa escolha do destino e escolha do caminho:
+
+1. A oportunidade de cada zona é repartida entre seus acessos, uma única vez.
+   Áreas externas herdam as oportunidades físicas/VMD dos portais; os cinco
+   extremos internos usam proxies relativos explícitos, sem contar cada portão
+   ou bloco universitário como uma nova população.
+2. Perfis de produção e atração por hora civil distinguem dias úteis, sábado e
+   domingo. Comércio, serviços, ensino e residência têm formas diferentes, com
+   interpolação contínua das probabilidades de 15 min. Os [horários oficiais do
+   shopping](https://centershopping.com.br/horarios/), as funções dos campi e os
+   [domicílios por bairro do Censo 2022](https://apisidra.ibge.gov.br/values/t/9922/n102/in%20n6%203170206/v/381/p/2022/c1/6795)
+   sustentam a distinção; os multiplicadores não são taxas de viagens medidas.
+3. Viagens entre bordas consideram progresso geográfico em relação ao comprimento
+   do trajeto, evitando privilegiar a primeira saída próxima. Viagens de atividade
+   usam impedância `exp(-distância/2000 m)`. Retorno ao mesmo acesso recebe fator
+   0,05; retornos legais continuam possíveis. Esses coeficientes são hipóteses.
+4. Dentro de cada OD, alternativas são repartidas pelo custo relativo do percurso
+   completo e pelo compartilhamento de trechos (`path size` ponderado em metros).
+   A utilidade inclui `exp(-4 × (custo/custo_mínimo - 1))` e fator 0,5 por rota
+   com retorno. Mais alternativas não multiplicam a atração daquele destino.
+5. Além do roteamento em tempo livre, o `duarouter` busca uma alternativa para
+   cada par com custos funcionais: tempo em vias locais/desconhecidas ×1,25,
+   coletoras ×1,10 e estruturais/arteriais ×1, mais as conexões internas. Isso
+   representa aversão moderada a atalhos locais, não velocidade observada ou
+   capacidade. Rotas duplicadas e inválidas são removidas.
+
+Os acessos internos são trechos `passenger` reais, georreferenciados nas ruas
+adjacentes. Rampas, estacionamentos e garagens ausentes da rede são abstraídos;
+as posições não são apresentadas como portões veiculares comprovados. Os dois
+setores residenciais usam somente a razão relativa entre domicílios dos bairros,
+não suas populações inteiras dentro do recorte. Santa Mônica e Umuarama ficam
+representados nas áreas de captação externas, sem duplicar seus campi no miolo.
+Não são criadas viagens que começam e terminam na mesma área interna.
+
+Uma única configuração atende sete dias, oito faixas diárias e 25 variações,
+inclusive na composição cronológica. A agenda regional e as retenções continuam
+comuns; mudar escolhas de origem pode mudar a contagem final da redução lateral.
+Agendas pareadas explícitas conservam sua população. O ajuste aos sensores pode
+alterar a distribuição urbana inicial; `observation_projection.urban_prior_drift`
+registra esse deslocamento por origem, destino e zona. Densidades absolutas,
+oportunidades e perfis permanecem hipóteses até haver OD e contagens de acesso.
+Os métodos anteriores continuam disponíveis no cadastro para comparação, e
+resultados históricos conservam a versão que os produziu.
+
+Validação da v4.4: **383 testes aprovados**; catálogo real de 2.923 rotas;
+1.400 contextos e 16.800 distribuições de 15 min conferidos quanto a finitude,
+normalização e conservação (erro máximo inferior a `1e-11` viagem esperada).
+A seleção domingo 21h V7 → segunda 00h V8 produziu 4.999 viagens válidas e
+continuidade OD na fronteira. Os métodos de auditoria foram executados somente
+como verificações temporárias, sem novos scripts ou relatórios no projeto.
+
+Uma simulação completa terça 15–18 V7 com 45 min de escoamento e `current`
+carregou 13.591 viagens: 7.068 conclusões naturais, 1.252 conclusões após teleporte,
+3.081 incompletas e 2.190 não inseridas. Houve 3.284 eventos de teleporte em
+2.353 veículos e zero colisões. A reconciliação distingue chegadas lógicas do
+SUMO, inclusive `vaporized="teleport"`, de conclusões físicas naturais. Há
+congestionamento forte nessa condição; a distribuição urbana tem fundamento
+geográfico, mas **a escala absoluta e a operação conjunta com `current` ainda
+não estão validadas**. Não se escolhem pesos para eliminar artificialmente filas.
+XMLs, mapas e saídas temporárias dessas verificações são removidos ao terminar;
+os dados-fonte e resultados anteriores permanecem no local habitual.
 
 `duarouter` calcula os caminhos. O catálogo inclui alternativas explícitas por
 Jerônimo–Brasil–Niterói, Brasil e João Pinheiro–Jataí, qualificadas pela geometria.
@@ -583,6 +649,8 @@ Os grupos periféricos `rondon_sudoeste` e `rondon_nordeste` ficam protegidos;
 todas as demais origens são laterais para essa regra, mesmo quando o percurso
 posteriormente utiliza a Rondon. A classificação é por portal de origem,
 independente de travessia integral/parcial e da incidência dos sensores.
+Na v4.4, origens de atividade internas também recebem a retenção lateral; somente
+os dois grupos periféricos da Rondon estão protegidos.
 
 Primeiro ocorre a retenção regional de 85% já aprovada e a escolha OD original.
 Depois cada faixa retém `floor(0.9 * N_lateral)` partidas laterais mediante amostra
@@ -631,12 +699,16 @@ Uma conversão entre os pontos pode tornar suas contagens diferentes. Faltam lin
 virtual, direção e faixas efetivamente observadas; não há calibração empírica regional
 confirmada. MAE/WAPE contra treino e verificação são condicionais a essa correspondência.
 
-O coletor compartilhado registra por portal e intervalo: programados, inseridos,
+O coletor compartilhado registra por portal ou acesso de atividade e intervalo: programados, inseridos,
 pendentes de inserção, atrasos e estados finais. Separa conclusões naturais, chegadas
 após teleporte, incompletos e não inseridos. Passagens conservadoras excluem qualquer
 veículo com teleporte e ficam separadas de `edgeData` nativo. Movimentos entre edges
 são observados por `vehroute` com tempos das conexões internas. Tempos até o sensor,
 filas e teleportes não são ocultados para melhorar os erros.
+`spatial_observation.activity_locations` reúne os acessos internos;
+`portal_reconciliation`, `activity_reconciliation` e `endpoint_reconciliation`
+conferem separadamente as bordas, as atividades e o total. Uma chegada a um polo
+interno não é contada como saída periférica da rede.
 
 **Seções contínuas e sorteio contextual.** A composição `metasettran-chronological-v1`
 preserva a calibração `v4.3.2-utc`. Um único mecanismo atende de uma a 56 faixas
@@ -1052,6 +1124,27 @@ das observações. O CLI seleciona somente `--metrics-profile core/full`, sem
 seleção individual de métricas ou alteração de fórmulas. Acrescentar uma fonte
 exige suporte no código; recursos nativos como SSM/TTC/PET, detectores E2 e
 bateria não estão integrados à coleta atual.
+
+Em MetaSettran, o `core` omite o catálogo diagnóstico `routes` (pesos, custos e
+listas por trecho de cada alternativa) e a cópia de `groups`, já preservada em
+`execution.generation.groups`. A cópia integral do cadastro espacial vira
+`spatial_model_reference`, com versão, hash, escopo e hipóteses principais. A
+calibração interna vira `calibration_reference`, com fonte e hash, relógio,
+método, seleção, quantidade de datas, referências e alvos por sensor. Curvas
+semanais completas, validações diárias da entrada e evidências extensas ficam no
+`full`. Qualificações cartográficas e textos estáticos também não são repetidos
+em cada resultado `core`.
+
+Na contabilidade por origem, o `core` conserva totais programados/inseridos,
+estados finais, teleportes e atraso agregado, mas omite os diagnósticos de atraso
+repetidos em cada intervalo de 15 minutos. As séries temporais de veículos por
+portal, polo e corredor continuam presentes, assim como comparações dos sensores,
+progressão global, reconciliações e continuidade. Permanecem ainda configurações,
+seeds, variações, modos de seleção/agrupamento e o XML das rotas. O `full` conserva
+o detalhamento anterior integralmente. O gerador evita construir a cópia do
+catálogo no `core`; sua API Python mantém esse detalhe por padrão
+(`include_route_details=True`). A diferença é somente de representação dos novos
+resultados, sem recalcular ou regravar históricos.
 
 ### O que SETTRAN altera no SUMO
 

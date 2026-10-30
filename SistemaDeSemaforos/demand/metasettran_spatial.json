@@ -1,11 +1,11 @@
 {
   "schema_version": 4,
-  "version": "boundary-regional-integrated-v4.3.1",
-  "status": "experimental_spatial_improvement_confirmed_regional_calibration_pending",
+  "version": "boundary-and-activity-regional-integrated-v4.4-urban",
+  "status": "experimental_urban_activity_model_regional_calibration_pending",
   "network_sha256": "f30b0807fa46e3d4fb65c573be68f6544d75a64e44a2c32fee71389fd4106d56",
   "vehicle_class": "passenger",
   "count_column": "car",
-  "scope": "População regional única entre portais cartograficamente qualificados. Percursos determinam incidências sobre observações possivelmente compartilhadas. Extremos internos e classes distintas de passenger permanecem excluídos.",
+  "scope": "População regional única repartida entre portais cartograficamente qualificados, três polos internos de atividade e duas pequenas áreas residenciais/mistas em ruas adjacentes. Percursos determinam incidências sobre observações compartilhadas. Não é uma matriz OD medida; demais extremos internos e classes não passenger permanecem excluídos, sem novo orçamento regional.",
   "sensor_mapping_status": "unconfirmed",
   "experimental_assumption": {
     "status": "sensor_mapping_authorized_hypothesis_not_empirically_confirmed",
@@ -70,6 +70,13 @@
         "rondon_rio": 2962
       },
       "use": "Referência histórica descritiva; não convertida em preferência por destino nem aplicada como restrição de movimento."
+    },
+    "urban_context": {
+      "checked_on": "2026-10-29",
+      "official_road_and_landuse_maps": "https://www.uberlandia.mg.gov.br/prefeitura/secretarias/planejamento-urbano/mapas-e-bairros/",
+      "official_road_map": "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf",
+      "geographic_data": "https://www.openstreetmap.org/copyright",
+      "scope": "Mapa oficial e coordenadas OSM qualificam localização, função urbana, corredores estruturais e acessos aproximados; não fornecem volumes de viagens ou ocupação dos portais. Overrides de hierarquia de demanda apenas para corredores conferidos visualmente no mapa, preservando o tipo físico original da rede."
     }
   },
   "portals": {
@@ -105,7 +112,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "-659117933#east",
@@ -138,7 +146,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.tertiary",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "1171563461",
@@ -171,7 +180,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "rondon_sudoeste"
       },
       {
         "edge": "142719720#0",
@@ -202,7 +212,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "152937004#0",
@@ -235,7 +246,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "152937010#0",
@@ -267,7 +279,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "152937136#0",
@@ -299,7 +312,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "rondon_nordeste"
       },
       {
         "edge": "154562663#north",
@@ -332,7 +346,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "248261375#0",
@@ -365,7 +380,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "248261379#0",
@@ -398,7 +414,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "261301884#0",
@@ -430,7 +447,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "261533405#0",
@@ -462,7 +480,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "261533408",
@@ -493,7 +512,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "269160814#west",
@@ -526,7 +546,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available.",
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "30620737#0",
@@ -557,7 +578,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30620978#0",
@@ -589,7 +611,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30621187",
@@ -621,7 +644,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "30621472#0",
@@ -653,7 +677,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "30621478#east",
@@ -686,7 +711,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.secondary",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "30621940#0",
@@ -719,7 +745,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30621947#0",
@@ -750,7 +777,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30621954#0",
@@ -781,7 +809,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30628244#0",
@@ -812,7 +841,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "30664522#0",
@@ -843,7 +873,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30664642#0",
@@ -875,7 +906,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "30665257#0",
@@ -906,7 +938,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "30665265#0",
@@ -937,7 +970,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "307156125#0",
@@ -969,7 +1003,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "398537158#east",
@@ -1001,7 +1036,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "402968122#0",
@@ -1034,7 +1070,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "402968127#west",
@@ -1067,7 +1104,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.secondary",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "402968128#0",
@@ -1100,7 +1138,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "402968133#west",
@@ -1133,7 +1172,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "421572935",
@@ -1164,7 +1204,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "602306707",
@@ -1197,7 +1238,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "602306713#0",
@@ -1229,7 +1271,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "616180216",
@@ -1263,7 +1306,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "658279138#0",
@@ -1295,7 +1339,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "659117881",
@@ -1330,7 +1375,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "659117933#west",
@@ -1363,7 +1409,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.tertiary",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "665897565#0",
@@ -1396,7 +1443,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "789705871#0",
@@ -1429,7 +1477,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "853676885",
@@ -1461,7 +1510,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "931172668#west",
@@ -1494,7 +1544,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available.",
+        "zone_id": "santa_monica_ufu_leste"
       }
     ],
     "exits": [
@@ -1529,7 +1580,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "-616180216",
@@ -1563,7 +1615,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "-659117881",
@@ -1598,7 +1651,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "-659117933#west",
@@ -1631,7 +1685,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.tertiary",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "1156272391#3",
@@ -1662,7 +1717,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "rondon_nordeste"
       },
       {
         "edge": "1163825151",
@@ -1694,7 +1750,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "1171661493#1",
@@ -1725,7 +1782,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "152937004#32",
@@ -1758,7 +1816,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "1542864329",
@@ -1789,7 +1848,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "261301880#6",
@@ -1822,7 +1882,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "261432318",
@@ -1855,7 +1916,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "rondon_sudoeste"
       },
       {
         "edge": "303790003#4",
@@ -1888,7 +1950,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "30621943#13",
@@ -1919,7 +1982,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30621952#12",
@@ -1950,7 +2014,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30621953#14",
@@ -1981,7 +2046,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30621958#12",
@@ -2012,7 +2078,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30628247#1",
@@ -2043,7 +2110,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "30648910#6",
@@ -2075,7 +2143,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "30648920#5",
@@ -2106,7 +2175,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "30649088#1",
@@ -2138,7 +2208,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "30664521#13",
@@ -2170,7 +2241,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30664523#6",
@@ -2201,7 +2273,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "30665258#10",
@@ -2232,7 +2305,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "307156125#15",
@@ -2264,7 +2338,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "330066084#14",
@@ -2296,7 +2371,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "centro_aparecida_oeste"
       },
       {
         "edge": "332052778",
@@ -2328,7 +2404,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "403166935#12",
@@ -2361,7 +2438,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "403166940#4",
@@ -2393,7 +2471,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "602306725#east",
@@ -2426,7 +2505,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.secondary",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "602306733#west",
@@ -2459,7 +2539,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "602306745#west",
@@ -2492,7 +2573,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.secondary",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "616971268#west",
@@ -2525,7 +2607,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "647043774#1",
@@ -2558,7 +2641,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.residential",
-        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available."
+        "prior_road_type_basis": "Unknown source hierarchy; conservative local prior hypothesis, external relative count retained when available.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "659117933#east",
@@ -2591,7 +2675,8 @@
           "field_validation": "not_available"
         },
         "prior_road_type": "highway.tertiary",
-        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge."
+        "prior_road_type_basis": "Modal nonempty hierarchy on mapped same corridor; hypothesis for cut edge.",
+        "zone_id": "santa_monica_ufu_leste"
       },
       {
         "edge": "665897559#8",
@@ -2622,7 +2707,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "brasil_umuarama_norte"
       },
       {
         "edge": "665897609#1",
@@ -2654,7 +2740,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "tibery_leste"
       },
       {
         "edge": "82009805#1",
@@ -2687,7 +2774,8 @@
           "topology": "passenger_boundary_verified",
           "geography": "versioned_OSM_cut_cross_checked",
           "field_validation": "not_available"
-        }
+        },
+        "zone_id": "santa_monica_ufu_leste"
       }
     ]
   },
@@ -4848,7 +4936,7 @@
       "highway.residential": 1,
       "": 1
     },
-    "weight_status": "Oportunidade por entrada física orientada: faixas passenger × hierarquia × VMD relativo quando disponível; ramos do mesmo acesso repartem oportunidade. Cada entrada distribui sua massa pelos ramos dos percursos nativos, usando faixas de origem permitidas e ângulo da conversão. Destinos adicionais a jusante não multiplicam peso de um movimento. Hipótese de escolha, não capacidade semafórica nem volume medido.",
+    "weight_status": "Oportunidades físicas dos acessos externos e proxies relativos de três polos e duas pequenas áreas residenciais internas são repartidos por zona/gate; produção/atração horária e custo espacial definem pares OD. Rotas nativas são avaliadas por custo funcional, desvio e sobreposição, conservando a população regional. Oportunidades/perfis são hipóteses de planejamento, não capacidades, densidades identificadas ou volumes medidos.",
     "relative_corridor_evidence": {
       "avenida_joao_naves_de_avila": "joao_naves",
       "avenida_monsenhor_eduardo": "monsenhor",
@@ -4943,17 +5031,18 @@
       "Projeção de tempo livre não modela filas/inserção/sinais; somente passagens físicas SUMO avaliam o fluxo realizado.",
       "Fontes externas modulam priors relativos de outras seções e classes; não medem a demanda destes portais.",
       "Forma temporal arterial/local e escolha OD são hipóteses; não há OD semanal medido.",
-      "Viagens internas ausentes não são compensadas elevando entradas.",
-      "Comparações pareadas v4.3.1 reduzem saturação da v4.2 sem alterar volume, mas não comprovam escala regional, posições dos sensores ou adequação integral de current.",
-      "Alternativas de continuidade da Niterói ampliam origens possíveis sem cotas; destinos e movimentos permanecem hipóteses, sujeitos a conflitos reais."
+      "Três polos e duas pequenas áreas residenciais internas substituem parte das viagens de passagem; demais viagens internas e classes não passenger permanecem ausentes, sem aumento do orçamento regional.",
+      "Comparações históricas v4.3.1 não validam o refinamento contextual v4.3.3 nem comprovam escala regional, posições dos sensores ou adequação integral de current.",
+      "Alternativas de continuidade da Niterói ampliam origens possíveis sem cotas; destinos e movimentos permanecem hipóteses, sujeitos a conflitos reais.",
+      "Uso do solo, perfis por atividade e oportunidades de polos melhoram plausibilidade geográfica, mas seus coeficientes não identificam densidades reais sem contagens de acessos/OD; gates em ruas próximas abstraem estacionamentos ausentes.",
+      "Censo2022 de domicílios por bairro fundamenta somente uma razão relativa entre duas amostras residenciais; falta população/área/motorização do recorte e contagens de acesso para identificar densidade e viagens dessas quadras."
     ],
     "route_choice": {
-      "method": "native_path_branch_opportunities",
-      "angular_cost": 1.0,
-      "kind": "hypothesis_geometric_route_choice",
-      "formula": "At each divergence in existing native paths: distinct permitted source lanes / (1 + absolute heading change / (pi/2)); normalized among available continuations, separately for each origin. Origin opportunities normalized once.",
-      "rationale": "Elimina a multiplicação da atratividade de conversões pelo número de destinos a jusante. Prioriza continuidade geométrica sem proibir retornos, viagens curtas ou selecionar caminhos por desempenho simulado. Custo angular unitário é hipótese dimensional explícita; não é proporção medida de conversão.",
-      "sensitivity": "angular_cost=0 is lane-only; angular_cost=2 doubles geometric turn aversion; neither changes volumes, signals or route validity."
+      "method": "urban_activity_od",
+      "kind": "hypothesis_activity_and_generalized_cost_OD",
+      "formula": "Zone opportunity * hourly production/attraction * distance deterrence, shared among qualified gates; native alternatives split by freeflow detour cost and path overlap, with positive penalties for U-turn and return to the same physical access. All route and context probabilities normalize within the fixed regional population.",
+      "rationale": "Representa origens e destinos internos georreferenciados antes ausentes, distingue comércio, serviços, ensino e pequenas áreas residenciais/mistas, considera horários de atividade e custo do percurso completo. Não aumenta veículos para preencher zonas, não força ocupação mínima ou fluxo uniforme, e não confunde trecho de rua adjacente com rampa de estacionamento ou garagem comprovada.",
+      "scope": "All7weekdays,8three-hourwindows,25variations and chronological selections; measuredcarcurves and reductions remain shared."
     },
     "scale_assessment": {
       "status": "not_identified_from_available_counts",
@@ -4979,11 +5068,846 @@
     "lateral_origin_reduction": {
       "version": "lateral-origins-v1",
       "retained_fraction": 0.9,
-      "protected_boundary_groups": ["rondon_sudoeste", "rondon_nordeste"],
+      "protected_boundary_groups": [
+        "rondon_sudoeste",
+        "rondon_nordeste"
+      ],
       "scope": "All 56 contexts, all 25 variations and chronological selections; all origins outside the two protected Rondon boundary groups, including routes that later use Rondon.",
       "method": "After the existing 15% regional reduction and OD selection, retain floor(0.9*N_lateral) systematically spaced lateral departures per context. Never redistribute removed trips or redraw retained routes.",
       "basis": "User-authorized experimental sensitivity reduction. Local sensor observations do not identify boundary inflows or establish this percentage as measured.",
       "paired_schedule": "Explicit paired agendas bypass both reductions to preserve their fixed population. Existing route files reused between controllers are never reduced again."
+    },
+    "urban_activity_model": {
+      "version": "urban-activity-od-v1",
+      "status": "geographically_grounded_planning_hypothesis_not_measured_OD",
+      "zones": [
+        {
+          "id": "center_shopping",
+          "name": "Complexo Center Shopping",
+          "kind": "commerce",
+          "opportunity": 4.0,
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.01, 0.01, 0.05, 0.3, 0.9, 1.1, 1.3, 1.4, 1.3, 0.01],
+              "destination": [0.01, 0.01, 0.2, 0.75, 1.1, 1.2, 1.3, 1.4, 0.05, 0.01]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.01, 0.01, 0.05, 0.3, 0.9, 1.2, 1.5, 1.5, 1.4, 0.01],
+              "destination": [0.01, 0.01, 0.15, 0.8, 1.2, 1.4, 1.5, 1.3, 0.05, 0.01]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.01, 0.01, 0.02, 0.05, 0.3, 0.7, 1.2, 1.3, 0.5, 0.01],
+              "destination": [0.01, 0.01, 0.02, 0.05, 0.25, 1.1, 1.3, 1.0, 0.03, 0.01]
+            }
+          },
+          "references": [
+            "https://centershopping.com.br/horarios/",
+            "https://www.openstreetmap.org/way/1467914911",
+            "https://www.openstreetmap.org/node/4735171422",
+            "https://www.openstreetmap.org/way/299469784",
+            "https://www.openstreetmap.org/way/463013981",
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf",
+            "https://centershopping.com.br/o-shopping/"
+          ],
+          "basis": "Complexo comercial cartograficamente identificado. O estacionamento real e suas vias de serviço (por exemplo Rua Argentina e Rua da Bandeira/30622917) estão ausentes da rede. Chegada na Honduras e saída na Bandeira representam acesso agregado no viário público adjacente, não rampas de estacionamento comprovadas nem simulação interna do complexo. Oportunidade4 é hipótese ordinal de atratividade de um polo comercial regional, não volume medido, capacidade, vagas ou número de estabelecimentos."
+        },
+        {
+          "id": "centro_administrativo",
+          "name": "Centro Administrativo Municipal",
+          "kind": "service",
+          "opportunity": 2.0,
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.01, 0.03, 0.05, 0.2, 0.6, 0.9, 1.5, 0.15, 0.01, 0.01],
+              "destination": [0.01, 0.05, 0.4, 0.6, 1.4, 1.4, 0.15, 0.03, 0.01, 0.01]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.01, 0.01, 0.03, 0.05, 0.05, 0.05, 0.03, 0.02, 0.01, 0.01],
+              "destination": [0.01, 0.01, 0.03, 0.05, 0.05, 0.05, 0.03, 0.02, 0.01, 0.01]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.01, 0.01, 0.02, 0.03, 0.03, 0.03, 0.02, 0.01, 0.01, 0.01],
+              "destination": [0.01, 0.01, 0.02, 0.03, 0.03, 0.03, 0.02, 0.01, 0.01, 0.01]
+            }
+          },
+          "references": [
+            "https://www.uberlandia.mg.gov.br/",
+            "https://www.openstreetmap.org/way/489688669",
+            "https://www.openstreetmap.org/way/30649087",
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf",
+            "https://www.uberlandia.mg.gov.br/portal-da-transparencia/atendimento-ao-publico/"
+          ],
+          "basis": "Prefeitura georreferenciada e endereço oficial na Anselmo Alves dos Santos. Trechos bidirecionais da Ubiratan Honório de Castro, cerca de55m do centro do edifício, representam distribuição agregada dos acessos locais no entorno sul; não se usa a João Naves meramente por ser a arterial mais próxima. Estacionamento e portões não são simulados. Oportunidade2 é hipótese ordinal de serviços, não contagem de servidores, visitantes ou vagas."
+        },
+        {
+          "id": "ufu_educacao_fisica",
+          "name": "UFU Campus Educação Física",
+          "kind": "education",
+          "opportunity": 1.0,
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.01, 0.03, 0.15, 0.5, 1.0, 0.7, 1.4, 0.8, 0.15, 0.01],
+              "destination": [0.01, 0.2, 1.4, 0.7, 0.7, 1.1, 0.5, 0.2, 0.05, 0.01]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.01, 0.02, 0.2, 0.35, 0.4, 0.25, 0.2, 0.1, 0.02, 0.01],
+              "destination": [0.01, 0.05, 0.35, 0.4, 0.25, 0.2, 0.15, 0.05, 0.01, 0.01]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.01, 0.01, 0.1, 0.2, 0.25, 0.2, 0.15, 0.05, 0.01, 0.01],
+              "destination": [0.01, 0.02, 0.2, 0.25, 0.2, 0.15, 0.1, 0.02, 0.01, 0.01]
+            }
+          },
+          "references": [
+            "https://prefe.ufu.br/localizacoes/campus-educacao-fisica",
+            "https://faefi.ufu.br/unidades/curso/curso-de-graduacao-educacao-fisica-licenciatura-e-bacharelado",
+            "https://www.openstreetmap.org/way/159437041",
+            "https://www.openstreetmap.org/node/6122297453",
+            "https://www.openstreetmap.org/node/6122297459",
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf"
+          ],
+          "basis": "Campus Educação Física, Rua Benjamim Constant1286, dentro do recorte. Dois trechos públicos de Benjamim Constant ficam próximos das entradas cartográficas main e representam acesso agregado ao campus; não são rampas ou portões veiculares confirmados. Oportunidade1 é hipótese relativa ao campus e compartilhada pelos dois trechos, sem contar cada bloco como universidade independente. Santa Mônica e Umuarama são outros campi e não são duplicados como polos internos."
+        },
+        {
+          "id": "centro_aparecida_oeste",
+          "name": "Continuação Centro–Aparecida a oeste do recorte",
+          "kind": "mixed_commerce_services",
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.25, 0.35, 0.6, 0.8, 1.0, 1.0, 1.4, 1.15, 0.45, 0.25],
+              "destination": [0.25, 0.5, 1.4, 1.3, 1.1, 1.2, 0.8, 0.5, 0.3, 0.25]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.25, 0.3, 0.6, 0.9, 1.2, 1.3, 1.1, 0.8, 0.4, 0.25],
+              "destination": [0.25, 0.35, 0.8, 1.25, 1.3, 1.2, 0.8, 0.5, 0.3, 0.25]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.3, 0.3, 0.4, 0.6, 0.8, 0.9, 0.9, 0.8, 0.4, 0.3],
+              "destination": [0.3, 0.3, 0.5, 0.7, 0.9, 0.9, 0.8, 0.6, 0.35, 0.3]
+            }
+          },
+          "references": [
+            "https://www.uberlandia.mg.gov.br/prefeitura/secretarias/planejamento-urbano/mapas-e-bairros/",
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf"
+          ],
+          "basis": "Área externa agregada pelas continuações de Brasil, Afonso Pena, João Pinheiro, João Naves e malha do setor central. Não é polígono legal de bairro. Oportunidade herdada dos acessos físicos orientados e VMD relativo; perfis moderados de atração diurna/saída no fim da tarde são hipótese de uso misto, não OD medido."
+        },
+        {
+          "id": "brasil_umuarama_norte",
+          "name": "Continuação Brasil–Umuarama ao norte",
+          "kind": "mixed_residential_health_education",
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.35, 0.5, 0.8, 0.9, 1.0, 1.0, 1.3, 1.15, 0.6, 0.35],
+              "destination": [0.35, 0.6, 1.3, 1.2, 1.1, 1.15, 0.9, 0.9, 0.5, 0.35]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.4, 0.45, 0.7, 0.9, 1.1, 1.1, 1.05, 0.9, 0.6, 0.4],
+              "destination": [0.4, 0.5, 0.9, 1.1, 1.1, 1.1, 1.0, 0.85, 0.55, 0.4]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.4, 0.4, 0.6, 0.8, 1.0, 1.0, 1.0, 0.9, 0.6, 0.4],
+              "destination": [0.4, 0.45, 0.7, 0.9, 1.0, 1.0, 1.0, 0.9, 0.6, 0.4]
+            }
+          },
+          "references": [
+            "https://www.uberlandia.mg.gov.br/prefeitura/secretarias/planejamento-urbano/mapas-e-bairros/",
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf",
+            "https://ufu.br/campi/campus-umuarama?page=1"
+          ],
+          "basis": "Continuações da malha Brasil em direção a Umuarama, saúde e educação fora do recorte. Campi/hospital do Umuarama não são deslocados para dentro da rede. Oportunidade física herdada; atividade diurna, mistura residencial e manutenção de fluxo de saúde fora do expediente são hipóteses relativas."
+        },
+        {
+          "id": "santa_monica_ufu_leste",
+          "name": "Continuação Santa Mônica–UFU no limite sudeste",
+          "kind": "mixed_education_residential",
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.35, 0.4, 0.7, 0.9, 1.1, 0.9, 1.3, 1.05, 1.1, 0.35],
+              "destination": [0.35, 0.6, 1.35, 1.0, 1.0, 1.15, 0.9, 1.15, 0.7, 0.35]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.4, 0.5, 0.7, 1.0, 1.2, 1.2, 1.1, 0.9, 0.7, 0.4],
+              "destination": [0.4, 0.4, 0.6, 0.8, 1.0, 1.1, 1.2, 1.2, 0.9, 0.4]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.4, 0.4, 0.6, 0.9, 1.1, 1.1, 1.0, 0.8, 0.6, 0.4],
+              "destination": [0.4, 0.4, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2, 0.8, 0.4]
+            }
+          },
+          "references": [
+            "https://www.uberlandia.mg.gov.br/prefeitura/secretarias/planejamento-urbano/mapas-e-bairros/",
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf",
+            "https://prefe.ufu.br/localizacoes/campus-santa-monica-0"
+          ],
+          "basis": "Portais de João Naves de Ávila, Segismundo Pereira e ruas locais ao sul/sudeste dão continuidade ao Santa Mônica e ao campus além do corte. Não se cria um campus interno ou um acesso fictício cruzando quarteirões. Oportunidade herdada dos portais; combina atração acadêmica diurna/noturna e residência em hipótese temporal moderada."
+        },
+        {
+          "id": "tibery_leste",
+          "name": "Continuação residencial e mista do Tibery a leste",
+          "kind": "mixed_residential",
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.35, 0.6, 1.4, 1.1, 1.0, 1.0, 0.8, 0.7, 0.5, 0.35],
+              "destination": [0.35, 0.4, 0.6, 0.8, 0.9, 1.0, 1.25, 1.4, 0.8, 0.35]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.4, 0.5, 0.7, 1.0, 1.2, 1.2, 1.1, 0.9, 0.7, 0.4],
+              "destination": [0.4, 0.4, 0.6, 0.8, 1.0, 1.1, 1.2, 1.2, 0.9, 0.4]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.4, 0.4, 0.6, 0.9, 1.1, 1.1, 1.0, 0.8, 0.6, 0.4],
+              "destination": [0.4, 0.4, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2, 0.8, 0.4]
+            }
+          },
+          "references": [
+            "https://www.uberlandia.mg.gov.br/prefeitura/secretarias/planejamento-urbano/mapas-e-bairros/",
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf",
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2022/07/Setor-Leste.pdf"
+          ],
+          "basis": "Continuações de Europa, Portugal, Benjamim Magalhães, Holanda, África e acessos orientais do Tibery. Não é polígono censitário nem todos os destinos são residências; usa padrão relativo de saída de manhã e retorno ao fim do dia, com fim de semana distinto, como hipótese explícita."
+        },
+        {
+          "id": "rondon_sudoeste",
+          "name": "Conexão regional Rondon Pacheco sudoeste",
+          "kind": "regional_connection",
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+              "destination": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+              "destination": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+              "destination": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            }
+          },
+          "references": [
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf"
+          ],
+          "basis": "Extremo regional distinto, oportunidade física orientada herdada. Perfil relativo neutro evita inventar destino de trabalho/moradia para tráfego que continua além da rede; curvas car e estimativa direcional existentes determinam variação temporal."
+        },
+        {
+          "id": "rondon_nordeste",
+          "name": "Conexão regional Rondon Pacheco nordeste",
+          "kind": "regional_connection",
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+              "destination": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+              "destination": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+              "destination": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            }
+          },
+          "references": [
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf"
+          ],
+          "basis": "Extremo regional distinto, oportunidade física orientada herdada. Não compartilha orçamento com o extremo sudoeste pelo nome da avenida. Perfil neutro; variação das curvas e razão direcional existente continua separada."
+        },
+        {
+          "id": "brasil_residential_blocks",
+          "name": "Quadras residenciais e mistas do Brasil — Espírito Santo/Bahia",
+          "kind": "residential_mixed",
+          "opportunity": 1.0,
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.35, 0.6, 1.4, 1.1, 1.0, 1.0, 0.8, 0.7, 0.5, 0.35],
+              "destination": [0.35, 0.4, 0.6, 0.8, 0.9, 1.0, 1.25, 1.4, 0.8, 0.35]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.4, 0.5, 0.7, 1.0, 1.2, 1.2, 1.1, 0.9, 0.7, 0.4],
+              "destination": [0.4, 0.4, 0.6, 0.8, 1.0, 1.1, 1.2, 1.2, 0.9, 0.4]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.4, 0.4, 0.6, 0.9, 1.1, 1.1, 1.0, 0.8, 0.6, 0.4],
+              "destination": [0.4, 0.4, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2, 0.8, 0.4]
+            }
+          },
+          "references": [
+            "https://apisidra.ibge.gov.br/values/t/9922/n102/3170206001,3170206002/v/381/p/2022/c1/6795",
+            "https://www.uberlandia.mg.gov.br/prefeitura/secretarias/planejamento-urbano/mapas-e-bairros/",
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2022/07/Setor-Central.pdf",
+            "https://www.openstreetmap.org/node/3588937956",
+            "https://www.openstreetmap.org/way/30621958",
+            "https://www.openstreetmap.org/way/30621947"
+          ],
+          "basis": "Pequena área agregada de quadras no entorno do ponto cartográfico do bairro Brasil, em ruas públicas locais de sentidos complementares Espírito Santo/Bahia. Os pontos são acessos agregados de origem/destino residencial e usos mistos nas quadras, não portões de casas identificadas. O Censo2022 confirma o bairro e fornece4201domicílios ocupados no BAIRRO INTEIRO; o valor1 apenas ancora uma escala relativa modesta para esta amostra de quadras. Sem área recortada/contagem local, não se interpreta a razão como densidade real ou população representada."
+        },
+        {
+          "id": "tibery_residential_blocks",
+          "name": "Quadras residenciais e mistas do Tibery — Rua Paris",
+          "kind": "residential_mixed",
+          "opportunity": 1.4103784813139728,
+          "profiles": {
+            "weekday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.35, 0.6, 1.4, 1.1, 1.0, 1.0, 0.8, 0.7, 0.5, 0.35],
+              "destination": [0.35, 0.4, 0.6, 0.8, 0.9, 1.0, 1.25, 1.4, 0.8, 0.35]
+            },
+            "saturday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.4, 0.5, 0.7, 1.0, 1.2, 1.2, 1.1, 0.9, 0.7, 0.4],
+              "destination": [0.4, 0.4, 0.6, 0.8, 1.0, 1.1, 1.2, 1.2, 0.9, 0.4]
+            },
+            "sunday": {
+              "hours": [0, 6, 8, 10, 12, 14, 17, 19, 22, 24],
+              "origin": [0.4, 0.4, 0.6, 0.9, 1.1, 1.1, 1.0, 0.8, 0.6, 0.4],
+              "destination": [0.4, 0.4, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2, 0.8, 0.4]
+            }
+          },
+          "references": [
+            "https://apisidra.ibge.gov.br/values/t/9922/n102/3170206001,3170206002/v/381/p/2022/c1/6795",
+            "https://www.uberlandia.mg.gov.br/prefeitura/secretarias/planejamento-urbano/mapas-e-bairros/",
+            "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2022/07/Setor-Leste.pdf",
+            "https://www.openstreetmap.org/node/1658291397",
+            "https://www.openstreetmap.org/way/30648047"
+          ],
+          "basis": "Pequena área agregada de quadras residenciais e mistas no entorno do ponto cartográfico do Tibery, com dois sentidos reais da Rua Paris. Origem/destino são acessos agregados às quadras, sem inventar garagem ou rampa. O Censo2022 contém5925domicílios ocupados no BAIRRO INTEIRO. A oportunidade~1,41 apenas modula a escala relativa da pequena amostra em relação ao Brasil; a proporção de moradores efetivamente situada no recorte e sua motorização são desconhecidas."
+        }
+      ],
+      "distance_scale_m": 2000.0,
+      "detour_sensitivity": 4.0,
+      "same_access_penalty": 0.05,
+      "uturn_penalty": 0.5,
+      "path_size_exponent": 1.0,
+      "population_policy": "Repartir a população regional existente entre viagens externas, de acesso a polos internos e entre polos. Não somar orçamento novo, não compensar classes ausentes e não impor contagem mínima por polo ou via.",
+      "opportunity_basis": "Zonas externas herdam a soma das oportunidades físicas orientadas existentes, com hierarquia/faixas e evidência VMD relativa; quantidade de portais não define massa independente. Polos internos usam proxies ordinais4/2/1 comparáveis à escala de um acesso e compartilhados entre gates. Duas pequenas áreas residenciais usam1 e5925/4201 como proxy relativo fundamentado nos domicílios dos bairros(Censo2022), sem atribuir suas populações integrais ao recorte ou derivar veículos por domicílio. Nenhuma proxy identifica densidade real. Não se conta cada bloco universitário/POI como polo independente. Valores operacionais de oportunidade ficam somente em urban_activity_model.zones. A hierarquia de corredores é conferida no mapa municipal2026 mediante road_hierarchy_overrides; nomes de avenidas sozinhos não promovem classificação.",
+      "profile_basis": "Multiplicadores relativos de produção/atração interpolados por hora civil: funções urbanas e horários públicos justificam a forma, mas valores não são contagens, taxas de viagem, lotação ou capacidade calibrada. Diferenças weekday/saturday/sunday são hipóteses moderadas; car5/car6 e suas realizações continuam definindo intensidade regional.",
+      "boundary_assignment_basis": "Áreas de captação externas inferidas pela posição cartográfica dos portais qualificados e continuidade dos corredores, não polígonos legais de bairros. Critério: extremos Rondon próprios; x>=4100 e y>=2300 Tibery; x>=3300 e y<2300 Santa Mônica/UFU; y>=3900 Brasil/Umuarama; demais Centro/Aparecida. Coordenadas da rede em metros. Referências municipais e OSM preservadas por portal e zona.",
+      "access_status": "Gates internos são trechos passenger reais do viário público próximo ao equipamento; estacionamento, portões e circulação em lotes não existem na rede e são abstraídos. Não existem viagens com origem e destino na mesma zona interna.",
+      "road_cost_factors": {
+        "highway.residential": 1.25,
+        "unclassified": 1.25,
+        "highway.tertiary": 1.1,
+        "highway.tertiary_link": 1.1
+      },
+      "road_cost_basis": "Fatores positivos de custo de rota para desestimular tráfego de passagem em vias locais(1,25) e, moderadamente, em coletoras(1,10), após os overrides funcionais municipais. São hipóteses de preferência na escolha do caminho; não alteram limites de velocidade, conexões, capacidade, tempo físico SUMO ou total de veículos."
+    },
+    "road_hierarchy_overrides": {
+      "-154562663#north": "highway.tertiary",
+      "-30622945#0": "highway.tertiary",
+      "-30622945#1": "highway.tertiary",
+      "-30622945#2": "highway.tertiary",
+      "-616180216": "highway.tertiary",
+      "-616971271#0": "highway.tertiary",
+      "-616971271#1": "highway.tertiary",
+      "-616971271#2": "highway.tertiary",
+      "-616971271#3": "highway.tertiary",
+      "-647043773#0": "highway.tertiary",
+      "-647043773#1": "highway.tertiary",
+      "-647043774#0": "highway.tertiary",
+      "-647043774#1": "highway.tertiary",
+      "-659117881": "highway.tertiary",
+      "-659117913#0": "highway.tertiary",
+      "-659117913#1": "highway.tertiary",
+      "-659117913#2": "highway.tertiary",
+      "-659117913#3": "highway.tertiary",
+      "-659117913#4": "highway.tertiary",
+      "-659117913#5": "highway.tertiary",
+      "-659117930#0": "highway.tertiary",
+      "-659117930#1": "highway.tertiary",
+      "-659117933#east": "highway.tertiary",
+      "-659117933#west": "highway.tertiary",
+      "-659117941": "highway.tertiary",
+      "1156272391#0": "highway.primary",
+      "1156272391#1": "highway.primary",
+      "1156272391#2": "highway.primary",
+      "1156272391#3": "highway.primary",
+      "1156272393#0": "highway.primary",
+      "1156272393#1": "highway.primary",
+      "1156272393#2": "highway.primary",
+      "1156272393#3": "highway.primary",
+      "1156272393#4": "highway.primary",
+      "1156272393#5": "highway.primary",
+      "1156272393#5.rio": "highway.primary",
+      "1156272393#6": "highway.primary",
+      "1156272393#7": "highway.primary",
+      "1156717163#0": "highway.primary",
+      "1156717163#1": "highway.primary",
+      "1156717163#1.rio": "highway.primary",
+      "1156717163#2": "highway.primary",
+      "1156717163#3": "highway.primary",
+      "1156717170#0": "highway.primary",
+      "1156717170#1": "highway.primary",
+      "1156717173#0": "highway.primary",
+      "1156717173#1": "highway.primary",
+      "1156717173#2": "highway.primary",
+      "1156717173#3": "highway.primary",
+      "1156717173#4": "highway.primary",
+      "1156717173#5": "highway.primary",
+      "1156717175#0": "highway.primary",
+      "1156717175#1": "highway.primary",
+      "1156717175#2": "highway.primary",
+      "1156717175#3": "highway.primary",
+      "1156717175#4": "highway.primary",
+      "1156717175#5": "highway.primary",
+      "1156717176": "highway.primary",
+      "1156717177#0": "highway.tertiary",
+      "1156717177#1": "highway.tertiary",
+      "1156717177#2": "highway.tertiary",
+      "1156717177#3": "highway.tertiary",
+      "1156717177#4": "highway.tertiary",
+      "1156717177#5": "highway.tertiary",
+      "1171563461": "highway.primary",
+      "1171661493#0": "highway.primary",
+      "1171661493#1": "highway.primary",
+      "142719720#0": "highway.tertiary",
+      "142719720#1": "highway.tertiary",
+      "142719720#10": "highway.tertiary",
+      "142719720#11": "highway.tertiary",
+      "142719720#2": "highway.tertiary",
+      "142719720#3": "highway.tertiary",
+      "142719720#4": "highway.tertiary",
+      "142719720#5": "highway.tertiary",
+      "142719720#6": "highway.tertiary",
+      "142719720#7": "highway.tertiary",
+      "142719720#8": "highway.tertiary",
+      "142719720#9": "highway.tertiary",
+      "152937004#0": "highway.primary",
+      "152937004#1": "highway.primary",
+      "152937004#10": "highway.primary",
+      "152937004#11": "highway.primary",
+      "152937004#12": "highway.primary",
+      "152937004#13": "highway.primary",
+      "152937004#14": "highway.primary",
+      "152937004#15": "highway.primary",
+      "152937004#16": "highway.primary",
+      "152937004#17": "highway.primary",
+      "152937004#18": "highway.primary",
+      "152937004#19": "highway.primary",
+      "152937004#2": "highway.primary",
+      "152937004#20": "highway.primary",
+      "152937004#21": "highway.primary",
+      "152937004#22": "highway.primary",
+      "152937004#23": "highway.primary",
+      "152937004#24": "highway.primary",
+      "152937004#25": "highway.primary",
+      "152937004#26": "highway.primary",
+      "152937004#27": "highway.primary",
+      "152937004#28": "highway.primary",
+      "152937004#29": "highway.primary",
+      "152937004#3": "highway.primary",
+      "152937004#30": "highway.primary",
+      "152937004#31": "highway.primary",
+      "152937004#32": "highway.primary",
+      "152937004#4": "highway.primary",
+      "152937004#5": "highway.primary",
+      "152937004#6": "highway.primary",
+      "152937004#7": "highway.primary",
+      "152937004#8": "highway.primary",
+      "152937004#9": "highway.primary",
+      "152937136#0": "highway.primary",
+      "152937136#1": "highway.primary",
+      "152937136#2": "highway.primary",
+      "152937136#3": "highway.primary",
+      "154562663#north": "highway.tertiary",
+      "259739904#0": "highway.primary",
+      "259739904#1": "highway.primary",
+      "259739911#0": "highway.primary",
+      "259739911#1": "highway.primary",
+      "259739911#2": "highway.primary",
+      "259739911#3": "highway.primary",
+      "259739911#4": "highway.primary",
+      "259739911#5": "highway.primary",
+      "259739911#6": "highway.primary",
+      "259739911#7": "highway.primary",
+      "259739913#0": "highway.primary",
+      "259739913#1": "highway.primary",
+      "259739913#2": "highway.primary",
+      "259739915": "highway.tertiary",
+      "261301880#0": "highway.primary",
+      "261301880#1": "highway.primary",
+      "261301880#2": "highway.primary",
+      "261301880#3": "highway.primary",
+      "261301880#4": "highway.primary",
+      "261301880#5": "highway.primary",
+      "261301880#6": "highway.primary",
+      "261301881#0": "highway.primary",
+      "261301881#1": "highway.primary",
+      "261301881#2": "highway.primary",
+      "261301881#3": "highway.primary",
+      "261301881#4": "highway.primary",
+      "261301881#5": "highway.primary",
+      "261301881#6": "highway.primary",
+      "261301881#7": "highway.primary",
+      "261301881#8": "highway.primary",
+      "261301884#0": "highway.primary",
+      "261301884#1": "highway.primary",
+      "261301884#10": "highway.primary",
+      "261301884#11": "highway.primary",
+      "261301884#12": "highway.primary",
+      "261301884#13": "highway.primary",
+      "261301884#14": "highway.primary",
+      "261301884#15": "highway.primary",
+      "261301884#16": "highway.primary",
+      "261301884#17": "highway.primary",
+      "261301884#18": "highway.primary",
+      "261301884#19": "highway.primary",
+      "261301884#2": "highway.primary",
+      "261301884#20": "highway.primary",
+      "261301884#21": "highway.primary",
+      "261301884#22": "highway.primary",
+      "261301884#23": "highway.primary",
+      "261301884#24": "highway.primary",
+      "261301884#25": "highway.primary",
+      "261301884#26": "highway.primary",
+      "261301884#27": "highway.primary",
+      "261301884#28": "highway.primary",
+      "261301884#29": "highway.primary",
+      "261301884#3": "highway.primary",
+      "261301884#4": "highway.primary",
+      "261301884#5": "highway.primary",
+      "261301884#6": "highway.primary",
+      "261301884#7": "highway.primary",
+      "261301884#8": "highway.primary",
+      "261301884#9": "highway.primary",
+      "261432318": "highway.primary",
+      "299471494#0": "highway.primary",
+      "299471494#1": "highway.primary",
+      "299471494#2": "highway.primary",
+      "30620978#0": "highway.tertiary",
+      "30620978#1": "highway.tertiary",
+      "30620978#10": "highway.tertiary",
+      "30620978#11": "highway.tertiary",
+      "30620978#2": "highway.tertiary",
+      "30620978#3": "highway.tertiary",
+      "30620978#4": "highway.tertiary",
+      "30620978#5": "highway.tertiary",
+      "30620978#6": "highway.tertiary",
+      "30620978#7": "highway.tertiary",
+      "30620978#8": "highway.tertiary",
+      "30620978#9": "highway.tertiary",
+      "30621187": "highway.primary",
+      "30621470": "highway.tertiary",
+      "30622921": "highway.tertiary",
+      "30622933#0": "highway.tertiary",
+      "30622933#1": "highway.tertiary",
+      "30622933#10": "highway.tertiary",
+      "30622933#11": "highway.tertiary",
+      "30622933#2": "highway.tertiary",
+      "30622933#3": "highway.tertiary",
+      "30622933#4": "highway.tertiary",
+      "30622933#5": "highway.tertiary",
+      "30622933#6": "highway.tertiary",
+      "30622933#7": "highway.tertiary",
+      "30622933#8": "highway.tertiary",
+      "30622933#9": "highway.tertiary",
+      "30622945#0": "highway.tertiary",
+      "30622945#1": "highway.tertiary",
+      "30622945#2": "highway.tertiary",
+      "30649088#0": "highway.tertiary",
+      "30649088#1": "highway.tertiary",
+      "30665265#0": "highway.tertiary",
+      "30665265#1": "highway.tertiary",
+      "30665265#10": "highway.tertiary",
+      "30665265#11": "highway.tertiary",
+      "30665265#2": "highway.tertiary",
+      "30665265#3": "highway.tertiary",
+      "30665265#4": "highway.tertiary",
+      "30665265#5": "highway.tertiary",
+      "30665265#6": "highway.tertiary",
+      "30665265#7": "highway.tertiary",
+      "30665265#8": "highway.tertiary",
+      "30665265#9": "highway.tertiary",
+      "330066084#0": "highway.tertiary",
+      "330066084#1": "highway.tertiary",
+      "330066084#10": "highway.tertiary",
+      "330066084#11": "highway.tertiary",
+      "330066084#12": "highway.tertiary",
+      "330066084#13": "highway.tertiary",
+      "330066084#14": "highway.tertiary",
+      "330066084#2": "highway.tertiary",
+      "330066084#3": "highway.tertiary",
+      "330066084#4": "highway.tertiary",
+      "330066084#5": "highway.tertiary",
+      "330066084#6": "highway.tertiary",
+      "330066084#7": "highway.tertiary",
+      "330066084#8": "highway.tertiary",
+      "330066084#9": "highway.tertiary",
+      "331577748#0": "highway.primary",
+      "331577748#1": "highway.primary",
+      "331577748#2": "highway.primary",
+      "331577748#3": "highway.primary",
+      "331577748#4": "highway.primary",
+      "331577749#0": "highway.primary",
+      "331577749#1": "highway.primary",
+      "331577750#0": "highway.primary",
+      "331577750#1": "highway.primary",
+      "331577751#0": "highway.primary",
+      "331577751#1": "highway.primary",
+      "398537158#east": "highway.primary",
+      "402968133#west": "highway.tertiary",
+      "402968135#0": "highway.tertiary",
+      "402968135#2": "highway.tertiary",
+      "402968137": "highway.tertiary",
+      "402968139#0": "highway.tertiary",
+      "402968139#1": "highway.tertiary",
+      "402968139#2": "highway.tertiary",
+      "402968139#3": "highway.tertiary",
+      "402968147#0": "highway.tertiary",
+      "402968147#1": "highway.tertiary",
+      "402968147#2": "highway.tertiary",
+      "403166943": "highway.tertiary",
+      "403166945#0": "highway.tertiary",
+      "403166945#1": "highway.tertiary",
+      "403166945#2": "highway.tertiary",
+      "462991286": "highway.primary",
+      "462993308#0": "highway.primary",
+      "462993308#1": "highway.primary",
+      "462993308#2": "highway.primary",
+      "462993309": "highway.primary",
+      "462993804": "highway.primary",
+      "462993805#0": "highway.primary",
+      "462993805#1": "highway.primary",
+      "462993805#2": "highway.primary",
+      "462993805#3": "highway.primary",
+      "462993806": "highway.primary",
+      "462993807#0": "highway.primary",
+      "462993807#1": "highway.primary",
+      "462993807#2": "highway.primary",
+      "46711471#0": "highway.primary",
+      "46711471#1": "highway.primary",
+      "46711471#2": "highway.primary",
+      "576014290#0": "highway.primary",
+      "576014290#1": "highway.primary",
+      "576014290#2": "highway.primary",
+      "576014290#3": "highway.primary",
+      "576014290#4": "highway.primary",
+      "576014290#5": "highway.primary",
+      "576014292#0": "highway.primary",
+      "576014292#1": "highway.primary",
+      "576014292#2": "highway.primary",
+      "576014293#0": "highway.primary",
+      "576014293#1": "highway.primary",
+      "576014295": "highway.primary",
+      "576014296#0": "highway.primary",
+      "576014296#1": "highway.primary",
+      "576014296#2": "highway.primary",
+      "576014298": "highway.primary",
+      "576014300": "highway.primary",
+      "576014301#0": "highway.primary",
+      "576014301#1": "highway.primary",
+      "576876311#0": "highway.primary",
+      "576876311#1": "highway.primary",
+      "576876311#2": "highway.primary",
+      "576876311#3": "highway.primary",
+      "577166561#0": "highway.primary",
+      "577166561#1": "highway.primary",
+      "577488380": "highway.primary",
+      "602306707": "highway.primary",
+      "602306713#0": "highway.primary",
+      "602306713#1": "highway.primary",
+      "602306713#10": "highway.primary",
+      "602306713#11": "highway.primary",
+      "602306713#12": "highway.primary",
+      "602306713#13": "highway.primary",
+      "602306713#14": "highway.primary",
+      "602306713#15": "highway.primary",
+      "602306713#16": "highway.primary",
+      "602306713#17": "highway.primary",
+      "602306713#18": "highway.primary",
+      "602306713#19": "highway.primary",
+      "602306713#2": "highway.primary",
+      "602306713#20": "highway.primary",
+      "602306713#21": "highway.primary",
+      "602306713#3": "highway.primary",
+      "602306713#4": "highway.primary",
+      "602306713#5": "highway.primary",
+      "602306713#6": "highway.primary",
+      "602306713#7": "highway.primary",
+      "602306713#8": "highway.primary",
+      "602306713#9": "highway.primary",
+      "602306733#west": "highway.tertiary",
+      "602306749#0": "highway.tertiary",
+      "602306749#1": "highway.tertiary",
+      "602306749#2": "highway.tertiary",
+      "616180216": "highway.tertiary",
+      "616971268#west": "highway.primary",
+      "616971270#east": "highway.primary",
+      "616971271#0": "highway.tertiary",
+      "616971271#1": "highway.tertiary",
+      "616971271#2": "highway.tertiary",
+      "616971271#3": "highway.tertiary",
+      "647043773#0": "highway.tertiary",
+      "647043773#1": "highway.tertiary",
+      "647043774#0": "highway.tertiary",
+      "647043774#1": "highway.tertiary",
+      "658279138#0": "highway.primary",
+      "658279138#1": "highway.primary",
+      "658279138#10": "highway.primary",
+      "658279138#11": "highway.primary",
+      "658279138#12": "highway.primary",
+      "658279138#13": "highway.primary",
+      "658279138#14": "highway.primary",
+      "658279138#2": "highway.primary",
+      "658279138#3": "highway.primary",
+      "658279138#4": "highway.primary",
+      "658279138#5": "highway.primary",
+      "658279138#6": "highway.primary",
+      "658279138#7": "highway.primary",
+      "658279138#8": "highway.primary",
+      "658279138#9": "highway.primary",
+      "659117881": "highway.tertiary",
+      "659117913#0": "highway.tertiary",
+      "659117913#1": "highway.tertiary",
+      "659117913#2": "highway.tertiary",
+      "659117913#3": "highway.tertiary",
+      "659117913#4": "highway.tertiary",
+      "659117913#5": "highway.tertiary",
+      "659117928#0": "highway.primary",
+      "659117928#1": "highway.primary",
+      "659117928#2": "highway.primary",
+      "659117930#0": "highway.tertiary",
+      "659117930#1": "highway.tertiary",
+      "659117933#east": "highway.tertiary",
+      "659117933#west": "highway.tertiary",
+      "659117941": "highway.tertiary",
+      "665897547": "highway.tertiary",
+      "665897559#0": "highway.primary",
+      "665897559#1": "highway.primary",
+      "665897559#2": "highway.primary",
+      "665897559#3": "highway.primary",
+      "665897559#4": "highway.primary",
+      "665897559#5": "highway.primary",
+      "665897559#6": "highway.primary",
+      "665897559#7": "highway.primary",
+      "665897559#8": "highway.primary",
+      "665897565#0": "highway.primary",
+      "665897565#1": "highway.primary",
+      "665897565#2": "highway.primary",
+      "665897565#3": "highway.primary",
+      "665897565#4": "highway.primary",
+      "665897565#5": "highway.primary",
+      "665897565#6": "highway.primary",
+      "665897565#7": "highway.primary",
+      "665897570#0": "highway.primary",
+      "665897570#1": "highway.primary",
+      "665897570#2": "highway.primary",
+      "665897570#3": "highway.primary",
+      "665897570#4": "highway.primary",
+      "665897570#5": "highway.primary",
+      "665897570#6": "highway.primary",
+      "665897570#7": "highway.primary",
+      "665897572": "highway.primary",
+      "666324275#0": "highway.primary",
+      "666324275#1": "highway.primary",
+      "666324275#2": "highway.primary",
+      "666324275#3": "highway.primary",
+      "666324275#4": "highway.primary",
+      "666324275#5": "highway.primary",
+      "666324308#0": "highway.primary",
+      "666324308#1": "highway.primary",
+      "666324308#2": "highway.primary",
+      "666324308#3": "highway.primary",
+      "666324308#4": "highway.primary",
+      "666324308#5": "highway.primary",
+      "669609230": "highway.primary",
+      "669609231": "highway.primary",
+      "669609232": "highway.primary",
+      "708111982": "highway.primary",
+      "708111983": "highway.primary",
+      "708111984": "highway.primary",
+      "708111985#0": "highway.primary",
+      "708111985#1": "highway.primary",
+      "708111986#0": "highway.primary",
+      "708111986#1": "highway.primary",
+      "708111986#2": "highway.primary",
+      "708111987": "highway.primary",
+      "82009802": "highway.primary",
+      "82009804": "highway.primary",
+      "82009805#0": "highway.primary",
+      "82009805#1": "highway.primary",
+      "901329256": "highway.primary",
+      "901329257": "highway.primary",
+      "930831032#0": "highway.primary",
+      "930831032#1": "highway.primary",
+      "930831033#0": "highway.primary",
+      "930831033#1": "highway.primary",
+      "931172668#west": "highway.primary",
+      "931572689": "highway.primary",
+      "965367672#0": "highway.primary",
+      "965367672#1": "highway.primary",
+      "965367672#2": "highway.primary",
+      "965367672#3": "highway.primary"
+    },
+    "road_hierarchy_evidence": {
+      "source": "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf",
+      "checked_on": "2026-10-29",
+      "municipal_class": "Via Estrutural, traçado vermelho na legenda oficial2026",
+      "demand_proxy_type": "highway.primary",
+      "corridors": [
+        "rondon_to_centro",
+        "rondon_to_bairro",
+        "avenida_afonso_pena_positive",
+        "avenida_brasil_positive",
+        "avenida_cesario_alvim_positive",
+        "avenida_floriano_peixoto_negative",
+        "avenida_joao_naves_de_avila_positive",
+        "avenida_joao_naves_de_avila_negative",
+        "avenida_joao_pinheiro_negative",
+        "avenida_segismundo_pereira_positive",
+        "avenida_segismundo_pereira_negative"
+      ],
+      "basis": "Conferência visual do mapa municipal georreferenciado: Brasil, Cesário Alvim, João Pinheiro, Afonso Pena, Floriano Peixoto, João Naves de Ávila, Rondon Pacheco e Segismundo Pereira aparecem como vias estruturais. Os segmentos desses corredores na rede recebem proxy de hierarquia de demanda equivalente a primary. O tipo OSM, velocidade, faixas, conexões e prioridade física da rede não são alterados. A equivalência é uma hipótese de demanda baseada na função municipal, não conversão legal nem capacidade estimada. Niterói, Europa, Belarmino Cotta Pacheco, Ortízio Borges, Nordau Gonçalves de Melo, Maria das Dores Dias, Miguel Rocha dos Santos, Alagoas, Rio de Janeiro, Tupaciguara e Itumbiara foram conferidas como coletoras amarelas no mesmo recorte cartográfico; recebem proxy tertiary. Não se estende a equivalência automaticamente a outras vias por seu nome.",
+      "collector_class": "Via Coletora, traçado amarelo na legenda oficial2026",
+      "collector_proxy_type": "highway.tertiary",
+      "collector_corridors": [
+        "avenida_belarmino_cotta_pacheco_positive",
+        "avenida_belarmino_cotta_pacheco_negative",
+        "avenida_europa_positive",
+        "avenida_europa_negative",
+        "avenida_ortizio_borges_positive",
+        "avenida_ortizio_borges_negative",
+        "rua_alagoas_positive",
+        "rua_itumbiara_negative",
+        "rua_maria_das_dores_dias_positive",
+        "rua_maria_das_dores_dias_negative",
+        "rua_miguel_rocha_dos_santos_negative",
+        "rua_niteroi_positive",
+        "rua_nordau_goncalves_de_melo_positive",
+        "rua_nordau_goncalves_de_melo_negative",
+        "rua_rio_de_janeiro_positive",
+        "rua_tupaciguara_positive"
+      ]
     }
   },
   "route_templates": [
@@ -5244,5 +6168,370 @@
     "organization": "MetaSettran / day / [start,start+03:00) / variation; shared parameters, routes only on demand",
     "source_time_convention": "utc",
     "timezone_status": "project_methodological_hypothesis_not_device_confirmation"
-  }
+  },
+  "activity_zones": [
+    {
+      "id": "center_shopping",
+      "name": "Complexo Center Shopping",
+      "kind": "commerce",
+      "center_longitude_latitude": [
+        -48.2605183,
+        -18.9098725
+      ],
+      "center_xy_m": [
+        3426.94,
+        2438.36
+      ],
+      "origins": [
+        {
+          "edge": "299469784#0",
+          "position_xy_m": [
+            3506.33,
+            2422.71
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_da_bandeira",
+          "road_type": "highway.residential",
+          "zone_id": "center_shopping",
+          "status": "adjacent_public_road_activity_proxy"
+        }
+      ],
+      "destinations": [
+        {
+          "edge": "463013981#2",
+          "position_xy_m": [
+            3493.97,
+            2476.5
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_honduras",
+          "road_type": "highway.residential",
+          "zone_id": "center_shopping",
+          "status": "adjacent_public_road_activity_proxy"
+        }
+      ],
+      "references": [
+        "https://centershopping.com.br/horarios/",
+        "https://www.openstreetmap.org/way/1467914911",
+        "https://www.openstreetmap.org/node/4735171422",
+        "https://www.openstreetmap.org/way/299469784",
+        "https://www.openstreetmap.org/way/463013981",
+        "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf",
+        "https://centershopping.com.br/o-shopping/"
+      ],
+      "basis": "Complexo comercial cartograficamente identificado. O estacionamento real e suas vias de serviço (por exemplo Rua Argentina e Rua da Bandeira/30622917) estão ausentes da rede. Chegada na Honduras e saída na Bandeira representam acesso agregado no viário público adjacente, não rampas de estacionamento comprovadas nem simulação interna do complexo. Oportunidade4 é hipótese ordinal de atratividade de um polo comercial regional, não volume medido, capacidade, vagas ou número de estabelecimentos."
+    },
+    {
+      "id": "centro_administrativo",
+      "name": "Centro Administrativo Municipal",
+      "kind": "service",
+      "center_longitude_latitude": [
+        -48.2563258,
+        -18.9119844
+      ],
+      "center_xy_m": [
+        3865.21,
+        2197.62
+      ],
+      "origins": [
+        {
+          "edge": "30649087#5",
+          "position_xy_m": [
+            3895.36,
+            2155.03
+          ],
+          "passenger_lanes": 1,
+          "corridor": "avenida_ubiratan_honorio_de_castro",
+          "road_type": "highway.residential",
+          "zone_id": "centro_administrativo",
+          "status": "adjacent_public_road_activity_proxy"
+        },
+        {
+          "edge": "-30649087#5",
+          "position_xy_m": [
+            3896.84,
+            2152.19
+          ],
+          "passenger_lanes": 1,
+          "corridor": "avenida_ubiratan_honorio_de_castro",
+          "road_type": "highway.residential",
+          "zone_id": "centro_administrativo",
+          "status": "adjacent_public_road_activity_proxy"
+        }
+      ],
+      "destinations": [
+        {
+          "edge": "30649087#5",
+          "position_xy_m": [
+            3895.36,
+            2155.03
+          ],
+          "passenger_lanes": 1,
+          "corridor": "avenida_ubiratan_honorio_de_castro",
+          "road_type": "highway.residential",
+          "zone_id": "centro_administrativo",
+          "status": "adjacent_public_road_activity_proxy"
+        },
+        {
+          "edge": "-30649087#5",
+          "position_xy_m": [
+            3896.84,
+            2152.19
+          ],
+          "passenger_lanes": 1,
+          "corridor": "avenida_ubiratan_honorio_de_castro",
+          "road_type": "highway.residential",
+          "zone_id": "centro_administrativo",
+          "status": "adjacent_public_road_activity_proxy"
+        }
+      ],
+      "references": [
+        "https://www.uberlandia.mg.gov.br/",
+        "https://www.openstreetmap.org/way/489688669",
+        "https://www.openstreetmap.org/way/30649087",
+        "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf",
+        "https://www.uberlandia.mg.gov.br/portal-da-transparencia/atendimento-ao-publico/"
+      ],
+      "basis": "Prefeitura georreferenciada e endereço oficial na Anselmo Alves dos Santos. Trechos bidirecionais da Ubiratan Honório de Castro, cerca de55m do centro do edifício, representam distribuição agregada dos acessos locais no entorno sul; não se usa a João Naves meramente por ser a arterial mais próxima. Estacionamento e portões não são simulados. Oportunidade2 é hipótese ordinal de serviços, não contagem de servidores, visitantes ou vagas."
+    },
+    {
+      "id": "ufu_educacao_fisica",
+      "name": "UFU Campus Educação Física",
+      "kind": "education",
+      "center_longitude_latitude": [
+        -48.2635054,
+        -18.9084583
+      ],
+      "center_xy_m": [
+        3114.52,
+        2599.86
+      ],
+      "origins": [
+        {
+          "edge": "30664642#10",
+          "position_xy_m": [
+            2966.34,
+            2545.72
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_benjamim_constant",
+          "road_type": "highway.residential",
+          "zone_id": "ufu_educacao_fisica",
+          "status": "adjacent_public_road_activity_proxy"
+        },
+        {
+          "edge": "30664642#13",
+          "position_xy_m": [
+            3054.68,
+            2687.53
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_benjamim_constant",
+          "road_type": "highway.residential",
+          "zone_id": "ufu_educacao_fisica",
+          "status": "adjacent_public_road_activity_proxy"
+        }
+      ],
+      "destinations": [
+        {
+          "edge": "30664642#10",
+          "position_xy_m": [
+            2966.34,
+            2545.72
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_benjamim_constant",
+          "road_type": "highway.residential",
+          "zone_id": "ufu_educacao_fisica",
+          "status": "adjacent_public_road_activity_proxy"
+        },
+        {
+          "edge": "30664642#13",
+          "position_xy_m": [
+            3054.68,
+            2687.53
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_benjamim_constant",
+          "road_type": "highway.residential",
+          "zone_id": "ufu_educacao_fisica",
+          "status": "adjacent_public_road_activity_proxy"
+        }
+      ],
+      "references": [
+        "https://prefe.ufu.br/localizacoes/campus-educacao-fisica",
+        "https://faefi.ufu.br/unidades/curso/curso-de-graduacao-educacao-fisica-licenciatura-e-bacharelado",
+        "https://www.openstreetmap.org/way/159437041",
+        "https://www.openstreetmap.org/node/6122297453",
+        "https://www.openstreetmap.org/node/6122297459",
+        "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf"
+      ],
+      "basis": "Campus Educação Física, Rua Benjamim Constant1286, dentro do recorte. Dois trechos públicos de Benjamim Constant ficam próximos das entradas cartográficas main e representam acesso agregado ao campus; não são rampas ou portões veiculares confirmados. Oportunidade1 é hipótese relativa ao campus e compartilhada pelos dois trechos, sem contar cada bloco como universidade independente. Santa Mônica e Umuarama são outros campi e não são duplicados como polos internos."
+    },
+    {
+      "id": "brasil_residential_blocks",
+      "name": "Quadras residenciais e mistas do Brasil — Espírito Santo/Bahia",
+      "kind": "residential_mixed",
+      "center_xy_m": [
+        3269.53,
+        4183.46
+      ],
+      "center_longitude_latitude": [
+        -48.2622678,
+        -18.8941408
+      ],
+      "source_place_node": "https://www.openstreetmap.org/node/3588937956",
+      "references": [
+        "https://apisidra.ibge.gov.br/values/t/9922/n102/3170206001,3170206002/v/381/p/2022/c1/6795",
+        "https://www.uberlandia.mg.gov.br/prefeitura/secretarias/planejamento-urbano/mapas-e-bairros/",
+        "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2022/07/Setor-Central.pdf",
+        "https://www.openstreetmap.org/node/3588937956",
+        "https://www.openstreetmap.org/way/30621958",
+        "https://www.openstreetmap.org/way/30621947"
+      ],
+      "census_proxy": {
+        "source": "https://apisidra.ibge.gov.br/values/t/9922/n102/3170206001,3170206002/v/381/p/2022/c1/6795",
+        "year": 2022,
+        "neighborhood_code": "3170206002",
+        "occupied_private_permanent_households": 4201,
+        "relative_opportunity": 1.0,
+        "use": "Proxy relativo de pequenas áreas de quadras. Não representa todos os domicílios do bairro no recorte, não estima população local ou veículos e não supõe que cada domicílio produza uma viagem."
+      },
+      "basis": "Pequena área agregada de quadras no entorno do ponto cartográfico do bairro Brasil, em ruas públicas locais de sentidos complementares Espírito Santo/Bahia. Os pontos são acessos agregados de origem/destino residencial e usos mistos nas quadras, não portões de casas identificadas. O Censo2022 confirma o bairro e fornece4201domicílios ocupados no BAIRRO INTEIRO; o valor1 apenas ancora uma escala relativa modesta para esta amostra de quadras. Sem área recortada/contagem local, não se interpreta a razão como densidade real ou população representada.",
+      "origins": [
+        {
+          "edge": "30621958#6",
+          "position_xy_m": [
+            3271.71,
+            4184.4
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_espirito_santo",
+          "road_type": "highway.residential",
+          "zone_id": "brasil_residential_blocks",
+          "status": "aggregate_residential_public_road_proxy"
+        },
+        {
+          "edge": "30621947#6",
+          "position_xy_m": [
+            3325.49,
+            4257.93
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_bahia",
+          "road_type": "highway.residential",
+          "zone_id": "brasil_residential_blocks",
+          "status": "aggregate_residential_public_road_proxy"
+        }
+      ],
+      "destinations": [
+        {
+          "edge": "30621958#6",
+          "position_xy_m": [
+            3271.71,
+            4184.4
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_espirito_santo",
+          "road_type": "highway.residential",
+          "zone_id": "brasil_residential_blocks",
+          "status": "aggregate_residential_public_road_proxy"
+        },
+        {
+          "edge": "30621947#6",
+          "position_xy_m": [
+            3325.49,
+            4257.93
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_bahia",
+          "road_type": "highway.residential",
+          "zone_id": "brasil_residential_blocks",
+          "status": "aggregate_residential_public_road_proxy"
+        }
+      ]
+    },
+    {
+      "id": "tibery_residential_blocks",
+      "name": "Quadras residenciais e mistas do Tibery — Rua Paris",
+      "kind": "residential_mixed",
+      "center_xy_m": [
+        4632.96,
+        3207.21
+      ],
+      "center_longitude_latitude": [
+        -48.2491926,
+        -18.9027627
+      ],
+      "source_place_node": "https://www.openstreetmap.org/node/1658291397",
+      "references": [
+        "https://apisidra.ibge.gov.br/values/t/9922/n102/3170206001,3170206002/v/381/p/2022/c1/6795",
+        "https://www.uberlandia.mg.gov.br/prefeitura/secretarias/planejamento-urbano/mapas-e-bairros/",
+        "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2022/07/Setor-Leste.pdf",
+        "https://www.openstreetmap.org/node/1658291397",
+        "https://www.openstreetmap.org/way/30648047"
+      ],
+      "census_proxy": {
+        "source": "https://apisidra.ibge.gov.br/values/t/9922/n102/3170206001,3170206002/v/381/p/2022/c1/6795",
+        "year": 2022,
+        "neighborhood_code": "3170206001",
+        "occupied_private_permanent_households": 5925,
+        "relative_opportunity": 1.4103784813139728,
+        "use": "Razão5925/4201 de domicílios dos bairros Tibery/Brasil usada somente como proxy RELATIVO entre duas pequenas amostras de quadras. Não transfere a população integral do Tibery para a rede nem equivale à densidade das quadras ou contagem de veículos."
+      },
+      "basis": "Pequena área agregada de quadras residenciais e mistas no entorno do ponto cartográfico do Tibery, com dois sentidos reais da Rua Paris. Origem/destino são acessos agregados às quadras, sem inventar garagem ou rampa. O Censo2022 contém5925domicílios ocupados no BAIRRO INTEIRO. A oportunidade~1,41 apenas modula a escala relativa da pequena amostra em relação ao Brasil; a proporção de moradores efetivamente situada no recorte e sua motorização são desconhecidas.",
+      "origins": [
+        {
+          "edge": "30648047#8",
+          "position_xy_m": [
+            4584.2,
+            3179.84
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_paris",
+          "road_type": "highway.residential",
+          "zone_id": "tibery_residential_blocks",
+          "status": "aggregate_residential_public_road_proxy"
+        },
+        {
+          "edge": "-30648047#8",
+          "position_xy_m": [
+            4582.3,
+            3182.42
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_paris",
+          "road_type": "highway.residential",
+          "zone_id": "tibery_residential_blocks",
+          "status": "aggregate_residential_public_road_proxy"
+        }
+      ],
+      "destinations": [
+        {
+          "edge": "30648047#8",
+          "position_xy_m": [
+            4584.2,
+            3179.84
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_paris",
+          "road_type": "highway.residential",
+          "zone_id": "tibery_residential_blocks",
+          "status": "aggregate_residential_public_road_proxy"
+        },
+        {
+          "edge": "-30648047#8",
+          "position_xy_m": [
+            4582.3,
+            3182.42
+          ],
+          "passenger_lanes": 1,
+          "corridor": "rua_paris",
+          "road_type": "highway.residential",
+          "zone_id": "tibery_residential_blocks",
+          "status": "aggregate_residential_public_road_proxy"
+        }
+      ]
+    }
+  ]
 }

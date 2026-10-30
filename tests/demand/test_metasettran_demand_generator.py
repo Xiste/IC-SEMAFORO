@@ -1,6 +1,7 @@
 """Contratos da distribuição OD, incidência dos sensores e reprodução."""
 
 from collections import Counter
+from contextlib import nullcontext
 import hashlib
 import json
 import math
@@ -163,6 +164,112 @@ class MetaSettranTests(unittest.TestCase):
         self.assertEqual(ET.parse(metadata["routes_file"]).getroot().find("vType").attrib,
                          {"id": "metasettran_car", "vClass": "passenger"})
 
+    def urban_activity_fixture(self):
+        edges, _, _, _ = demand._read_network(self.net)
+        def gate(identifier):
+            edge = edges[identifier]
+            return {"edge": identifier, "passenger_lanes": 1, "road_type": edge["hierarchy"],
+                    "position_xy_m": [(a + b) / 2 for a, b in zip(edge["from_xy"], edge["to_xy"])]}
+        self.model["activity_zones"] = [{"id": "shops", "name": "Shops", "kind": "commerce",
+            "references": ["fixture cartography"], "origins": [gate("unseen")],
+            "destinations": [gate("sensor6")]}]
+        profiles = {kind: {"hours": [0, 24], "origin": [1, 1], "destination": [1, 1]}
+                    for kind in ("weekday", "saturday", "sunday")}
+        zones = [{"id": p["boundary_group"], "kind": "mixed", "profiles": profiles}
+                 for role in ("entries", "exits") for p in self.model["portals"][role]]
+        zones.append({"id": "shops", "kind": "commerce", "opportunity": 2, "profiles": profiles})
+        self.model["regional_demand"].update(route_choice={"method": "urban_activity_od"},
+            urban_activity_model={"zones": zones, "road_cost_factors": {"highway.tertiary": 1.1}})
+        paths = dict(PATHS)
+        paths.update({("entry_a", "sensor6"): "entry_a sensor5 bridge sensor6",
+                      ("entry_b", "sensor6"): "entry_b sensor6",
+                      ("unseen", "exit_a"): "unseen middle exit_a",
+                      ("unseen", "exit_b"): "unseen middle exit_b"})
+        def router(command, **kwargs):
+            root = ET.Element("routes")
+            for trip in ET.parse(_option(command, "--route-files")).getroot().findall("trip"):
+                route = paths.get((trip.get("from"), trip.get("to")))
+                if route:
+                    vehicle = ET.SubElement(root, "vehicle", id=trip.get("id"), depart="0")
+                    ET.SubElement(vehicle, "route", edges=route)
+            ET.ElementTree(root).write(_option(command, "--output-file"), encoding="utf-8")
+            return subprocess.CompletedProcess(command, 0)
+        self.write_model()
+        return router
+
+    def test_internal_activity_accesses_are_routed_geographically_and_get_native_alternatives(self):
+        router = self.urban_activity_fixture()
+        self.model["regional_demand"]["road_hierarchy_overrides"] = {"unseen": "highway.primary"}
+        with patch.object(demand.subprocess, "run", side_effect=router) as run:
+            pairs, _, catalog, _ = demand._route_pairs(self.model, self.net, self.directory, None)
+        self.assertEqual(run.call_count, 2)
+        weighted_command = run.call_args_list[1].args[0]
+        weights = ET.parse(_option(weighted_command, "--weight-files")).getroot()
+        self.assertAlmostEqual(float(weights.find("interval/edge[@id='unseen']").get("traveltime")), 60)
+        self.assertAlmostEqual(float(weights.find("interval/edge[@id='sensor5']").get("traveltime")), 22)
+        through = next(p for p in pairs.values() if p["origin"] == "entry_b" and p["destination"] == "exit_a")
+        self.assertEqual(through["movement_target_hierarchies"][0], "highway.primary")
+        self.assertAlmostEqual(through["urban_generalized_cost_s"], 137)
+        self.assertEqual(catalog["entry_portals_available"], 4)
+        self.assertEqual(catalog["activity_origin_accesses"], 1)
+        self.assertTrue(any(p["origin_kind"] == "activity" for p in pairs.values()))
+        self.assertTrue(any(p["destination_kind"] == "activity" for p in pairs.values()))
+        self.assertFalse(any(p["origin_kind"] == p["destination_kind"] == "activity" for p in pairs.values()))
+        self.model["activity_zones"][0]["origins"][0]["position_xy_m"] = [1e6, 1e6]
+        with self.assertRaisesRegex(ValueError, "Posição do acesso"):
+            demand._route_pairs(self.model, self.net, self.directory, None)
+
+    def test_mixed_activity_demand_conserves_population_and_reports_internal_endpoints_separately(self):
+        router = self.urban_activity_fixture()
+        metadata, replayed = {}, {}
+        with patch.object(demand.subprocess, "run", side_effect=router):
+            original = self.generate(output="mixed", metadata=metadata)
+            replay = self.generate(output="mixed_replay", metadata=replayed)
+        self.assertEqual(original.read_bytes(), replay.read_bytes())
+        spatial = metadata["spatial_distribution"]
+        populations = spatial["trip_populations"]
+        self.assertEqual(sum(populations.values()), metadata["vehicles_generated"])
+        self.assertGreater(populations["boundary_to_activity"], 0)
+        self.assertGreater(populations["activity_to_boundary"], 0)
+        self.assertEqual(populations["activity_to_activity"], 0)
+        self.assertEqual(metadata["route_validation"]["valid_routes"], metadata["vehicles_generated"])
+        self.assertEqual(metadata["route_validation"]["valid_boundary_routes"], populations["boundary_to_boundary"])
+        self.assertAlmostEqual(spatial["expected_network_departures"], 1200)
+        for role, activity_role in (("entries", "origins"), ("exits", "destinations")):
+            observed = sum(p["generated_departures"] for p in spatial["portals"][role])
+            observed += sum(p["generated_departures"] for z in spatial["activity_locations"] for p in z[activity_role])
+            self.assertEqual(observed, metadata["vehicles_generated"])
+
+    def test_compact_metadata_preserves_routes_and_every_remaining_field(self):
+        router = self.urban_activity_fixture()
+        routing_directory = self.directory / "routing"
+        routing_directory.mkdir()
+        # Fix only the temporary path so recorded native commands are comparable.
+        with patch.object(demand.subprocess, "run", side_effect=router), patch.object(
+                demand, "TemporaryDirectory", side_effect=lambda **kwargs: nullcontext(str(routing_directory))):
+            for options in ({"variation": 7},
+                            {"day": "sunday", "start": "21:00", "sections": 2, "variations": [7, 8]}):
+                with self.subTest(options=options):
+                    detailed, compact = {}, {}
+                    original = self.generate(metadata=detailed, **options).read_bytes()
+                    original_trips = Path(detailed["trips_file"]).read_bytes()
+                    reduced = self.generate(metadata=compact, include_route_details=False, **options).read_bytes()
+                    self.assertEqual(reduced, original)
+                    self.assertEqual(Path(compact["trips_file"]).read_bytes(), original_trips)
+                    self.assertEqual(compact["routes_sha256"], detailed["routes_sha256"])
+                    self.assertEqual(compact["trips_sha256"], detailed["trips_sha256"])
+                    self.assertTrue(detailed["spatial_distribution"]["routes"])
+                    self.assertEqual(detailed["spatial_distribution"]["groups"], detailed["groups"])
+                    self.assertNotIn("routes", compact["spatial_distribution"])
+                    self.assertNotIn("groups", compact["spatial_distribution"])
+                    expected = {**detailed, "spatial_distribution": {
+                        key: value for key, value in detailed["spatial_distribution"].items()
+                        if key not in {"routes", "groups"}}}
+                    for record in (expected, compact):
+                        for key in ("started_at_utc", "finished_at_utc", "duration_seconds"):
+                            record.pop(key)
+                    self.assertEqual(compact, expected)
+
     def test_branch_choice_does_not_reward_number_of_downstream_destinations(self):
         def pair(identifier, route, angles):
             return dict(id=identifier, origin="entry", destination=route[-1], route=route,
@@ -198,6 +305,226 @@ class MetaSettranTests(unittest.TestCase):
         self.assertAlmostEqual(sum(p["prior_weight"] for p in metadata["spatial_distribution"]["routes"]), 1)
         self.assertGreater(metadata["spatial_distribution"]["observation_incidence_generated"]["both"], 0)
         self.assertEqual(sum(metadata["spatial_distribution"]["observation_incidence_generated"].values()), metadata["vehicles_generated"])
+
+    def test_contextual_choice_preserves_curved_arterial_over_straight_local(self):
+        paths = {
+            "arterial": dict(origin="entry", route=["entry", "arterial_exit"],
+                             movement_opportunities=[1], movement_receiving_lanes=[1],
+                             movement_target_hierarchies=["highway.primary"], movement_angles=[math.pi / 2]),
+            "local": dict(origin="entry", route=["entry", "local_exit"],
+                          movement_opportunities=[1], movement_receiving_lanes=[1],
+                          movement_target_hierarchies=["highway.residential"], movement_angles=[0]),
+        }
+        config = {"method": "native_path_contextual_opportunities", "angular_cost": 1}
+        demand._branch_prior(paths, {"entry": 1}, {"entry": {}}, config,
+                             hierarchy_weights={"highway.primary": 4, "highway.residential": 1})
+        self.assertGreater(paths["arterial"]["prior_weight"], paths["local"]["prior_weight"])
+        self.assertAlmostEqual(paths["arterial"]["prior_weight"], 2 / 3)
+        self.assertGreater(paths["local"]["prior_weight"], 0)
+
+    def urban_fixture(self):
+        def zone(identifier, opportunity=None):
+            result = {"id": identifier, "profiles": {kind: {"hours": [0, 12, 24],
+                "origin": [1, 1, 1], "destination": [1, 1, 1]}
+                for kind in ("weekday", "saturday", "sunday")}}
+            if opportunity is not None:
+                result["opportunity"] = opportunity
+            return result
+
+        def endpoint(edge, zone_id, xy, kind="boundary"):
+            return dict(edge=edge, zone_id=zone_id, boundary_group=zone_id, position_xy_m=xy,
+                        endpoint_kind=kind, road_type="highway.primary")
+
+        endpoints = {"entries": [endpoint("in", "west", [0, 0]),
+                                  endpoint("shop_in", "shop", [1000, 0], "activity")],
+                     "exits": [endpoint("near", "west", [10, 0]), endpoint("far", "east", [4000, 0]),
+                               endpoint("shop_out", "shop", [1000, 0], "activity")]}
+
+        def route(origin, destination, length, cost, middle, same_access=False):
+            return dict(origin=origin, destination=destination, length_m=length, freeflow_time_s=cost,
+                        urban_generalized_cost_s=cost, route=[origin, middle, destination],
+                        urban_edge_lengths_m=[100, length - 200, 100], has_uturn=False,
+                        returns_to_same_access=same_access)
+
+        paths = {"near": route("in", "near", 400, 40, "loop", True),
+                 "far": route("in", "far", 4200, 300, "main"),
+                 "detour": route("in", "far", 7000, 600, "detour"),
+                 "shop": route("in", "shop_out", 1100, 100, "local"),
+                 "depart": route("shop_in", "far", 3100, 230, "main")}
+        model = {"regional_demand": {"route_choice": {"method": "urban_activity_od"},
+                 "urban_activity_model": {"zones": [zone("west"), zone("east"), zone("shop", 4)]}}}
+        return paths, model, endpoints, {"in": 4, "shop_in": 1}, {"near": 1, "far": 1, "shop_out": 1}
+
+    def test_urban_destination_choice_penalizes_boundary_loops_and_longer_alternatives(self):
+        paths, model, endpoints, entries, exits = self.urban_fixture()
+        demand._urban_prior(paths, model, endpoints, entries, exits)
+        self.assertAlmostEqual(sum(pair["prior_weight"] for pair in paths.values()), 1)
+        self.assertAlmostEqual(sum(pair["prior_weight"] for pair in paths.values() if pair["origin"] == "in"), .5)
+        self.assertGreater(paths["far"]["prior_weight"], paths["near"]["prior_weight"])
+        self.assertGreater(paths["far"]["prior_weight"], paths["detour"]["prior_weight"])
+        self.assertGreater(paths["near"]["prior_weight"], 0)
+
+    def test_urban_extra_route_does_not_increase_destination_attraction(self):
+        paths, model, endpoints, entries, exits = self.urban_fixture()
+        demand._urban_prior(paths, model, endpoints, entries, exits)
+        before = sum(paths[key]["prior_weight"] for key in ("far", "detour"))
+        other_before = paths["shop"]["prior_weight"]
+        paths["third"] = dict(paths["detour"], route=["in", "third", "far"])
+        demand._urban_prior(paths, model, endpoints, entries, exits)
+        self.assertAlmostEqual(sum(paths[key]["prior_weight"] for key in ("far", "detour", "third")), before)
+        self.assertAlmostEqual(paths["shop"]["prior_weight"], other_before)
+
+    def test_urban_zone_opportunity_is_shared_between_its_gates(self):
+        endpoints = [{"edge": "a", "zone_id": "campus"}, {"edge": "b", "zone_id": "campus"}]
+        weights = demand._urban_endpoint_weights(endpoints, {"a": 1, "b": 3}, {"campus": {"opportunity": 4}})
+        self.assertEqual(weights, {"a": 1, "b": 3})
+        endpoints.append({"edge": "c", "zone_id": "campus"})
+        changed = demand._urban_endpoint_weights(endpoints, {"a": 1, "b": 3, "c": 4}, {"campus": {"opportunity": 4}})
+        self.assertEqual(sum(changed.values()), 4)
+        self.assertEqual(changed["c"], 2)
+
+    def test_urban_profiles_change_destinations_without_changing_origin_opportunity(self):
+        paths, model, endpoints, entries, exits = self.urban_fixture()
+        shop = model["regional_demand"]["urban_activity_model"]["zones"][-1]
+        shop["profiles"]["weekday"]["destination"] = [.01, 2, .01]
+        shop["profiles"]["sunday"]["destination"] = [.01, .2, .01]
+        demand._urban_prior(paths, model, endpoints, entries, exits)
+        rows = {clock: demand._route_prior_row(list(paths.values()), model, moment, {"5": 1, "6": 1})
+                for clock, moment in (("night", 0), ("weekday", 12 * 3600), ("sunday", 6 * 86400 + 12 * 3600))}
+        shop_index = list(paths).index("shop")
+        self.assertGreater(rows["weekday"][shop_index], rows["sunday"][shop_index])
+        self.assertGreater(rows["sunday"][shop_index], rows["night"][shop_index])
+        for row in rows.values():
+            self.assertAlmostEqual(sum(row), 1)
+            self.assertAlmostEqual(sum(value for pair, value in zip(paths.values(), row) if pair["origin"] == "in"), .5)
+        self.assertAlmostEqual(demand._urban_profile(shop, "destination", 6 * 3600), 1.005)
+
+    def test_urban_configuration_rejects_invalid_profiles_and_penalties(self):
+        _, model, _, _, _ = self.urban_fixture()
+        config = model["regional_demand"]["urban_activity_model"]
+        for key, value in (("distance_scale_m", 0), ("uturn_penalty", 2), ("path_size_exponent", -1),
+                           ("detour_sensitivity", math.nan), ("same_access_penalty", True)):
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, "urbano"):
+                demand._urban_zones(dict(config, **{key: value}))
+        config["zones"][0]["profiles"]["weekday"]["origin"][1] = -1
+        with self.assertRaisesRegex(ValueError, "Perfil urbano"):
+            demand._urban_zones(config)
+
+    def test_urban_observation_drift_records_spatial_changes_without_rebalancing(self):
+        paths, model, endpoints, entries, exits = self.urban_fixture()
+        demand._urban_prior(paths, model, endpoints, entries, exits)
+        routes = list(paths.values())
+        prior = [pair["prior_weight"] for pair in routes]
+        fitted = prior.copy()
+        transfer = fitted[-1] / 2
+        fitted[-1] -= transfer
+        fitted[0] += transfer
+        result = demand._urban_prior_drift(routes, [prior], [fitted], [100])
+        self.assertAlmostEqual(result["maximum_origins_total_variation"], transfer)
+        self.assertAlmostEqual(sum(row["projected_expected_departures"] for row in result["zones"]["origin_zones"]), 100)
+        self.assertEqual(fitted[0], prior[0] + transfer)
+
+    def test_contextual_choice_limits_merging_lanes_and_preserves_origin_mass(self):
+        paths = {
+            "merge": dict(origin="entry", route=["entry", "merge_exit"],
+                          movement_opportunities=[3], movement_receiving_lanes=[1],
+                          movement_target_hierarchies=["highway.primary"], movement_angles=[0]),
+            "single": dict(origin="entry", route=["entry", "single_exit"],
+                           movement_opportunities=[1], movement_receiving_lanes=[1],
+                           movement_target_hierarchies=["highway.primary"], movement_angles=[0]),
+            "return": dict(origin="other", route=["other", "return_exit"],
+                           movement_opportunities=[1], movement_receiving_lanes=[1],
+                           movement_target_hierarchies=["unclassified"], movement_angles=[math.pi]),
+        }
+        config = {"method": "native_path_contextual_opportunities", "angular_cost": 1}
+        demand._branch_prior(paths, {"entry": 3, "other": 1}, {"entry": {}, "other": {}}, config,
+                             hierarchy_weights={"highway.primary": 4})
+        self.assertAlmostEqual(paths["merge"]["prior_weight"], paths["single"]["prior_weight"])
+        self.assertAlmostEqual(paths["merge"]["prior_weight"] + paths["single"]["prior_weight"], .75)
+        self.assertAlmostEqual(paths["return"]["prior_weight"], .25)
+        self.assertAlmostEqual(sum(pair["prior_weight"] for pair in paths.values()), 1)
+
+    def test_contextual_choice_does_not_reward_extra_downstream_destinations(self):
+        def pair(branch, destination):
+            return dict(origin="entry", route=["entry", branch, destination],
+                        movement_opportunities=[1, 1], movement_receiving_lanes=[1, 1],
+                        movement_target_hierarchies=["highway.primary", "highway.residential"],
+                        movement_angles=[0, 0])
+        paths = {"a": pair("first", "exit_a"), "b": pair("second", "exit_b")}
+        config = {"method": "native_path_contextual_opportunities", "angular_cost": 1}
+        kwargs = {"hierarchy_weights": {"highway.primary": 4, "highway.residential": 1}}
+        demand._branch_prior(paths, {"entry": 1}, {"entry": {}}, config, **kwargs)
+        unaffected = paths["b"]["prior_weight"]
+        paths["c"] = pair("first", "exit_c")
+        demand._branch_prior(paths, {"entry": 1}, {"entry": {}}, config, **kwargs)
+        self.assertAlmostEqual(paths["b"]["prior_weight"], unaffected)
+        self.assertAlmostEqual(paths["a"]["prior_weight"] + paths["c"]["prior_weight"], 1 - unaffected)
+
+    def test_contextual_choice_rejects_invalid_hierarchy_weights(self):
+        paths = {"a": dict(origin="entry", route=["entry", "exit"],
+                           movement_opportunities=[1], movement_receiving_lanes=[1],
+                           movement_target_hierarchies=["highway.primary"], movement_angles=[0])}
+        config = {"method": "native_path_contextual_opportunities", "angular_cost": 1}
+        for value in (0, -1, float("nan"), float("inf"), True, "4", None):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "hierarquia"):
+                demand._branch_prior(paths, {"entry": 1}, {"entry": {}}, config,
+                                     hierarchy_weights={"highway.primary": value})
+
+    def test_catalog_counts_only_distinct_reachable_passenger_receiving_lanes(self):
+        root = ET.parse(self.net).getroot()
+        entry = root.find("edge[@id='entry_a']")
+        sensor = root.find("edge[@id='sensor5']")
+        for index in (1, 2):
+            ET.SubElement(entry, "lane", id=f"entry_a_{index}", index=str(index), length="100", speed="10", allow="passenger")
+        for index, allowed in ((1, "passenger"), (2, "bus"), (3, "passenger")):
+            ET.SubElement(sensor, "lane", id=f"sensor5_{index}", index=str(index), length="200", speed="10", allow=allowed)
+        for source_lane, target_lane in ((1, 0), (1, 1), (2, 1), (0, 2)):
+            ET.SubElement(root, "connection", **{"from": "entry_a", "to": "sensor5",
+                                                 "fromLane": str(source_lane), "toLane": str(target_lane), "dir": "s"})
+        self.model["portals"]["entries"][0]["passenger_lanes"] = 3
+        sensor.set("type", "highway.primary")
+        root.find("edge[@id='exit_a']").attrib.pop("type")
+        self.model["portals"]["exits"][0]["prior_road_type"] = "highway.secondary"
+        ET.ElementTree(root).write(self.net)
+        self.write_model()
+        metadata = {}
+        self.generate(metadata=metadata)
+        route = next(p for p in metadata["spatial_distribution"]["routes"]
+                     if p["origin"] == "entry_a" and p["destination"] == "exit_a")
+        self.assertEqual(route["movement_opportunities"][0], 3)
+        self.assertEqual(route["movement_receiving_lanes"][0], 2)
+        self.assertEqual(route["movement_target_hierarchies"][0], "highway.primary")
+        self.assertEqual(route["movement_target_hierarchies"][-1], "highway.secondary")
+
+    def test_contextual_model_preserves_departure_schedule_and_paired_population(self):
+        self.model["regional_demand"]["route_choice"] = {"method": "native_path_branch_opportunities", "angular_cost": 1}
+        self.write_model()
+        original_metadata = {}
+        original_file = self.generate(output="legacy_contextual_reference", variation=7, metadata=original_metadata)
+        original = ET.parse(original_file).getroot()
+        root = ET.parse(self.net).getroot()
+        root.find("edge[@id='bridge']").set("type", "highway.primary")
+        root.find("edge[@id='bypass']").set("type", "highway.residential")
+        ET.ElementTree(root).write(self.net)
+        self.model["regional_demand"]["destination_hierarchy_weights"].update({"highway.primary": 4, "highway.residential": 1})
+        self.model["regional_demand"]["route_choice"]["method"] = "native_path_contextual_opportunities"
+        self.write_model()
+        changed_metadata, paired_metadata = {}, {}
+        changed = ET.parse(self.generate(output="contextual", variation=7, metadata=changed_metadata)).getroot()
+        paired = ET.parse(self.generate(output="contextual_paired", variation=7, schedule_file=original_file,
+                                        metadata=paired_metadata)).getroot()
+        attributes = [vehicle.attrib for vehicle in original.findall("vehicle")]
+        self.assertEqual(attributes, [vehicle.attrib for vehicle in changed.findall("vehicle")])
+        self.assertEqual(attributes, [vehicle.attrib for vehicle in paired.findall("vehicle")])
+        for metadata in (changed_metadata, paired_metadata):
+            self.assertEqual(metadata["vehicles_generated"], len(attributes))
+            self.assertAlmostEqual(sum(p["prior_weight"] for p in metadata["spatial_distribution"]["routes"]), 1)
+            self.assertEqual(sum(metadata["spatial_distribution"]["observation_incidence_generated"].values()), len(attributes))
+            self.assertAlmostEqual(metadata["spatial_distribution"]["expected_network_departures"],
+                                   len(attributes) if metadata is paired_metadata else 1200)
+            self.assertEqual(metadata["route_validation"]["valid_boundary_routes"], len(attributes))
+        self.assertNotEqual([p["prior_weight"] for p in original_metadata["spatial_distribution"]["routes"]],
+                            [p["prior_weight"] for p in changed_metadata["spatial_distribution"]["routes"]])
 
     def test_reproduction_is_independent_of_output_directory_and_tool_headers(self):
         first, second = {}, {}

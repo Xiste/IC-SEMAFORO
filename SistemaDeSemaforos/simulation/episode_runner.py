@@ -44,6 +44,62 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _compact_metasettran_core(execution: dict) -> dict:
+    """Prepara a visão core sem alterar os dados usados pela coleta ou pelo full."""
+    generation = execution["generation"]
+    spatial_model = generation["spatial_model"]
+    calibration = generation["calibration"]
+    compact_generation = generation.copy()
+    compact_generation.pop("spatial_model")
+    compact_generation.pop("calibration")
+    distribution = generation["spatial_distribution"].copy()
+    distribution.pop("limitations", None)
+    distribution["portals"] = {
+        role: [
+            {key: value for key, value in record.items() if key != "qualification"}
+            for record in records
+        ]
+        for role, records in generation["spatial_distribution"].get("portals", {}).items()
+    }
+    compact_generation["spatial_distribution"] = distribution
+    compact_generation["spatial_model_reference"] = {
+        key: spatial_model[key] for key in (
+            "schema_version", "version", "status", "network_sha256", "vehicle_class",
+            "count_column", "sensor_mapping_status", "scope", "experimental_assumption",
+        ) if key in spatial_model
+    }
+    sensor_fields = (
+        "baseline_reference_cars_15_18", "expected_cars", "realized_expected_cars",
+        "target_counts", "realized_target_counts", "training_support",
+    )
+    compact_generation["calibration_reference"] = {
+        "version": calibration["version"],
+        "source": calibration["source"],
+        "time": calibration["time"],
+        "method": calibration["method"],
+        "selection": calibration["selection"],
+        "training_date_count": len(calibration["training_dates"]),
+        "validation_date_count": len(calibration["validation_dates"]),
+        "baseline_reference_cars_15_18": calibration["baseline_reference_cars_15_18"],
+        "sensors": {
+            sensor_id: {key: record[key] for key in sensor_fields if key in record}
+            for sensor_id, record in calibration["sensors"].items()
+        },
+    }
+
+    validation = execution["demand_validation"].copy()
+    observation = validation["spatial_observation"].copy()
+    accounting = observation["portal_trip_accounting"].copy()
+    for role in ("entries", "activity_origins"):
+        accounting[role] = [
+            {key: value for key, value in record.items() if key != "intervals"}
+            for record in accounting.get(role, [])
+        ]
+    observation["portal_trip_accounting"] = accounting
+    validation["spatial_observation"] = observation
+    return {**execution, "generation": compact_generation, "demand_validation": validation}
+
+
 def read_sumo_configuration(binary: str) -> dict:
     """Consulta versão e defaults como dados, sem copiar ferramentas ou entradas."""
     version = subprocess.run([binary, "--version"], check=True,
@@ -443,6 +499,7 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
             demand_file = generate_metasettran_demand(
                 net_file=net_file, output_dir=inputs, metadata=generation,
                 log_file=directory / "generation.log",
+                include_route_details=metrics_profile == "full",
                 **{key: value for key, value in demand_options.items() if not key.startswith("_")},
             )
             # Uma rota reutilizável é parte do experimento MetaSettran. As viagens
@@ -548,7 +605,12 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
             else "raw_and_aggregates")
         # A medida vai do início do episódio até a publicação final; exclui apenas
         # escrita de metrics.json e remoção de entradas/observações temporárias.
-        save_episode(directory, metrics, execution, include_entities=metrics_profile == "full")
+        published_execution = (
+            _compact_metasettran_core(execution)
+            if demand_options is not None and metrics_profile == "core"
+            and metrics["status"] == "completed" else execution
+        )
+        save_episode(directory, metrics, published_execution, include_entities=metrics_profile == "full")
         # Dados consolidados não dependem das entradas geradas. Falhas anteriores
         # preservam esses arquivos; full conserva somente suas observações úteis.
         if metrics["status"] == "completed":

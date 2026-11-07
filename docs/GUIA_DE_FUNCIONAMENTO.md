@@ -1,245 +1,87 @@
-# Funcionamento do projeto
+# Guia de funcionamento do EDI
 
-Este é o manual operacional: [executar](#1-quero-executar),
-[entender](#2-quero-entender), [experimentar](#3-quero-experimentar) e
-[evoluir](#4-quero-evoluir). O projeto gera demanda `random` ou o protótipo
-`metasettran`, executa SUMO e
-consolida observações da rede Rondon Norte, em Uberlândia.
+Referência técnica do funcionamento atual, das hipóteses de demanda e da reprodução
+de experimentos. A instalação e o uso cotidiano estão no [README](../README.md).
 
-## 1. Quero executar
+- [Fluxo e responsabilidades](#fluxo-e-responsabilidades)
+- [Execuções e reprodutibilidade](#execuções-e-reprodutibilidade)
+- [Modelo MetaSettran](#modelo-metasettran)
+- [Resultados e interpretação](#resultados-e-interpretação)
+- [Programação semafórica](#programação-semafórica)
+- [Validar e medir custo](#validar-e-medir-custo)
+- [Manutenção e histórico](#manutenção-e-histórico)
 
-### Preparação
-
-Instale Python 3.10+, `make` e SUMO com `randomTrips.py` e `duarouter`.
-`sumo` e `duarouter` precisam estar no `PATH`; `SUMO_HOME` aponta para a
-instalação que contém `tools/randomTrips.py`. A instalação de referência é
-SUMO **1.27.1**. O código de produção usa a biblioteca padrão Python.
-
-```bash
-export SUMO_HOME=/usr/share/sumo
-sumo --version
-make test
-```
-
-Para abrir a interface visual do SUMO, instale também `sumo-gui` e use uma sessão gráfica.
-Todos os targets Make impedem a criação de caches Python.
-
-### Interface local no navegador
-
-Na raiz do projeto, execute `make interface` e abra <http://127.0.0.1:8000>.
-O endereço também aparece no terminal. `make web` continua como alias.
-Também é possível usar
-`python3 -B -m SistemaDeSemaforos.simulation.web_interface --port 8000`.
-A interface usa somente a biblioteca padrão Python e HTML/JavaScript simples;
-não precisa de `sumo-gui`, instalação de pacotes, login ou banco de dados.
-
-Escolha a demanda, configure seus campos, a quantidade de episódios e `core/full`,
-então pressione **Run**. Só `current` está disponível. `random` mantém 7200 s de
-partidas, período 1,5 s e término natural por padrão; o instante final só é enviado
-quando escolhido. MetaSettran aceita dia, início e 1–56 faixas consecutivas.
-**Dia inteiro** e **Semana inteira** preenchem 00:00 e 8/56 faixas, mantendo o dia
-selecionado. O período mostrado é a janela civil de geração de cada episódio;
-o executor mantém 2700 s de escoamento apenas no final da seleção combinada.
-
-**Modo de execução MetaSettran** mantém **Consecutiva** como padrão, com os mesmos
-campos e limites. **Seleção livre de faixas** apresenta a grade de sete dias e oito
-faixas, com seleção de todas, limpeza e seleção por dia. **Agrupar faixas
-consecutivas** começa desmarcado: cada faixa marcada é uma execução independente,
-mesmo quando adjacente a outra. Marcado, reúne somente faixas imediatamente
-adjacentes, inclusive domingo 21h → segunda 00h. Faixas no mesmo horário em dias
-diferentes não são adjacentes. O resumo mostra os grupos e numera todas as faixas
-na ordem utilizada para associar as variações manuais.
-
-No agrupamento, os grupos são ordenados pelo início na semana; dentro de cada
-grupo segue-se a cronologia, incluindo a virada semanal. Por exemplo, segunda
-06h/09h e domingo 21h/segunda 00h aparecem como dois grupos, nessa ordem, com quatro
-variações manuais. Uma semana completa agrupada começa segunda 00h e usa uma única
-execução de 168h; desmarcado o agrupamento, são 56 execuções independentes.
-Cada episódio repete todos os grupos em sequência: três grupos e dois episódios
-resultam em seis execuções. Cada execução usa o runner existente e recebe seus
-próprios 45 minutos finais de escoamento. Veículos e transições permanecem somente
-dentro de um grupo; não são geradas partidas para preencher lacunas da seleção.
-
-Em **Exibir interface gráfica do SUMO**, **Não** (padrão) executa `sumo` e
-**Sim** executa a janela nativa `sumo-gui`, que requer uma sessão gráfica.
-A escolha vale para todos os episódios do lote; o executor existente inicia a
-simulação automaticamente e fecha a janela ao término de cada execução, incluindo
-todos os grupos da seleção livre.
-
-MetaSettran sorteia uma seed mestra com `secrets.randbits(63)`, o mesmo mecanismo
-do runner, e a envia a `run_episodes`, inclusive para uma única faixa. Isso evita
-o default legado V1 e deixa o sorteio e a derivação das seeds de cada episódio
-inteiramente no executor. A seed mestra do lote, as de cada episódio, as variações
-e as seeds efetivas ficam no `metrics.json` existente. A página não oferece
-entrada manual de seed mestra. Em **Variações por faixa (opcional)**, informe
-exatamente um inteiro 1–25 por faixa, separado por vírgula. A página indica a
-quantidade exigida e a quantidade digitada. Sequências inválidas bloqueiam o Run;
-o backend também valida quantidade, faixa dos valores e separadores.
-No modo livre, a quantidade é o total de faixas marcadas, não o número de grupos;
-siga a ordem numerada do resumo, que pode mudar ao marcar o agrupamento.
-Com lista explícita e vários episódios, o executor repete a mesma realização.
-Com o campo vazio, cada lote recebe uma nova seed mestra. O suporte a seed explícita
-no backend Python permanece disponível, sem controle na página. MetaSettran continua
-experimental, com as limitações científicas descritas neste guia.
-
-O agrupador isolado `simulation/metasettran_selection.py` converte a grade em
-`day/start/sections`. O runner percorre episódio → grupo, sem alterar geração,
-transições ou coleta. Mantém a derivação histórica das seeds entre episódios;
-grupos livres adicionais recebem seeds derivadas da seed do episódio e do índice
-do grupo, registradas em `execution.context_selection`. Os parâmetros científicos
-e as 25 variações não são modificados.
-
-O módulo `simulation/web_interface.py` valida o formulário e chama a função pública
-`run_episodes` numa thread. Há somente um lote ativo por servidor, sem fila;
-`/status` é consultado a cada 1,5 s. Mantenha apenas uma instância do servidor.
-O status mostra execução/conclusão/erro, sem porcentagem ou episódio presumido.
-Fechar a aba não cancela o lote; reabri-la recupera o estado enquanto o servidor
-continua ativo. Ctrl+C encerra o atendimento HTTP e aguarda o lote terminar.
-Não há cancelamento pela interface nem recuperação do estado em memória após
-reiniciar o processo. Uma interrupção forçada pode deixar `running` nos registros;
-esse valor permanece consultável no JSON, sem declarar uma conclusão.
-
-**Outputs** tem duas abas simples, **Random** e **MetaSettran**, que navegam pelas
-árvores `outputs/outputs-random/` e `outputs/outputs-metasettran/`:
-lote → episódio → arquivos, incluindo lotes anteriores e arquivos parciais.
-No modo livre, as pastas de execução incluem `episode-0001_group-01_…`, preservando
-timestamp, seed e identificador exclusivo. Cada pasta possui seu `metrics.json`.
-Em `execution`, os metadados `selection_mode`, `consecutive_grouping_enabled`,
-`execution_type` e `selected_sections` identificam o modo e os dias/inícios
-efetivamente executados juntos. Uma faixa isolada tem tipo `independent`, mesmo
-com agrupamento marcado; duas ou mais faixas contínuas têm `consecutive_group`.
-O modo tradicional registra `selection_mode: "consecutive"` e agrupamento
-habilitado. O modo livre também registra `selection_group_index` e
-`selection_group_count`; `context_selection.batch_episode` identifica a repetição.
-As métricas de grupos independentes não são agregadas entre si.
-No sucesso há link direto para o lote devolvido pelo executor. Em erro, o link
-leva ao perfil de demanda: procure o lote recente e seus logs, pois o runner não
-retorna o diretório quando lança uma exceção. Não se atribuem pastas por heurística.
-A listagem é atualizada ao terminar a execução. JSONs de qualquer schema são
-mostrados completos e indentados, em texto com rolagem dentro da própria página,
-sem tabelas ou cálculos. Logs e outros textos UTF-8 também podem ser consultados;
-binários são baixados. **Baixar original** conserva os bytes do arquivo em disco.
-JSON inválido ou incompleto é exibido como texto original, com uma indicação.
-
-**Apagar resultados** pede confirmação explícita da exclusão permanente nos dois
-perfis. A limpeza é manual e fica bloqueada durante um lote ativo neste servidor;
-usa o mesmo lock do início de execução. O backend aceita apenas a confirmação,
-sem caminhos enviados pelo navegador. Preserva as duas pastas-base, arquivos
-versionados no índice ou no HEAD do Git, links simbólicos e todos os arquivos fora
-dessas árvores. Não percorre links e recusa pastas-base simbólicas. Se não conseguir
-consultar o Git, recusa a exclusão antes de remover arquivos. Após a limpeza,
-atualiza a listagem. Os testes de exclusão usam somente repositórios temporários.
-
-A leitura fica restrita às duas árvores previstas; links simbólicos não são
-publicados. O servidor escuta apenas em `127.0.0.1`, verifica a origem local das
-requisições e não aceita comandos, opções extras ou caminhos de execução no formulário.
-Arquivos não podem ser editados. A exclusão exige o botão e sua confirmação;
-não existe limpeza automática. O runner mantém a criação de
-diretórios exclusivos e a política existente de retenção. Os testes HTTP, de
-validação e de integração da interface fazem parte de `make test`, sem SUMO real.
-
-### Comandos do dia a dia
-
-Execute na raiz do repositório:
-
-```bash
-make run-random
-make run-random RUN_ARGS='--episodes 10'
-make run-random RUN_ARGS='--episodes 10 --metrics-profile full'
-make run-random RUN_ARGS='--gui'
-```
-
-O primeiro comando executa um episódio `random`/`current`/`core`. Cada época é
-um episódio independente, com demanda e seed novas; dez épocas não são dez
-passos de simulação nem treinamento. A execução é sequencial.
-
-Para uma **prova curta explicitamente solicitada**, altere os parâmetros:
-
-```bash
-make run-random RUN_ARGS='--duration 30 --period 5'
-```
-
-Esse comando serve para conferir a instalação. Os experimentos padrão continuam
-com janela de demanda de **7.200 s**, período de partidas de **1,5 s** e término
-natural. Escolher `core` ou `full` altera somente as observações.
-
-A interface Make tem cinco comandos: `interface` e seu alias `web` abrem o servidor local;
-`run-random` executa pelo terminal; `test` verifica;
-`demand-random` gera somente viagens/rotas quando elas forem necessárias
-separadamente. As opções estão no mesmo runner:
-
-```bash
-python3 -B -m SistemaDeSemaforos.simulation.episode_runner --help
-```
-
-### Onde ficam os resultados
-
-A execução normal grava tudo em arquivos, sem relatório ou progresso no terminal.
-Erros continuam sendo informados. Cada chamada cria uma pasta exclusiva em
-`outputs/outputs-random/`; ordene as pastas pelo nome para encontrar o lote mais
-recente. Seus nomes começam pela data e hora UTC.
+## Fluxo e responsabilidades
 
 ```text
-outputs/outputs-random/<lote>/
-├── <episódio_1>/
-│   ├── metrics.json              # métricas explicadas, seeds e execução
-│   ├── generation.log, sumo.log   # mensagens das ferramentas
-│   └── raw/, entities.json.gz     # somente full após sucesso
-└── <episódio_2>/ ...
+Interface web ou CLI → seleção e planejamento dos episódios
+                    → geração Random ou MetaSettran
+                    → execução SUMO com a programação selecionada
+                    → coleta core/full → publicação dos resultados
 ```
 
-Abra `metrics.json` da época desejada: ele reúne resultados, seeds, tempos,
-nomes, descrições e unidades. O bloco `execution` registra a versão SUMO,
-a rede selecionada, os comandos e as opções aplicadas.
+O EDI usa processos nativos aguardados por `subprocess.run`, arquivos XML e coleta
+posterior à simulação. O servidor web executa o lote em uma thread e oferece consulta
+de estado e navegação pelos resultados.
 
-Em `random`, viagens, rotas e configurações XML de entrada são temporárias nos dois perfis.
-O protótipo MetaSettran usa `outputs/outputs-metasettran/` e conserva também
-`metasettran.rou.xml`, para reutilizar exatamente as viagens entre controladores.
-Após sucesso, o `core` também remove seus XMLs de observação; conserva os
-indicadores globais calculados. O `full` conserva os XMLs de observação e
-entidades para análise detalhada. Falhas preservam arquivos disponíveis para
-diagnóstico. Os dados de configuração e as seeds permanecem nos resultados,
-sem cópias da rede ou do código. Outputs ficam fora do Git.
+| Componente | Responsabilidade |
+| --- | --- |
+| `simulation/episode_runner.py` | Planejar faixas e grupos, executar episódios e registrar condições. |
+| `simulation/web_interface.py` e `.html` | Formulário, validação das entradas, estado do lote e consulta dos outputs. |
+| `demand/random_demand_generator.py` | Preparar viagens Random com as ferramentas nativas SUMO. |
+| `demand/metasettran_calibration.py` | Ler contagens, tratar exposição e construir curvas e realizações temporais. |
+| `demand/metasettran_network.py` | Ler a rede passenger, distribuir acessos e propor alternativas de cobertura. |
+| `demand/metasettran_demand_generator.py` | Combinar taxas, oportunidades OD, caminhos e retenções. |
+| `demand/metasettran_transitions.py` | Compor curvas e transportar partidas nas fronteiras temporais. |
+| `simulation/settran_configuration.py` | Validar e converter suplementos operacionais semafóricos. |
+| `metrics/` | Configurar observações, calcular métricas e publicar JSONs tipados. |
 
-### Material para o professor
+Os caminhos da tabela são relativos a `SistemaDeSemaforos/`. A preparação espacial
+compartilha uma leitura da rede entre expansão dos acessos e validação das rotas.
+O cadastro espacial e a rede física têm hashes próprios registrados nos resultados.
 
-A pasta `docs/` reúne o guia, os dados SETTRAN e duas planilhas CSV (UTF-8, separador vírgula):
-[CONFIGURACOES.csv](CONFIGURACOES.csv), com 65 configurações nativas
-relevantes ao cenário veicular, e [METRICAS.csv](METRICAS.csv), com
-80 indicadores coletáveis. As configurações têm seis colunas: categoria,
-opção SUMO, padrão de fábrica, efeito e unidade, uso no projeto e como alterar.
-Os 65 padrões foram conferidos no template do SUMO 1.28.0 e coincidem com
-os valores da referência 1.27.1. `uso_no_projeto` mostra um valor comum aos
-perfis ou distingue `core` e `full` quando necessário; considera `current`
-e os argumentos padrão. A coluna `como_alterar` distingue opções do CLI de
-ajustes que exigem editar o código em `SistemaDeSemaforos/`.
-As métricas indicam fonte, unidade, população, perfil e localização nos resultados.
-Das 80 linhas de `METRICAS.csv`, 40 indicam `core e full` e 40 são exclusivas
-do `full`. O catálogo inclui contexto temporal e contagens de amostras
-válidas/excluídas para interpretar as médias. A divisão 40/40 conta indicadores
-disponíveis no `core` e indicadores adicionais do `full`; o perfil `full` também
-coleta os indicadores comuns. O CSV é uma seleção, não a lista de todos os
-campos de `metrics.json`; custos de coleta, por exemplo, ficam fora do catálogo.
-Saídas brutas do `core` são temporárias.
+## Execuções e reprodutibilidade
 
-### Defaults e tempos
+### Seleção de faixas e episódios
 
-Padrões de `random`: 1 episódio, demanda de **7.200 s**, partidas a cada
-**1,5 s**, início em t=0, **timestep de 1 s** e término natural (`end=None`;
-SUMO `-1`). Perfis padrão: `current` e `core`. Sem `--end`, a simulação pode
-ultrapassar 7.200 s para concluir viagens. O perfil de observação não muda
-esses parâmetros ou o critério de encerramento.
+Cada faixa MetaSettran dura 10.800 segundos. O modo consecutivo aceita 1–56 faixas,
+com inícios a cada três horas e passagem por meia-noite e pela fronteira semanal.
+A seleção livre da interface executa as faixas separadamente ou agrupa as adjacentes.
+O agrupador e a API Python `run_episodes(selected_sections=..., consecutive_grouping_enabled=...)`
+representam a grade por índices de 0 a 55, de segunda 00h a domingo 21h.
 
-Os resultados separam janela da demanda (`demand_duration_seconds`), duração
-simulada (`simulation_duration_seconds`) e processamento real
-(`execution_time_seconds`). O tempo real inclui preparação, demanda, SUMO,
-consolidação e gravação de entidades; exclui a gravação final de `metrics.json`
-e a limpeza dos temporários. Durações usam relógio monotônico;
-horários de processamento são UTC. O horário civil de MetaSettran é Brasília;
-t=0 da simulação corresponde ao dia e horário inicial selecionados.
-A fronteira de medição do processamento é a mesma em `core` e `full`.
+O executor percorre episódio → grupo. Um grupo mantém a mesma simulação e seus
+veículos nas fronteiras. Grupos separados iniciam redes vazias. O escoamento padrão
+é de 2.700 segundos ao final de cada execução. Três grupos e dois episódios produzem
+seis execuções, cada uma com diretório próprio.
 
-Estas são todas as opções operacionais do runner, além de `--help`:
+### Seeds e variações
+
+- `--variation N` escolhe uma faixa individual. Episódios seguintes usam N+1, N+2,
+  até o limite 25. A chamada direta de uma faixa sem seleção explícita usa V1.
+- `--master-seed` sorteia uma variação de 1 a 25 por faixa. As seeds de episódios
+  e grupos adicionais são derivadas e registradas.
+- `--variations` fornece exatamente um índice por faixa. A sequência explícita
+  permite repetir a realização entre episódios.
+- A interface sorteia uma seed mestra quando o campo de variações está vazio,
+  inclusive para uma única faixa.
+
+A composição usa `metasettran-chronological-v1`. Curvas adjacentes são harmonizadas
+nas fronteiras, com transporte dos horários e conservação dos orçamentos por faixa.
+A seleção completa participa da reprodução. Uma faixa isolada pode ter escolhas OD
+diferentes da mesma faixa dentro de um grupo maior.
+
+Para comparar controladores ou perfis de coleta, mantenha rede, demanda, versão,
+seeds, timestep, horizonte e seleção completa equivalentes. Reutilizar o mesmo XML
+MetaSettran permite fixar a demanda planejada. A configuração efetiva e as opções
+nativas ficam em `execution.simulation.configured_options`.
+
+### Parâmetros do executor
+
+As opções estão disponíveis em `python3 -B -m SistemaDeSemaforos.simulation.episode_runner --help`.
+Random usa duração de geração de 7.200 segundos, período de 1,5 segundo e término
+natural. MetaSettran define sua duração pela seleção de faixas e usa `--drain-limit`
+para o escoamento. Ambos usam timestep nativo de 1 segundo nos ensaios de referência.
 
 | Opção | Padrão | Uso |
 | --- | --- | --- |
@@ -262,259 +104,65 @@ Estas são todas as opções operacionais do runner, além de `--help`:
 | `--net-file` | Rede Rondon Norte do projeto | Seleciona a rede física. |
 | `--output-dir` | `outputs/outputs-<perfil de demanda>/` | Destino dos lotes dentro da árvore correspondente. |
 
-## 2. Quero entender
+## Modelo MetaSettran
 
-### Arquitetura e responsabilidades
+### Fontes e interpretação temporal
 
-```text
-rede física única + random/metasettran + current/settran + core/full
-                              ↓
-                            SUMO
-                              ↓
-                   coleta e consolidação
-                              ↓
-                  arquivos de resultados
-```
+O modelo ativo é `metasettran-regional-integrated-v4.8-directional-local-access`,
+cenário `regional-integrated`. `regional-midpoint` é um alias de compatibilidade.
 
-| Local | Responsabilidade |
+| Fonte | Uso |
 | --- | --- |
-| `SistemaDeSemaforos/network/` | Rede física compartilhada e programas `current`. |
-| `SistemaDeSemaforos/demand/random_demand_generator.py` | Geração de viagens e rotas. |
-| `SistemaDeSemaforos/demand/metasettran_calibration.py` | Auditoria das contagens `car`, curvas temporais e separação de datas. |
-| `SistemaDeSemaforos/demand/metasettran_demand_generator.py` | Partidas reproduzíveis, escolha OD e rotas entre portais e áreas de atividade. |
-| `SistemaDeSemaforos/demand/metasettran_transitions.py` | Harmonização temporal e conservação entre faixas consecutivas. |
-| `SistemaDeSemaforos/demand/metasettran_spatial.json` | Portais, corredores, atividades urbanas, perfis de produção/atração e hipóteses dos sensores. |
-| `SistemaDeSemaforos/simulation/episode_runner.py` | Episódios, comandos, ciclo de vida e resultados. |
-| `SistemaDeSemaforos/simulation/metasettran_selection.py` | Ordenação e agrupamento opcional da seleção semanal livre. |
-| `SistemaDeSemaforos/simulation/web_interface.py`, `web_interface.html` | Servidor local e formulário; execução, acompanhamento e consulta dos outputs. |
-| `SistemaDeSemaforos/simulation/settran_configuration.py` | Validação e conversão de planos SETTRAN. |
-| `SistemaDeSemaforos/metrics/sumo_output_configuration.py` | Fontes nativas solicitadas por perfil. |
-| `SistemaDeSemaforos/metrics/episode_metrics_collector.py` | Leitura XML e cálculos das métricas. |
-| `SistemaDeSemaforos/metrics/metric_presentation.py` | Significados, unidades e apresentação. |
-| `SistemaDeSemaforos/metrics/metrics_storage.py` | Contrato e gravação dos resultados. |
-| `docs/settran_programs.json` | Planos normalizados e contrato operacional SETTRAN. |
-| `scripts/` | Auditorias e benchmark; `audit_settran.py` também valida a fonte no caminho de execução SETTRAN. |
-| `tests/` | Testes automatizados de demanda, simulação, interface e métricas. |
-| `outputs/` | Lotes de resultados gerados. |
+| [Medicoes_5_6.csv](Medicoes_5_6.csv) | Contagens `car` dos sensores 5 e 6. |
+| [metasettran_spatial.json](../SistemaDeSemaforos/demand/metasettran_spatial.json) | Portais, zonas, hipóteses, referências cartográficas e políticas de distribuição. |
+| [Rede SUMO](../SistemaDeSemaforos/network/uberlandia.vehicular.families.16_2_4.net.xml) | Geometria, permissões, conexões e programas `current`. |
 
-O fluxo usa **CLI e XML**, com processos aguardados via `subprocess.run`.
-Nosso código seleciona entradas, registra parâmetros, valida, agrega e grava.
-O SUMO calcula movimentação, seguimento, filas, viagens e eventos. Não há
-controlador Python por timestep ou consultas TraCI contínuas nos episódios.
+Os timestamps da fonte são interpretados como UTC e convertidos para
+`America/Sao_Paulo` antes da agregação. Essa convenção é uma decisão metodológica
+pendente de confirmação do exportador. A posição dos sensores também permanece
+hipotética, com 5 na Niterói e 6 na Rondon rumo centro.
 
-### Caminho de execução de random
+Intervalos aceitos de até 120 segundos são rateados por sobreposição. Cada quarto
+de hora exige pelo menos 95% de exposição nos dois sensores. As curvas de treino
+usam datas anteriores a 24/08/2026, com exclusão dos feriados cadastrados. A semana
+iniciada nessa data é a verificação principal e as posteriores são adicionais.
+Lacunas conservam sua condição de dado ausente.
 
-1. Você inicia com `make run-random`, passando as opções por `RUN_ARGS`.
-2. O runner valida parâmetros, rede e seleção semafórica; SETTRAN exige plano válido.
-3. Cria a pasta do lote e a do primeiro episódio em `outputs/outputs-random/`.
-4. Sorteia a seed da demanda e consulta em memória a versão e os defaults SUMO.
-5. `randomTrips.py` gera as viagens; `duarouter` calcula e valida as rotas.
-6. Prepara programas semafóricos e observações conforme `current`/`settran` e `core`/`full`.
-7. Executa `sumo` ou `sumo-gui` com a rede e a demanda; por padrão, termina naturalmente.
-8. O coletor lê as saídas nativas e calcula as métricas.
-9. Grava `metrics.json` e, no `full`, entidades e observações; remove temporários após sucesso.
-10. Repete a partir do sorteio para os próximos episódios, reutilizando os defaults em memória.
+Cada uma das 25 variações reamostra conjuntamente um dia completo de treino por
+dia da semana, compartilhado pelos dois sensores. A correlação intradia é preservada.
+A interpolação linear entre centros de 15 minutos é cíclica na semana. O suporte
+atual tem 3–6 dias completos por weekday, o que limita a independência das realizações.
 
-TraCI, `sumolib` e `netconvert/netedit` são recursos da instalação SUMO usados
-quando necessários por ferramentas de manutenção/validação. Não são necessários
-novos mecanismos de coleta para apresentar o que já está nos XMLs.
+### Taxa regional e retenções
 
-### Rede Rondon Norte e referência `current`
+O coeficiente regional é congelado em
+`17864,7155948 / (1614,7760417 + 6151,8447917) = 2,30019155`.
+Ele multiplica a soma das curvas dos dois sensores como índice temporal.
+A escala regional é uma hipótese, pois essas contagens admitem incidências sobrepostas.
 
-A rede é
-[`uberlandia.vehicular.families.16_2_4.net.xml`](../SistemaDeSemaforos/network/uberlandia.vehicular.families.16_2_4.net.xml),
-carregada por `--net-file`. A região foi confirmada pelo responsável como Rondon
-Norte. O XML contém geometria, faixas, conexões, permissões e programas;
-coordenadas locais estão em metros (UTM zona 22/WGS84). Não há fonte OSM de
-construção versionada no repositório.
+A agenda inicial segue um processo Poisson de taxa contínua sobre a realização.
+Os seletores sistemáticos definem as seguintes retenções sobre essa agenda.
+O sorteio OD cobre toda a agenda antes da remoção por origem e do corte final.
 
-São **36 TLS** (controladores semafóricos SUMO), **314 índices**, **316 conexões
-controladas** e **43 travessias**. Há 34 TLS fisicamente OK e dois com evidência
-insuficiente, sem erro estrutural comprovado. Um TLS pode atender vários nós.
-Correções físicas são comuns a `current`/`settran` e reproduzíveis por
-[`correct_signal_infrastructure.py`](../scripts/correct_signal_infrastructure.py).
-
-`current` usa os programas de referência SUMO, inclusive prioridades `O/o`;
-os tempos não são certificados como operação real. Batalhão permanece verde
-no regime normal, sem acionamento emergencial. Travessias existentes ficam
-na rede; índices pedestres sem programação comprovada permanecem vermelhos.
-Avisos correspondentes não rebaixam a infraestrutura veicular.
-
-A referência mantém modelo Krauss e `time-to-teleport=300` s. Defaults dependem
-do tipo/classe; não devem ser extrapolados para modelos ausentes. Mudanças de
-rede, demanda, seed, programação, horizonte ou modelos definem outras condições
-experimentais e exigem registro. Observar mais dados aumenta custo, sem alterar
-essas condições.
-
-### Pendências físicas e limites conhecidos
-
-- **Europa × Benjamim:** a representação legada da Europa conserva uma faixa e
-  27,78 m/s, ainda sem comprovação. Faltam fotos/croqui das duas pistas e placas
-  R-19; não transferir o limite da Benjamim.
-  [Imagens consultadas](https://www.mapillary.com/app/?pKey=27886827067676861).
-- **Maria das Dores Dias × Segismundo:** faltam placas/setas vistas desde Maria.
-  Esquerdas 3/11 chegam à faixa comum; 4/12 à faixa bus. As restrições OSM
-  8531027/8531030 partem da Segismundo e não comprovam proibição desde Maria.
-  [Imagem consultada](https://www.mapillary.com/app/?pKey=1252092370200250).
-- **Suíça/Viena:** diagnósticos com veículos longos apresentaram colisões em
-  condições específicas; a causa física não foi comprovada. Esses resultados
-  independentes não justificam alterar geometria para liberar SETTRAN nem
-  certificam a rede para qualquer carga/modelo.
-
-Rio de Janeiro e Batalhão possuem controles físicos, mesmo sem plano no XLSX.
-A existência foi documentada pela Prefeitura:
-[Rondon × Rio de Janeiro, 2020](https://www.uberlandia.mg.gov.br/2020/06/10/mais-de-350-semaforos-ja-contam-com-botoeiras-para-travessia-de-pedestres/)
-e [5º Batalhão, 2025](https://www.uberlandia.mg.gov.br/2025/06/11/bombeiros-terao-controle-de-sistema-de-fechamento-semaforico-nas-imediacoes-do-5o-batalhao-para-garantir-agilidade-e-seguranca-na-saida-de-viaturas/).
-Não existe programação SETTRAN inventada para esses sinais.
-
-### Demanda e seeds
-
-A demanda `random` sorteia origens/destinos e programa partidas regulares.
-Serve para exercitar o cenário; ainda não é calibrada por contagens reais.
-`randomTrips.py` chama `duarouter` para rotear e novamente com `--write-trips`
-para validar viagens. Solicitações inviáveis podem ser filtradas. Nosso código
-confere os dois XMLs finais antes de substituir uma demanda avulsa anterior.
-
-| Arquivo | Conteúdo e uso |
+| Etapa | Política |
 | --- | --- |
-| `random.trips.xml` | Origem, destino e partida das viagens verificadas; conferência do sorteio. |
-| `random.rou.xml` | Veículos e sequências de vias; **demanda carregada pelo SUMO**. |
+| Regional | Reter `floor(0,85 × N)` da agenda de referência. |
+| Por origem | Reter 90% das partidas fora dos grupos protegidos `rondon_sudoeste` e `rondon_nordeste`, por contexto. |
+| Final | Reter `floor(0,95 × N)` da população restante de cada faixa. |
 
-`7200 / 1.5 = 4800` solicitações, com partidas programadas de 0 a 7198,5 s.
-O total válido depende da conectividade; gerados, inseridos e concluídos são
-populações diferentes. A classe gerada é `passenger`.
+Os fatores nominais compostos são 0,8075 para origens protegidas e 0,72675 para
+as demais. A dependência da origem e os arredondamentos podem mudar a contagem
+final ao mudar os pesos. A escolha OD consome também os sorteios das posições
+posteriormente removidas. IDs, atributos e percursos retidos são conservados.
+`volume_recalibration`, `lateral_origin_reduction` e `final_adjustment` registram
+as contagens e as hipóteses aplicadas.
 
-Cada episódio `random` sorteia a seed da demanda entre 0 e `2**31 - 1`. A seed interna
-SUMO permanece no default e é registrada separadamente. O gerador aceita
-`--seed`; o runner continua sorteando e não possui flag CLI de replay.
+A API permite controlar `volume_retention` e `final_volume_retention`. Uma agenda
+explícita `schedule_file` conserva IDs, tipos, horários e quantidade, usando curvas
+medianas e dispensando as retenções. Esse contrato tem condições diferentes da
+geração normal com curvas realizadas. Comparações devem identificar qual contrato usam.
 
-`make demand-random` gera somente o par avulso em `SistemaDeSemaforos/demandas/`;
-repetir no mesmo destino substitui o par anterior. `make run-random` gera direto
-em `inputs/` temporário do novo episódio, sem ler nem preencher o par avulso.
-Essa pasta é removida após sucesso; as seeds permanecem nos resultados.
-
-### Dados reais preservados
-
-[RondonNorte.xlsx](RondonNorte.xlsx) é a fonte original dos planos.
-[Medicoes_5_6.csv](Medicoes_5_6.csv) contém 175.729 registros, em 67 datas entre
-26/06 e 16/09/2026. A auditoria integral confirma `vehicle_total = car + bus + truck`;
-motos e bicicletas ficam fora dessa soma. Os campos de velocidade são sempre zero
-e não calibram velocidades. Não há duplicatas ou sobreposições por sensor;
-existem interrupções, dias parciais e intervalos longos. Ausência não é fluxo zero.
-As linhas virtuais dos sensores 5/6 não têm coordenadas comprovadas.
-Essas observações alimentam somente o protótipo descrito abaixo, preservando
-`random`; não identificam uma matriz OD completa nem uma agenda semafórica.
-
-### MetaSettran: modelo regional integrado, ainda experimental
-
-Execute pelo runner compartilhado, com demanda e semáforos independentes:
-
-```bash
-python3 -B -m SistemaDeSemaforos.simulation.episode_runner \
-  --demand-profile metasettran --day tuesday --start 15:00 --sections 1 \
-  --variation 7 --signal-profile current --metrics-profile core
-```
-
-`regional-integrated` é o modelo ativo. `regional-midpoint` é somente alias de
-compatibilidade; não recria a distribuição antiga. Os cenários reprovados
-`balanced`, `dispersed`, `local`, `regional-control` e `regional-upper` são recusados.
-Os resultados históricos permanecem em outputs com suas configurações originais.
-
-**Escopo e organização.** Um único modelo atende sete dias (`monday` a `sunday`),
-oito inícios (`00:00`, `03:00`, …, `21:00`) e variações 1–25. O cadastro comum
-`metasettran_spatial.json`, campo `temporal_contexts`, representa essa hierarquia;
-não há 56 geradores nem 1.400 XMLs antecipados. Cada episódio gera e conserva sua
-rota sob demanda. `--episodes 10 --variation 1` executa dez realizações independentes,
-com índices 1–10. Isso não equivale a dez seções consecutivas.
-
-São representados carros (`passenger`) em viagens entre portais periféricos e
-cinco áreas internas: Center Shopping, Centro Administrativo, UFU Educação Física
-e duas amostras de quadras residenciais/mistas nos bairros Brasil e Tibery.
-A população regional existente é repartida entre essas viagens, sem acrescentar
-um orçamento por polo. Ônibus, caminhões, motocicletas, bicicletas, pedestres e
-demais extremos internos continuam ausentes. O modelo não é uma reprodução
-integral do tráfego real nem uma matriz OD medida.
-
-**Relógio, dados e variações.** A versão `metasettran-regional-integrated-v4.3.2-utc`
-interpreta os timestamps originais como UTC e os converte explicitamente com
-`ZoneInfo("America/Sao_Paulo")` antes de construir datas, weekdays e quartos de hora.
-UTC é uma decisão metodológica do projeto, **não uma confirmação do equipamento**:
-falta o metadado de fuso do exportador. O CSV não é alterado. Por exemplo, terça
-00:30 UTC pertence a segunda 21:30 civil. A conversão ocorre uma vez na leitura
-para agregação; timestamps de entrada com fuso explícito exigem revisão e são
-recusados. Metadados registram convenção, conversão e datas civis. Somente `car` calibra o modelo;
-`vehicle_total = car + bus + truck` exclui motocicletas e bicicletas. As velocidades
-zeradas não são usadas. A classificação não tem verificação manual independente.
-
-O módulo de calibração verifica o arquivo integral e conserva seus dados originais.
-Intervalos aceitos de até 120 s são rateados por sobreposição; lacunas não viram
-zero. Cada quarto de hora requer pelo menos 95% de exposição nos dois sensores.
-As medianas, IQR e MAD são calculadas separadamente por dia da semana e horário,
-com datas anteriores a 24/08/2026, excluindo os feriados cadastrados. A semana
-iniciada em 24/08 é verificação principal; semanas posteriores são verificação
-adicional. Janelas que cruzam dias são avaliadas contra datas consecutivas reais.
-Intervalos incompletos de verificação ficam sem erro calculado, com exposição explícita.
-
-Após a conversão, continuam 67 datas civis observadas, 48 elegíveis para treino e
-17 para verificação. A composição e os cortes de datas são recalculados no horário
-local; a igualdade das quantidades não significa igualdade dos registros.
-Os 672 quartos de hora do CSV atual têm 5–7 datas comuns de treino; não foi
-necessário recorrer ao fallback entre weekdays. Cada variação reamostra conjuntamente
-um dia completo de treino para cada weekday, compartilhado pelos dois sensores,
-preservando a correlação intradia e entre contadores. Há apenas 3–6 dias completos
-por weekday: 25 realizações não significam 25 semanas observadas independentes.
-A interpolação linear entre centros de 15 min é cíclica na semana e não aplica
-outra janela de suavização. Datas vizinhas sorteadas podem não ser consecutivas;
-a correlação entre dias permanece uma limitação.
-
-A agenda de referência segue um processo Poisson de taxa contínua sobre a realização
-sorteada. A agenda moderada retém `floor(0,85 × N)` posições sistematicamente espaçadas
-nessa agenda, com deslocamento pseudoaleatório determinístico. Não é um novo Poisson
-independente: é uma amostra de tamanho fixo que preserva a forma temporal e reduz
-a variância adicional de remoção. Cada viagem mantida conserva ID, partida, atributos
-e percurso. A escolha OD também é consumida para posições removidas, evitando
-redistribuição acidental. Não há ajuste por filas durante a execução.
-Seed, configuração e versão iguais reproduzem o mesmo XML, independentemente de
-`current`/`settran` e `core`/`full`. A variação 7 continua identificada pela seed
-1082464323, mas uma mudança da versão do modelo altera as rotas e deve ser registrada.
-
-**População regional e observações.** Há uma população única de viagens.
-Uma rota pode atravessar nenhum, um ou vários pontos de observação; incidências
-não criam veículos. Não existem origens exclusivas por sensor nem rotas proibidas
-somente por atravessarem ambos. A existência de viagens compartilhadas depende da
-geografia: não se impõem desvios para produzi-las.
-
-O coeficiente regional histórico permanece `17864,7155948 / (1614,7760417 +
-6151,8447917) = 2,30019155`. O denominador é congelado na v4.3.1 **antes** da
-conversão. Recalculá-lo na nova terça 15–18 renormalizaria silenciosamente os volumes,
-confundindo correção de relógio e mudança de escala. O número 17.864,7 passa a ser
-somente a referência histórica do coeficiente, não o novo volume dessa seção.
-
-`taxa_B(t) = 2,30019155 × [car5_UTC→civil(t) + car6_UTC→civil(t)]`
-
-`taxa_C(t) = 0,85 × taxa_B(t); N_C = floor(0,85 × N_B)`
-
-A redução de 15% é uma **hipótese experimental**, fixada antes das simulações para
-atender à decisão do projeto de reduzir mais de 10% em cada realização. É uma
-moderação limitada da escala não identificável com dois sensores; nenhuma medição
-comprova especificamente esse percentual. Mantê-lo comum preserva diferenças
-relativas entre contextos e evita inventar reduções por horário ou portal sem dados.
-A distribuição espacial continua desigual; a escolha urbana v4.4 descrita
-abaixo não recalibra esse coeficiente. Não houve busca iterativa de um percentual
-que eliminasse congestionamentos.
-
-A soma de curvas define um índice temporal, não veículos únicos medidos. Não se
-divide por cobertura de 5,80%, não se somam VMD como novas viagens nem se aumenta
-a demanda periférica para compensar viagens internas ausentes. As datas observadas
-representam variabilidade temporal, não um intervalo de confiança do total regional.
-
-O Python permite `source_time_convention="legacy_civil", volume_retention=1` para a
-referência A, `source_time_convention="utc", volume_retention=1` para B e os defaults
-UTC/0,85 para C. São suportes da comparação controlada, sem novos comandos de CLI.
-`generate_metasettran_demand(schedule_file=...)` continua preservando a quantidade,
-IDs, atributos e horários da agenda fornecida, alterando somente OD/percursos;
-**não reaplica redução** a uma agenda pareada. A geração normal sempre reconstrói B
-antes de selecionar C, sem reduções cumulativas.
+### Distribuição espacial e escolha de caminhos
 
 **Portais, OD e percursos.** Os 44 acessos de entrada e 37 de saída têm nó, coordenada,
 referências cartográficas e evidência do corte. A validação confere hash da rede,
@@ -536,19 +184,20 @@ João Pinheiro, por exemplo, tinham trechos OSM residenciais apesar da função
 estrutural municipal. O proxy usa `primary` para estrutural e `tertiary` para
 coletora, sem alterar limites de velocidade, faixas, conexões ou a rede física.
 
-O modelo `metasettran-regional-integrated-v4.4-urban-activities`, método
+O modelo `metasettran-regional-integrated-v4.8-directional-local-access`, método
 `urban_activity_od`, separa escolha do destino e escolha do caminho:
 
 1. A oportunidade de cada zona é repartida entre seus acessos, uma única vez.
-   Áreas externas herdam as oportunidades físicas/VMD dos portais; os cinco
-   extremos internos usam proxies relativos explícitos, sem contar cada portão
-   ou bloco universitário como uma nova população.
+   Áreas externas herdam as oportunidades físicas/VMD dos portais; os três polos
+   mantêm proxies ordinais 4/2/1. Zonas locais compartilham oportunidades
+   proporcionais à extensão viária, sem contar cada gate como uma nova população.
 2. Perfis de produção e atração por hora civil distinguem dias úteis, sábado e
    domingo. Comércio, serviços, ensino e residência têm formas diferentes, com
    interpolação contínua das probabilidades de 15 min. Os [horários oficiais do
-   shopping](https://centershopping.com.br/horarios/), as funções dos campi e os
-   [domicílios por bairro do Censo 2022](https://apisidra.ibge.gov.br/values/t/9922/n102/in%20n6%203170206/v/381/p/2022/c1/6795)
+   shopping](https://centershopping.com.br/horarios/) e as funções urbanas
    sustentam a distinção; os multiplicadores não são taxas de viagens medidas.
+   As células locais herdam o perfil residencial/misto antes usado na amostra
+   do Tibery, sem interpretar domicílios do bairro inteiro como população do recorte.
 3. Viagens entre bordas consideram progresso geográfico em relação ao comprimento
    do trajeto, evitando privilegiar a primeira saída próxima. Viagens de atividade
    usam impedância `exp(-distância/2000 m)`. Retorno ao mesmo acesso recebe fator
@@ -562,642 +211,267 @@ O modelo `metasettran-regional-integrated-v4.4-urban-activities`, método
    coletoras ×1,10 e estruturais/arteriais ×1, mais as conexões internas. Isso
    representa aversão moderada a atalhos locais, não velocidade observada ou
    capacidade. Rotas duplicadas e inválidas são removidas.
+6. Duas buscas adicionais usam `duarouter --weights.random-factor 1.3` e seeds
+   fixas 17/53, comuns a todas as realizações. Representam alternativas de
+   percepção de custo; não usam filas observadas. Todas as alternativas,
+   inclusive templates de corredor, ficam limitadas a 1,35 vezes o melhor custo
+   funcional não perturbado do OD e a 1,5 vezes o menor comprimento. A rota
+   nativa básica continua disponível. A divisão por custo e sobreposição não
+   multiplica a atração de um destino quando aparecem mais alternativas.
+7. A complementação de cobertura revisa trechos ausentes depois dessas buscas.
+   Limites inferiores dirigidos selecionam até três ODs existentes por trecho;
+   um caminho simples fornece a sequência de passagem para o `duarouter`.
+   O resultado nativo precisa manter conexões `passenger`, não repetir trechos
+   ou junções e respeitar os mesmos limites de custo e comprimento. A política
+   acrescenta opções de caminho, sem reserva de veículos por rua.
+   Se os prefixos e sufixos mais curtos não formam um caminho simples, a v4.8
+   tenta manter uma metade e buscar a outra sem repetir suas junções. O cadastro
+   limita essa etapa a 32 buscas por trecho. Cada testemunho passa pelos mesmos
+   tetos de custo e comprimento e pela validação nativa.
+   `catalog.coverage_completion` registra candidatos, rejeições e lacunas.
+   Uma busca limitada sem sucesso não demonstra impossibilidade física.
+
+**Atividades locais distribuídas.** `regional_demand.local_activity_distribution`
+define células de 600 m, até quatro acessos representativos por célula, comprimento mínimo de
+40 m para um acesso e oportunidade relativa de 1 por km de via local. Os parâmetros
+são hipóteses de resolução e oportunidade, escolhidas antes da comparação SUMO;
+não foram ajustados para eliminar congestionamento. A formação usa a rede
+`passenger` e a hierarquia funcional municipal já cadastrada: exclui arteriais,
+coletoras, rampas, portais e gates dos polos identificados. Cada trecho é associado
+à célula do ponto situado na metade de sua geometria; não se trata de polígono
+legal de bairro, área edificada medida ou cadastro de lotes.
+
+Somam-se comprimentos, sem multiplicação por número de faixas ou de segmentos.
+Sentidos opostos reconhecidos do mesmo trecho repartem sua extensão física.
+Cada célula com acesso recebe `comprimento_local_km × oportunidade_por_km`;
+até quatro gates espalhados, preferindo ruas OSM distintas, compartilham esse
+valor. O gate precisa de entrada, saída e geometria válida; células sem gate
+admissível são diagnosticadas, sem inserções forçadas. Ramais e circuitos ligados
+à malha por uma única junção recebem acessos adicionais quando existe frente
+local elegível: origem orientada para sair e destino orientado para entrar.
+Esses acessos compartilham a oportunidade já existente da célula, sem acrescentar
+extensão, atratividade ou uma população por ramal. Pontas curtas e vias que a
+hierarquia funcional classifica como coletoras não viram gates residenciais
+automaticamente. `directional_terminal_edges` cadastra casos auditados em que
+a junção tem outras ruas, mas um sentido só admite retorno em um de seus lados.
+O gerador confirma a frente residencial elegível e o papel compatível com as
+conexões, usando a oportunidade da célula existente. Isso fornece acessos
+agregados às atividades locais e amplia os caminhos possíveis, sem exigir que
+cada rua tenha veículos em toda realização. A abordagem de zonas e acessos
+ponderados é compatível com as [TAZ do SUMO](https://sumo.dlr.de/docs/Demand/Importing_O/D_Matrices.html);
+o EDI mantém seu sorteio explícito e o roteador nativo calcula os percursos.
+
+`generation.spatial_model.local_activity_expansion` registra as células,
+comprimentos, oportunidades, acessos e áreas sem gate. O hash espacial identifica
+o cadastro-fonte, incluindo a política, enquanto o hash da rede identifica a
+geometria usada na expansão. As duas amostras antigas Brasil/Tibery permanecem
+na fonte como contexto e perfil; são removidas da população ativa durante a
+expansão, evitando dupla contagem. O Censo 2022 não calibra a intensidade das
+novas células. A unidade 1/km e os perfis continuam experimentais até haver
+contagens locais e OD, e não equivalem a capacidade, veículos/km ou densidade
+real de domicílios.
 
 Os acessos internos são trechos `passenger` reais, georreferenciados nas ruas
 adjacentes. Rampas, estacionamentos e garagens ausentes da rede são abstraídos;
-as posições não são apresentadas como portões veiculares comprovados. Os dois
-setores residenciais usam somente a razão relativa entre domicílios dos bairros,
-não suas populações inteiras dentro do recorte. Santa Mônica e Umuarama ficam
+as posições não são apresentadas como portões veiculares comprovados. Santa Mônica e Umuarama ficam
 representados nas áreas de captação externas, sem duplicar seus campi no miolo.
-Não são criadas viagens que começam e terminam na mesma área interna.
+Viagens entre ruas distintas da mesma célula residencial/mista são permitidas;
+uma célula computacional não equivale a um único portão. Origem e destino no
+mesmo trecho continuam excluídos. Shopping, prefeitura e campus não recebem
+viagens internas ao próprio polo por essa regra. A penalização de retorno ao
+mesmo acesso periférico continua restrita aos grupos de borda.
 
 Uma única configuração atende sete dias, oito faixas diárias e 25 variações,
 inclusive na composição cronológica. A agenda regional e as retenções continuam
 comuns; mudar escolhas de origem pode mudar a contagem final da redução lateral.
-Agendas pareadas explícitas conservam sua população. O ajuste aos sensores pode
-alterar a distribuição urbana inicial; `observation_projection.urban_prior_drift`
-registra esse deslocamento por origem, destino e zona. Densidades absolutas,
+Agendas pareadas explícitas conservam sua população. Na política ativa,
+`regional_demand.observation_projection_scope="external_od_internal_prior"`,
+todas as viagens que tocam atividades internas formam um componente: entrada
+de borda → atividade, atividade → saída de borda e atividade → atividade.
+Nos centros de quinze minutos, a distribuição **condicional** de OD e percursos
+desse componente permanece a do prior urbano. Os sensores podem ajustar sua
+participação conjunta e as viagens entre bordas; não podem favorecer uma célula,
+polo ou desvio interno apenas porque seu percurso atravessa um sensor.
+`observation_projection.protected_internal_prior` registra massas antes/depois
+e erro de conservação condicional. A interpolação temporal existente continua;
+isso não cria cotas inteiras por rua ou por OD em um sorteio finito.
+
+O escopo histórico `global_od_and_routes` e o controle `within_fixed_od`
+permanecem reproduzíveis para comparação. O segundo congela toda a matriz,
+mas foi rejeitado como default: no teste V7 sua projeção sem retenções ficou
+cerca de 73% abaixo do sensor 6. O primeiro podia deslocar arbitrariamente
+viagens internas para tentar cumprir contagens. A política ativa permite que as
+medições informem a mistura regional, preservando a estrutura interna definida
+pelas atividades. Densidades absolutas,
 oportunidades e perfis permanecem hipóteses até haver OD e contagens de acesso.
 Os métodos anteriores continuam disponíveis no cadastro para comparação, e
 resultados históricos conservam a versão que os produziu.
 
-Validação da v4.4: **383 testes aprovados**; catálogo real de 2.923 rotas;
-1.400 contextos e 16.800 distribuições de 15 min conferidos quanto a finitude,
-normalização e conservação (erro máximo inferior a `1e-11` viagem esperada).
-A seleção domingo 21h V7 → segunda 00h V8 produziu 4.999 viagens válidas e
-continuidade OD na fronteira. Os métodos de auditoria foram executados somente
-como verificações temporárias, sem novos scripts ou relatórios no projeto.
+### Decisão dos pesos padrão e comparação controlada
 
-Uma simulação completa terça 15–18 V7 com 45 min de escoamento e `current`
-carregou 13.591 viagens: 7.068 conclusões naturais, 1.252 conclusões após teleporte,
-3.081 incompletas e 2.190 não inseridas. Houve 3.284 eventos de teleporte em
-2.353 veículos e zero colisões. A reconciliação distingue chegadas lógicas do
-SUMO, inclusive `vaporized="teleport"`, de conclusões físicas naturais. Há
-congestionamento forte nessa condição; a distribuição urbana tem fundamento
-geográfico, mas **a escala absoluta e a operação conjunta com `current` ainda
-não estão validadas**. Não se escolhem pesos para eliminar artificialmente filas.
-XMLs, mapas e saídas temporárias dessas verificações são removidos ao terminar;
-os dados-fonte e resultados anteriores permanecem no local habitual.
+**O padrão escolhido é v4.8, com oportunidade local por extensão viária.**
+Os pesos de hierarquia 4/3/2/1, faixas, VMD relativo, polos 4/2/1 e perfis
+temporais formam a referência operacional. A avaliação de 07/11/2026 concluiu
+pela manutenção dessa configuração. O CNEFE 50/50 e a sensibilidade de 100%
+ficam preservados como referências comparativas. A decisão privilegia o suporte
+geográfico e funcional dos acessos na rede representada.
 
-`duarouter` calcula os caminhos. O catálogo inclui alternativas explícitas por
-Jerônimo–Brasil–Niterói, Brasil e João Pinheiro–Jataí, qualificadas pela geometria.
-A continuidade Niterói→lado do shopping também admite origens periféricas
-geograficamente compatíveis, além da Jerônimo: origem atrás do início e destino
-adiante do fim, projetados no eixo orientado da Niterói. Isso remove uma assimetria
-do catálogo que oferecia a outras origens principalmente a conversão para a Rondon.
-Não há mínimo de veículos nesse caminho nem desvio integral obrigatório pela Brasil.
-Pontos intermediários de templates de atravessamento não podem produzir uma segunda
-visita à mesma junção. Retornos legais e trajetos curtos encontrados naturalmente
-continuam permitidos. Toda viagem parte de `departPos=0` e termina em `arrivalPos=max`,
-com rota contínua e permissões `passenger`, inclusive nas conexões internas.
-Não se selecionam caminhos pela taxa de conclusão obtida em simulação.
+O CNEFE contém 18.866 endereços particulares nas 28 células recortadas pelo
+fecho convexo do viário. A mistura melhora a correspondência com esse conjunto,
+mas transfere peso para células com pouca frente local representada. Na célula
+4/8, os 500 endereços passam a informar 0,975 de oportunidade, ante 0,081 no
+padrão (12 vezes). Apenas 16 ficam a até 50 m das ruas elegíveis da célula,
+e 27 a até 100 m. Esses raios são verificações geométricas de sensibilidade.
+A associação efetiva aos acessos dependeria do caminho entre imóvel e via.
 
-Os [VMD SETTRAN de 2025](https://www.uberlandia.mg.gov.br/prefeitura/secretarias/transito-e-transportes/fiscalizacao-eletronica/)
-de João Naves, Monsenhor Eduardo, Afonso Pena e Segismundo são referências relativas
-de outras seções e de todas as classes. O cadastro conserva os quatro PDFs, páginas,
-valores e faixas. VMD por faixa fiscalizada é normalizado antes de aplicar as faixas
-locais; esses números não viram orçamentos independentes. A transferência entre
-seções, sentidos e classes é estimativa. Contagens históricas de conversão de 2002
-permanecem referência, mas não determinam preferência por destino no mesmo corredor.
-
-O [estudo UFU de 2026](https://repositorio.ufu.br/handle/123456789/49701), tabela 2,
-observou duas outras seções em terças, de manhã, ao meio-dia e à tarde. As razões
-entre sentidos informam uma **restrição estimada** no sentido bairro da Rondon,
-relativa à curva do sensor 6. A interpolação entre centros desses períodos, a transferência aos
-demais dias e a razão neutra noturna são hipóteses explícitas; não uma terceira medição.
-
-**Ajuste espacial e validação física.** As probabilidades OD variam a cada 15 min,
-com interpolação contínua. A forma relativa do sensor 6 informa o prior arterial
-e a do sensor 5 o local,
-uma transferência experimental sem contagens semanais nas demais vias. Um ajuste
-iterativo de probabilidades relaciona cada rota aos pontos atravessados e ao tempo
-livre calculado até eles. Conserva a massa regional e registra resíduos, inclusive
-quando uma restrição é inviável. Na geração normal os alvos acompanham a realização
-sorteada; na comparação de agenda congelada usam medianas de treino.
-
-Na versão moderada o ajuste OD é feito sobre B, e somente depois se retêm viagens.
-Os alvos medidos permanecem intactos; `experimental_target_passages` e projeções
-reduzidas ficam separados. Não se reajustam pesos para recuperar artificialmente
-a contagem completa com menos veículos.
-
-**Redução lateral compartilhada (2026-10-24).** O modelo
-`v4.3.2-utc-lateral-10` aplica a hipótese experimental autorizada de redução de
-10% das partidas com origem lateral em todos os 56 contextos e suas 25 variações,
-inclusive nas seleções cronológicas. A configuração única é
-`regional_demand.lateral_origin_reduction` em `metasettran_spatial.json`.
-Os grupos periféricos `rondon_sudoeste` e `rondon_nordeste` ficam protegidos;
-todas as demais origens são laterais para essa regra, mesmo quando o percurso
-posteriormente utiliza a Rondon. A classificação é por portal de origem,
-independente de travessia integral/parcial e da incidência dos sensores.
-Na v4.4, origens de atividade internas também recebem a retenção lateral; somente
-os dois grupos periféricos da Rondon estão protegidos.
-
-Primeiro ocorre a retenção regional de 85% já aprovada e a escolha OD original.
-Depois cada faixa retém `floor(0.9 * N_lateral)` partidas laterais mediante amostra
-sistemática determinística na agenda ordenada. As partidas das extremidades da
-Rondon permanecem completas; IDs, horários, atributos e percursos das demais viagens
-retidas também são preservados. Viagens removidas não são redistribuídas nem
-regeneradas para compensar contagens. O percentual é uma decisão experimental,
-não uma medição de excesso nos acessos ou garantia de melhora operacional.
-
-Terminal, interface web e execução de dez épocas usam o mesmo gerador. O manifesto
-`lateral_origin_reduction` registra referência, total retido e orçamento lateral
-por contexto; `volume_recalibration` continua descrevendo separadamente a etapa de
-15%. Expectativas por rota, portal, intervalo e observação incluem a retenção por
-origem. Nas execuções combinadas a intensidade efetiva esperada é
-`taxa_referência(t) * soma(probabilidade_rota(t) * retenção_origem)`, contínua porque
-a interpolação OD é preservada. Os diagnósticos de conservação da ponte temporal
-permanecem identificados como referência anterior à redução lateral; contagens nas
-fronteiras e totais finais refletem as viagens efetivamente retidas.
-
-Agendas pareadas explícitas preservam sua população e não recebem nova redução;
-reutilizar o XML entre controladores também não o modifica. Resultados e XMLs
-anteriores mantêm sua versão original. A regra vale para novas gerações, sem
-materializar 1.400 XMLs nem modificar os dados-fonte.
-
-Validação desta regra: **343 testes aprovados** (109 de demanda, 157 de simulação,
-77 de métricas). O contrato de seleção foi exercitado em 56×25 agendas de teste,
-incluindo reprodução e preservação temporal. Na rede real foram comparadas as
-gerações terça 15–18 V7/V8 e a semana completa com seed mestra `20261022`.
-Nesta semana, 449.170 partidas passaram a 432.463: origens laterais
-166.812→150.105, extremidades da Rondon 282.358→282.358. As 56 faixas respeitaram
-individualmente o arredondamento; todos os IDs, horários e percursos retidos
-coincidiram com a referência, com zero rotas geradas inválidas.
-São verificações de geração, **sem nova execução SUMO** ou comprovação de melhora
-operacional. XMLs, configuração de referência e demais temporários desses testes
-foram removidos; resultados anteriores foram preservados.
-
-Esse ajuste é uma projeção de planejamento: não conhece filas, atraso de inserção
-ou espera nos sinais. Somente as passagens físicas SUMO podem validar o fluxo realizado.
-O ajuste considera a janela inteira: uma seção isolada pode receber escolhas OD
-diferentes das obtidas dentro de uma execução maior. A reprodução exige a mesma
-seleção completa, além da seed e dos parâmetros.
-
-As posições dos sensores continuam hipóteses: 5 na Niterói e 6 na Rondon rumo centro.
-Antes/depois do cruzamento são candidatos alternativos, não contagens somáveis.
-Uma conversão entre os pontos pode tornar suas contagens diferentes. Faltam linha
-virtual, direção e faixas efetivamente observadas; não há calibração empírica regional
-confirmada. MAE/WAPE contra treino e verificação são condicionais a essa correspondência.
-
-O coletor compartilhado registra por portal ou acesso de atividade e intervalo: programados, inseridos,
-pendentes de inserção, atrasos e estados finais. Separa conclusões naturais, chegadas
-após teleporte, incompletos e não inseridos. Passagens conservadoras excluem qualquer
-veículo com teleporte e ficam separadas de `edgeData` nativo. Movimentos entre edges
-são observados por `vehroute` com tempos das conexões internas. Tempos até o sensor,
-filas e teleportes não são ocultados para melhorar os erros.
-`spatial_observation.activity_locations` reúne os acessos internos;
-`portal_reconciliation`, `activity_reconciliation` e `endpoint_reconciliation`
-conferem separadamente as bordas, as atividades e o total. Uma chegada a um polo
-interno não é contada como saída periférica da rede.
-
-**Seções contínuas e sorteio contextual.** A composição `metasettran-chronological-v1`
-preserva a calibração `v4.3.2-utc`. Um único mecanismo atende de uma a 56 faixas
-cronológicas. `--sections` conta faixas de três horas, sem interromper a seleção
-à meia-noite ou na passagem de domingo para segunda. Não aceita horários arbitrários
-nem seleção descontínua. Exemplos no executor compartilhado:
-
-```bash
-# Uma faixa específica, preservando a realização individual aprovada
-python3 -B -m SistemaDeSemaforos.simulation.episode_runner --demand-profile metasettran --day tuesday --start 15:00 --sections 1 --variation 7
-# Duas faixas, sorteadas independentemente e reproduzíveis
-python3 -B -m SistemaDeSemaforos.simulation.episode_runner --demand-profile metasettran --day tuesday --start 15:00 --sections 2 --master-seed 20261022
-# 21 horas: terça 00h–21h
-python3 -B -m SistemaDeSemaforos.simulation.episode_runner --demand-profile metasettran --day tuesday --start 00:00 --sections 7 --master-seed 20261022
-# Dia inteiro: segunda 00h–terça 00h
-python3 -B -m SistemaDeSemaforos.simulation.episode_runner --demand-profile metasettran --day monday --start 00:00 --sections 8 --master-seed 20261022
-# Dois dias; para uma semana, usar --sections 56
-python3 -B -m SistemaDeSemaforos.simulation.episode_runner --demand-profile metasettran --day monday --start 00:00 --sections 16 --master-seed 20261022
-# Meia-noite e virada semanal
-python3 -B -m SistemaDeSemaforos.simulation.episode_runner --demand-profile metasettran --day friday --start 21:00 --sections 2 --master-seed 20261022
-python3 -B -m SistemaDeSemaforos.simulation.episode_runner --demand-profile metasettran --day sunday --start 21:00 --sections 2 --master-seed 20261022
-# Reprodução explícita do exemplo de terça 15h–21h acima
-python3 -B -m SistemaDeSemaforos.simulation.episode_runner --demand-profile metasettran --day tuesday --start 15:00 --sections 2 --variations 6 8
-```
-
-A seed mestra controla sorteios uniformes independentes, com reposição: repetir um
-índice em faixas vizinhas é permitido. As 25 variações continuam próprias de cada
-contexto. Não se materializam as `25^n` combinações. Sem seed informada numa seleção
-combinada, o sistema cria e registra uma seed de 63 bits. A lista explícita não sorteia
-novos índices e prevalece sobre uma seed mestra eventualmente informada. `--variation`
-não pode ser combinada com lista, seed mestra ou várias faixas. Uma faixa sem opções
-continua V1, por compatibilidade; use `--master-seed` para sorteá-la.
-
-`execution.context_selection` registra a seed mestra, a lista, os dias/horários,
-as seeds efetivas e o deslocamento semanal antes da geração. A geração conserva
-a seleção enriquecida com os orçamentos de cada faixa. Seeds/rotas não dependem de
-`current`, `settran`, `core` ou `full`. A mesma lista explícita reproduz o XML da
-seleção sorteada, inclusive seus IDs. `--episodes 10` mantém dez episódios independentes:
-com `--variation 1`, V1–V10; com seed mestra, seeds de episódio derivadas e registradas;
-com lista explícita, repete a mesma realização para comparação.
-
-Cada seleção gera uma única agenda ordenada, com IDs prefixados pelo índice da faixa.
-Mantêm-se exatamente as partidas de cada realização individual; perto das fronteiras,
-o transporte por quantis apenas reposiciona seus horários dentro da própria faixa.
-As marcas aleatórias OD de cada viagem também são preservadas: fora da transição,
-mudar uma variação seguinte não altera seus percursos. Não há geração em resposta
-às filas, população remanescente ou troca de controlador.
-
-A harmonização altera no máximo **15 minutos de cada lado** de uma fronteira,
-compatível com a resolução dos dados. Uma ponte linear positiva une as taxas e
-conserva separadamente a integral de cada meia-janela e de cada faixa. Assim, tanto
-a expectativa quanto a quantidade programada são as somas individuais, sem inflação.
-O valor comum parte da média harmônica das taxas vizinhas. Quando a ponte exigiria
-um novo pico ou vale, ajustam-se a junção e a duração das rampas, conservando a área
-e respeitando os extremos já presentes na janela. A maior rampa viável espalha a
-mudança no tempo; os extremos, eventuais limites de viabilidade e as janelas de
-5/15 minutos ficam registrados. Isso é harmonização numérica, não uma nova
-estimativa de volume ou evidência de pico real. Uma fronteira matematicamente
-incompatível com continuidade, conservação e limite de pico é rejeitada explicitamente,
-sem criar viagens ou elevar silenciosamente a taxa.
-
-As probabilidades OD aprovadas nos centros de 15 minutos continuam interpoladas,
-inclusive entre as duas faixas: sua junção ocupa 7,5 minutos de cada lado. Não há
-novo ajuste espacial, novo roteamento ou desvio obrigatório. Horários transportados
-podem mudar a rota sorteada dentro da janela de transição. O manifesto separa as
-projeções individuais de passagem, anteriores à harmonização, das passagens efetivas
-medidas no SUMO. As curvas medidas de referência não são deslocadas nem suavizadas.
-
-Um único processo SUMO conserva veículos, filas e semáforos durante toda a seleção.
-Intervalos são semiabertos. O horizonte é `10800 × sections + 2700` segundos:
-6h45, 21h45, 24h45, 48h45 e 168h45 para as seleções correspondentes. O escoamento
-ocorre somente ao final, nunca entre faixas, e é ajustável por `--drain-limit`.
-O horizonte é fixo mesmo se a rede esvaziar antes. Veículos aguardando inserção e
-veículos em circulação continuam no episódio; só o horizonte final define incompletos.
-`execution.demand_validation.boundary_continuity` registra essas populações e IDs
-com inserção antes e término após cada fronteira, separando ocorrências de teleporte.
-
-Inserções e passagens após a janela civil são identificadas e não integram sua
-contagem. Não existe aquecimento oculto nem deslocamento da curva observada para
-corrigir o início vazio. `--duration`, `--period` e `--end` pertencem a `random` e
-são recusados com MetaSettran. Horário civil, tempo relativo, janela de partidas,
-horizonte e tempo real de processamento são registrados separadamente.
-
-**Reprodução e limites de aceitação.** `metrics.json` conserva versão, seeds, hashes,
-fonte, calibração, parâmetros espaciais, rotas utilizadas e observações. O XML retido
-pode ser reutilizado em `run_simulation(demand_file=...)`; gerar com as mesmas
-entradas também reproduz suas viagens. Alterar os sinais não sorteia outra demanda.
-Os perfis oficiais permanecem intactos. Os diagnósticos de Niterói e Europa ×
-Benjamim são configurações temporárias registradas nos resultados, não planos SETTRAN.
-
-A integridade e a continuidade do software não comprovam realismo em todos os
-contextos. Volumes regionais, preferências OD, abrangência externa das contagens,
-fluxos nas vias sem medição e operação real de `current` continuam incertos.
-Aprovação científica exige distribuição justificável, resultados interpretáveis e
-verificação independente, não ausência artificial de filas ou 100% de chegadas.
-
-**Validação de referência — UTC e redução experimental de 15% (22/10/2026).**
-Os números e hashes desta comparação e da integração cronológica abaixo antecedem
-a redução lateral de 24/10/2026. São registros metodológicos dessas versões, não
-valores esperados para novas gerações. Os links de episódios dependem dos outputs
-locais, que não são versionados; a ausência de um arquivo impede sua reconferência.
-
-A referência A conserva relógio e escala da v4.3.1; B converte UTC sem mudar o
-coeficiente regional; C acrescenta a redução de 15%. Não foram alterados rede,
-sinais oficiais, parâmetros físicos ou regras de teleporte. A reprodução de A
-foi conferida byte a byte contra o XML anterior. Nas comparações B/C, cada viagem
-retida tem exatamente os mesmos ID, horário e percurso. Os programas diagnósticos
-são os mesmos de Niterói e Europa com quatro atendimentos, usados apenas onde indicado.
-
-**Os 56 contextos.** Cada célula mostra **B → C**, em partidas esperadas, arredondadas,
-obtidas pela integração da curva mediana de treino. A redução exata dessa expectativa
-é **15,00% em todas as células**. Status comum: cálculo **verificado**, volume regional
-**estimado sob hipótese experimental**, não medido. Justificativa comum: curvas
-car específicas do dia/horário após UTC, coeficiente regional histórico congelado e
-moderação experimental única; não existem percentuais extras por madrugada ou portal.
-
-| Horário civil | Segunda | Terça | Quarta | Quinta | Sexta | Sábado | Domingo |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 00–03 | 747 → 635 | 554 → 471 | 644 → 547 | 810 → 688 | 1005 → 854 | 1844 → 1567 | 2181 → 1853 |
-| 03–06 | 673 → 572 | 615 → 522 | 626 → 532 | 651 → 554 | 704 → 598 | 783 → 666 | 793 → 674 |
-| 06–09 | 12083 → 10270 | 12394 → 10535 | 12592 → 10703 | 12473 → 10602 | 12072 → 10261 | 5486 → 4663 | 2491 → 2117 |
-| 09–12 | 13223 → 11239 | 13624 → 11581 | 13789 → 11721 | 13818 → 11745 | 14360 → 12206 | 12610 → 10719 | 6659 → 5661 |
-| 12–15 | 16479 → 14007 | 17865 → 15185 | 17636 → 14991 | 17852 → 15174 | 18129 → 15410 | 14791 → 12572 | 10651 → 9054 |
-| 15–18 | 16379 → 13922 | 17517 → 14890 | 17736 → 15076 | 17703 → 15047 | 18454 → 15686 | 12374 → 10518 | 10346 → 8794 |
-| 18–21 | 13583 → 11546 | 14277 → 12135 | 14977 → 12731 | 15372 → 13067 | 16310 → 13863 | 13159 → 11185 | 10305 → 8760 |
-| 21–24 | 4677 → 3976 | 5464 → 4645 | 6295 → 5351 | 6855 → 5826 | 8225 → 6991 | 8895 → 7561 | 4675 → 3973 |
-
-As 1.400 agendas foram verificadas programaticamente, sem gerar 1.400 XMLs.
-A redução das quantidades inteiras variou de **15,0000% a 15,1874%**: o arredondamento
-para baixo explica a diferença. A ordem de intensidade das variações foi preservada
-(admite-se empate por arredondamento); a seleção repetida reproduziu os mesmos IDs.
-A→B pode mudar a data doadora da mesma V porque a conversão recompõe os dias
-civis completos elegíveis; seed e regra de reamostragem permanecem iguais. B→C
-preserva a mesma data doadora e a ordem de intensidade contextual.
-O erro máximo por quarto de hora entre a contagem retida e 85% da agenda B foi
-1,10 veículo. Isso testa preservação temporal, não acurácia empírica regional.
-
-A conversão mantém mínimos horários de treino do sensor 6 na madrugada (medianas
-por weekday entre 03h e 05h), com máximo às 17h nos cinco dias úteis e às 12h no
-sábado/domingo. O crescimento matinal e a alta vespertina ficam qualitativamente
-mais coerentes com os períodos investigados pelo [estudo UFU](https://repositorio.ufu.br/handle/123456789/49701).
-O estudo cobre outras seções e horários delimitados; essa coerência **não comprova UTC**
-nem valida a escala regional. Não houve correção artificial de picos. Na terça,
-03–06 equivale a 3,51% de 15–18 tanto em B quanto em C. O domingo diurno tem menor
-intensidade que os dias úteis, enquanto 00–03 de sábado/domingo permanece acima da
-madrugada útil. Há somente 3–6 dias integrais elegíveis por weekday para reamostragem.
-
-**Frequência dinâmica.** Na terça 15–18, os doze intervalos de 15 min têm as seguintes
-expectativas; o pico tardio continua presente após a redução:
-
-| Civil | B | C | Intervalo médio B → C (s/veículo) |
+| Distribuição das oportunidades contra endereços, variação total | v4.8 | 50/50 | 100% CNEFE |
 | --- | ---: | ---: | ---: |
-| 15:00 | 1191 | 1012 | 0.76 → 0.89 |
-| 15:15 | 1197 | 1017 | 0.75 → 0.88 |
-| 15:30 | 1282 | 1090 | 0.70 → 0.83 |
-| 15:45 | 1342 | 1141 | 0.67 → 0.79 |
-| 16:00 | 1369 | 1164 | 0.66 → 0.77 |
-| 16:15 | 1382 | 1175 | 0.65 → 0.77 |
-| 16:30 | 1414 | 1202 | 0.64 → 0.75 |
-| 16:45 | 1498 | 1273 | 0.60 → 0.71 |
-| 17:00 | 1597 | 1357 | 0.56 → 0.66 |
-| 17:15 | 1681 | 1429 | 0.54 → 0.63 |
-| 17:30 | 1783 | 1515 | 0.50 → 0.59 |
-| 17:45 | 1781 | 1514 | 0.51 → 0.59 |
+| Todos os endereços particulares no fecho convexo | 0,242 | 0,121 | 0,000 |
+| Estabelecimentos CNEFE, espécies 3–6 | 0,302 | 0,232 | 0,220 |
+| Endereços a até 25 m das ruas elegíveis da mesma célula | 0,063 | 0,138 | 0,236 |
+| Até 50 m | 0,077 | 0,122 | 0,218 |
+| Até 100 m | 0,132 | 0,085 | 0,173 |
 
-O intervalo médio descreve a intensidade, não um espaçamento fixo das partidas.
-A interpolação permanece linear e contínua; a agenda realizada tem intervalos
-variáveis. Em terça 06–09, A previa 615 partidas, B 12.394 e C 10.535; em 21–24,
-A previa 14.277, B 5.464 e C 4.645. Portanto o grande deslocamento entre madrugada,
-manhã e noite decorre do relógio, não do fator 0,85. A curva temporal local de terça
-15–18, antes de qualquer escala/redução, teve WAPE de verificação principal de
-12,20%/3,26% para sensores 5/6 e adicional de 7,97%/6,23% (12 e 24 janelas completas).
-São erros de previsão local entre datas, separados dos erros das passagens SUMO.
+A posição relativa muda com o raio de captação. A escolha de extensão viária
+mantém vínculo direto com os acessos representados. Já a aplicação de todos os
+endereços do fecho convexo exige uma hipótese adicional de distribuição entre
+esses acessos. O mesmo multiplicador também afeta origens e destinos de células
+residenciais/mistas, cuja atração inclui comércio e serviços. O CNEFE auxilia a
+qualificação espacial, com incertezas sobre captação, motorização e viagens de
+automóvel. [IBGE/CNEFE](https://www.ibge.gov.br/estatisticas/sociais/populacao/38734-cadastro-nacional-de-enderecos-para-fins-estatisticos.html).
 
-**Operação A/B/C.** Todos os episódios têm 10.800 s de partidas e 2.700 s adicionais.
-`N.I.` é quantidade não inserida e seu percentual sobre programados; `Após TP`
-são chegadas após teleporte, `Inc.` são inseridos incompletos e `TP` são eventos,
-podendo haver vários por veículo. S5/S6 são passagens conservadoras durante as três
-horas nos candidatos **anteriores** ao cruzamento, excluindo veículos com qualquer
-teleporte. Passagens no escoamento não entram nessa coluna. As referências são links
-para os resultados completos; contagens de candidatos anteriores/posteriores não se somam.
+**Controle das condições.** O [resultado consolidado](../outputs/outputs-metasettran/weight-review-20261107/comparison.json)
+usa as curvas realizadas V7 e a sequência de uniformes OD da geração normal.
+Antes das retenções por origem/final, registra o percurso sorteado para cada ID.
+Depois seleciona os mesmos IDs e atributos retidos pelo v4.8 nas três hipóteses.
+Assim, horários e volumes finais são idênticos. O campo `normal_N` registra
+separadamente o efeito da geração normal, cujo arredondamento e retenção por
+origem podem variar com os pesos. A comparação anterior via `schedule_file`
+usava curvas medianas e dispensava retenções. Seus números e hashes estão
+preservados no mesmo resultado, separados da comparação atual.
 
-| Contexto / sinais / variação | Ref. | Prog. | Inser. | N.I. (%) | Naturais | Após TP | Inc. | TP | S5/S6 |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Sáb 00–03 / current / V7 | [A](../outputs/outputs-metasettran/20261022T155705608813Z_8c927e4f/20261022T155705609024Z_seed-1082464323_bf536404/metrics.json) | 8949 | 8949 | 0 (0.00%) | 8865 | 84 | 0 | 87 | 320/3285 |
-| Sáb 00–03 / current / V7 | [B](../outputs/outputs-metasettran/20261022T172202641873Z_364fe02b/20261022T172202642108Z_seed-1082464323_f250e315/metrics.json) | 2335 | 2335 | 0 (0.00%) | 2335 | 0 | 0 | 0 | 127/859 |
-| Sáb 00–03 / current / V7 | [C](../outputs/outputs-metasettran/20261022T172210316226Z_42a75b68/20261022T172210316406Z_seed-1082464323_61b453fc/metrics.json) | 1984 | 1984 | 0 (0.00%) | 1984 | 0 | 0 | 0 | 104/742 |
-| Sáb 12–15 / current / V7 | [A](../outputs/outputs-metasettran/20261022T155816780602Z_af267fb1/20261022T155816780816Z_seed-1082464323_7f8cbac4/metrics.json) | 13730 | 13499 | 231 (1.68%) | 11897 | 517 | 1085 | 1147 | 141/4445 |
-| Sáb 12–15 / current / V7 | [B](../outputs/outputs-metasettran/20261022T172230000152Z_efaec85b/20261022T172230000334Z_seed-1082464323_f905f6d6/metrics.json) | 15822 | 14717 | 1105 (6.98%) | 11848 | 1072 | 1797 | 2456 | 15/4831 |
-| Sáb 12–15 / current / V7 | [C](../outputs/outputs-metasettran/20261022T172231220014Z_82b31b0e/20261022T172231220182Z_seed-1082464323_89f08ff3/metrics.json) | 13448 | 13172 | 276 (2.05%) | 11634 | 587 | 951 | 1166 | 51/4439 |
-| Dom 12–15 / current / V7 | [A](../outputs/outputs-metasettran/20261022T172655313898Z_408e80a3/20261022T172655314100Z_seed-1082464323_22ae2ef5/metrics.json) | 6461 | 6461 | 0 (0.00%) | 6461 | 0 | 0 | 0 | 393/2342 |
-| Dom 12–15 / current / V7 | [B](../outputs/outputs-metasettran/20261022T172236061224Z_f38a6c14/20261022T172236061387Z_seed-1082464323_f00aa8c3/metrics.json) | 10361 | 10361 | 0 (0.00%) | 10080 | 281 | 0 | 310 | 275/3549 |
-| Dom 12–15 / current / V7 | [C](../outputs/outputs-metasettran/20261022T172409359831Z_2831da7e/20261022T172409360017Z_seed-1082464323_93ad042c/metrics.json) | 8806 | 8806 | 0 (0.00%) | 8740 | 66 | 0 | 66 | 439/3094 |
-| Ter 03–06 / current / V7 | [A](../outputs/outputs-metasettran/20261022T155527670181Z_1d4e38c6/20261022T155527670407Z_seed-1082464323_a4be8d7c/metrics.json) | 567 | 567 | 0 (0.00%) | 567 | 0 | 0 | 0 | 41/181 |
-| Ter 03–06 / current / V7 | [B](../outputs/outputs-metasettran/20261022T172028527414Z_cb5da8e4/20261022T172028527570Z_seed-1082464323_079dc670/metrics.json) | 602 | 602 | 0 (0.00%) | 602 | 0 | 0 | 0 | 24/222 |
-| Ter 03–06 / current / V7 | [C](../outputs/outputs-metasettran/20261022T172036644244Z_eb9d8a21/20261022T172036644411Z_seed-1082464323_eb14cb32/metrics.json) | 511 | 511 | 0 (0.00%) | 511 | 0 | 0 | 0 | 21/186 |
-| Ter 06–09 / current / V7 | [A](../outputs/outputs-metasettran/20261022T155527668089Z_6fe1aebc/20261022T155527668310Z_seed-1082464323_1a1d6fc1/metrics.json) | 602 | 602 | 0 (0.00%) | 602 | 0 | 0 | 0 | 25/219 |
-| Ter 06–09 / current / V7 | [B](../outputs/outputs-metasettran/20261022T172036947453Z_5ae6ee6b/20261022T172036947622Z_seed-1082464323_2490d56d/metrics.json) | 10596 | 10596 | 0 (0.00%) | 10232 | 362 | 2 | 392 | 127/3482 |
-| Ter 06–09 / current / V7 | [C](../outputs/outputs-metasettran/20261022T172047034722Z_8f70ff40/20261022T172047034895Z_seed-1082464323_e039d27a/metrics.json) | 9006 | 9006 | 0 (0.00%) | 8796 | 210 | 0 | 224 | 147/3046 |
-| Ter 15–18 / current / V7 | [A](../outputs/outputs-metasettran/20261022T172741444382Z_39ad1a61/20261022T172741444551Z_seed-1082464323_e47ef657/metrics.json) | 16501 | 15339 | 1162 (7.04%) | 12475 | 975 | 1889 | 2312 | 29/5252 |
-| Ter 15–18 / current / V7 | [B](../outputs/outputs-metasettran/20261022T172502936486Z_268100c1/20261022T172502936677Z_seed-1082464323_86ae4cce/metrics.json) | 17132 | 16133 | 999 (5.83%) | 12558 | 1074 | 2501 | 2372 | 43/4201 |
-| Ter 15–18 / current / V7 | [C](../outputs/outputs-metasettran/20261022T172512613381Z_ecef7574/20261022T172512613593Z_seed-1082464323_408656c6/metrics.json) | 14562 | 14306 | 256 (1.76%) | 12048 | 684 | 1574 | 1642 | 100/4512 |
-| Ter 21–24 / current / V7 | [A](../outputs/outputs-metasettran/20261022T155551552048Z_acde19be/20261022T155551552286Z_seed-1082464323_e74a0498/metrics.json) | 14551 | 13792 | 759 (5.22%) | 10986 | 1120 | 1686 | 2406 | 12/4689 |
-| Ter 21–24 / current / V7 | [B](../outputs/outputs-metasettran/20261022T172057689784Z_80fab562/20261022T172057689986Z_seed-1082464323_4b065029/metrics.json) | 5272 | 5272 | 0 (0.00%) | 5272 | 0 | 0 | 0 | 370/1910 |
-| Ter 21–24 / current / V7 | [C](../outputs/outputs-metasettran/20261022T172134527341Z_bed67ff4/20261022T172134527513Z_seed-1082464323_7a2b5e71/metrics.json) | 4481 | 4481 | 0 (0.00%) | 4481 | 0 | 0 | 0 | 314/1628 |
-| Ter 15–18 / diag / V7 | [A](../outputs/outputs-metasettran/20261022T160314612039Z_230291ec/20261022T160314612215Z_seed-1082464323_4929630c/metrics.json) | 16501 | 16334 | 167 (1.01%) | 14936 | 377 | 1021 | 902 | 825/4965 |
-| Ter 15–18 / diag / V7 | [B](../outputs/outputs-metasettran/20261022T171645391439Z_c5727ad2/20261022T171645391651Z_seed-1082464323_2a6ad3ac/metrics.json) | 17132 | 16738 | 394 (2.30%) | 15063 | 339 | 1336 | 798 | 784/5035 |
-| Ter 15–18 / diag / V7 | [C](../outputs/outputs-metasettran/20261022T171645398519Z_adbd36fc/20261022T171645398659Z_seed-1082464323_09f8dff4/metrics.json) | 14562 | 14562 | 0 (0.00%) | 14470 | 92 | 0 | 97 | 1067/4608 |
-| Ter 15–18 / diag / V8 | [A](../outputs/outputs-metasettran/20261022T160314610233Z_0a052027/20261022T160314610432Z_seed-1817779227_70f66330/metrics.json) | 18351 | 17380 | 971 (5.29%) | 14644 | 842 | 1894 | 2084 | 627/5028 |
-| Ter 15–18 / diag / V8 | [B](../outputs/outputs-metasettran/20261022T171645397942Z_3ee3b42a/20261022T171645398171Z_seed-1817779227_74b7d4ac/metrics.json) | 18025 | 17878 | 147 (0.82%) | 15897 | 413 | 1568 | 884 | 1077/4704 |
-| Ter 15–18 / diag / V8 | [C](../outputs/outputs-metasettran/20261022T171826847311Z_253af1a2/20261022T171826847535Z_seed-1817779227_11ff67b4/metrics.json) | 15321 | 15321 | 0 (0.00%) | 15151 | 170 | 0 | 181 | 1136/4277 |
+Terça 15–18, V7, seed de demanda 1082464323. Percentuais sobre 12.882 viagens.
 
-Na tarde diagnóstica, B→C reduz o atraso médio de inserção de **76,0→22,1 s** (V7)
-e **199,4→44,7 s** (V8). Os não inseridos caem de 394 (2,30%) e 147 (0,82%) para
-zero; os incompletos de 1.336/1.568 para zero. A média de veículos parados cai de
-920→200 e 938→365. A quantidade absoluta de conclusões naturais diminui porque há
-menos partidas; sua proporção aumenta. Não se exige conclusão integral nem se
-apresenta esse resultado como prova de realismo.
+| Rotas planejadas | v4.8 | 50/50 | 100% CNEFE |
+| --- | ---: | ---: | ---: |
+| Interno → Interno | 794 (6,16%) | 772 (5,99%) | 744 (5,78%) |
+| Interno → Externo | 945 (7,34%) | 932 (7,23%) | 946 (7,34%) |
+| Externo → Interno | 1.216 (9,44%) | 1.132 (8,79%) | 1.121 (8,70%) |
+| Externo → Externo | 9.927 (77,06%) | 10.046 (77,98%) | 10.071 (78,18%) |
+| Incluem Rondon | 9.882 (76,71%) | 9.830 (76,31%) | 9.791 (76,01%) |
+| Entre pontas da Rondon | 1.659 (12,88%) | 1.679 (13,03%) | 1.692 (13,13%) |
 
-Com a mesma demanda C V7, mudar somente dos sinais diagnósticos para `current`
-reduz naturais de 14.470 para 12.048, aumenta teleportes de 97 para 1.642 e deixa
-256 não inseridos e 1.574 incompletos. S5 cai de 1.067 para 100 passagens. Isso
-isola um efeito relevante da configuração semafórica, sem comprovar qual representa
-a infraestrutura real. Dentro de `current`, B→C reduz não inseridos de 999 (5,83%)
-para 256 (1,76%) e atraso médio de 223,9 para 32,7 s. Dos 256 não inseridos,
-209 pertencem ao acesso `261533408` e 47 à Benjamim Constant; as retenções da Niterói
-continuam visíveis nos logs e nas curvas de passagem. As limitações não desaparecem.
+Entre as células locais, a distância dos sorteios aos endereços cai de 0,258
+para 0,130 nas origens e de 0,252 para 0,158 nos destinos com a mistura.
+A participação entre bordas aumenta e o uso global da Rondon varia menos de
+um ponto percentual. Em domingo 00–03, V7, as três hipóteses têm 1.662 viagens.
+Borda→borda soma 1.465/1.488/1.487 (88,15%/89,53%/89,47%) e Rondon
+1.512/1.519/1.511 (90,97%/91,40%/90,91%), na mesma ordem.
+As seis rotas completas estão em `weight-review-20261107/planned/`.
 
-**Sensores e espacialidade.** Na tarde V7, planejadas/efetivas durante a janela são
-1.303/784→1.111/1.067 no candidato 5 e 6.183/5.035→5.283/4.608 no 6. Em V8,
-1.571/1.077→1.354/1.136 e 6.495/4.704→5.512/4.277. Planejadas contam rotas contendo
-o edge, independentemente do instante de passagem; efetivas são passagens físicas
-sem teleporte dentro das três horas. Na redução V7 ainda ocorrem 28/615 passagens
-nos candidatos 5/6 durante o escoamento, separadas da janela civil.
+A identificação da Rondon usa os 84 edges das duas pistas principais, conferidos
+por IDs, junções, conexões passenger e 28 vias OSM versionadas. A referência
+v4.8 tem 8.574 viagens (66,56%) com pelo menos 500 m contínuos no eixo,
+1.308 (10,15%) com trechos menores e 3.000 (23,29%) sem usar o eixo.
+Destas, 767 (5,95% do total) cruzam uma junção compartilhada em nível pelo
+critério geométrico registrado no resultado. São incidências planejadas.
 
-O sensor 5 melhora operacionalmente, enquanto o 6 recebe menos passagens. O WAPE
-contra a curva central nos candidatos anteriores muda de 45,1%→25,5% (5) e
-18,6%→25,5% (6) em V7; de 34,1%→24,0% e 24,0%→30,9% em V8. Os candidatos
-posteriores resultam em 754/4.566 e 789/4.236 passagens em C. A redução não foi
-escolhida para fazer esses erros parecerem melhores. Sensores sem linha/faixas
-confirmadas continuam impedindo uma declaração de calibração empírica regional.
+**Verificação SUMO curta.** Foram preservadas as 1.836 partidas dos primeiros
+30 minutos da terça, com rede inicialmente vazia e 45 minutos finais de
+escoamento. SUMO 1.28.0, seed 23423, passo de 1 s, sinais `current` e opções
+físicas iguais. As opções configuradas diferem apenas nos caminhos dos arquivos.
 
-Os 44 portais de entrada e 37 de saída continuaram utilizados na tarde, sem quotas
-obrigatórias; C usou 897 percursos em V7 e 914 em V8, de 1.908 disponíveis. Na V7,
-entrada sudoeste da Rondon: 4.753→3.990; nordeste: 5.511→4.726; laterais: 6.868→5.846.
-As participações permanecem próximas de 27%/32%/40%. Mediana de percurso 3,052 km,
-mínimo 143 m e máximo 6,766 km em V7; rotas curtas válidas permanecem. A conversão
-Rondon→João Naves programa 907→768 e realiza 676→593 passagens sem teleporte na
-janela. Jerônimo–Afonso programa 126→104, Jerônimo–Brasil 95→82 e o movimento
-conflitante reto da Brasil 19→18. Não se promoveu o desvio integral pela Brasil;
-a pequena amostra de conflitos permanece uma limitação, não prova de baixa demanda real.
+| Operação até 4.500 s | v4.8 | 50/50 | 100% CNEFE |
+| --- | ---: | ---: | ---: |
+| Inseridos | 1.836 | 1.836 | 1.836 |
+| Chegadas sem teleporte | 1.777 | 1.767 | 1.778 |
+| Chegadas após teleporte | 11 | 2 | 5 |
+| Incompletos | 48 | 67 | 53 |
+| Eventos de teleporte | 13 | 3 | 5 |
+| Colisões | 0 | 0 | 0 |
+| Entradas no probe Rondon sentido bairro | 640 | 645 | 644 |
+| Entradas no probe Rondon sentido centro | 653 | 685 | 678 |
 
-Persistem retenções na região da Benjamim (edges `666324302#1`, `300971367#3`) e em
-acessos secundários. Na tarde diagnóstica C, o portal `30621472#0` (Praça Senador
-Camilo Chaves) apresenta atrasos médios de 853/967 s em V7/V8, mesmo após todos
-entrarem. No sábado C com `current`, `261533408` e Benjamim Constant concentram
-170 e 106 não inseridos; há 951 incompletos. B→C melhora esse caso, mas frente a A
-os não inseridos passam de 231 para 276 e os teleportes de 1.147 para 1.166.
-Relógio, distribuição contextual e operação dos sinais não podem ser confundidos
-com o efeito isolado da redução. Não houve uma nova redução para eliminar esses resíduos.
+Menos eventos de teleporte e mais incompletos coexistem no caso 50/50.
+Esses resultados descrevem operação sob uma demanda hipotética. A decisão
+sobre o padrão usa a análise geográfica acima. Os diretórios `street/`,
+`half/` e `cnefe/` do lote guardam as rotas curtas, métricas e logs.
+O contrato de resultados foi conferido para os três episódios.
 
-**Verificação e encaminhamento.** Passaram **282 testes**: 80 de demanda, 130 de
-simulação e 72 de métricas. Incluem conversão com virada de data, corte temporal,
-conservação da fonte, ausência de conversão/redução cumulativa, reprodução, subset
-exato B/C, contagens compartilhadas, portais, permissões, `random`, `current`,
-validação `settran`, `core`, `full`, dez épocas e continuidade existente.
-Foram executados 20 episódios nativos novos; sete resultados anteriores idênticos
-foram reaproveitados. Os 27 passaram no validador compartilhado e na contabilidade
-programados→inseridos→estados finais. 276.171 definições de viagem desses episódios
-foram verificadas contra os portais e conexões passenger. Nove pares B/C preservam
-exatamente as viagens retidas. A mesma demanda C V7 foi reutilizada entre os sinais
-oficiais e diagnósticos, sem novo sorteio.
+A refatoração reproduziu byte a byte a referência v4.8 terça V7
+(`b472bd92c8d1930053c00079b6aeeff46d725225f659492b41711511a2d875ef`) e
+a comparação 50/50 pelo contrato anterior `schedule_file`
+(`3294b0e9ea869e15aee478f75b60565f7722bd0d13485ac384df75abff7ac2d9`).
+O cadastro padrão conserva o hash
+`f16df47ed054b08020e5c8776f29cab58c35f9ddb80562aa8f6715907a7df8bf`.
+A variante anterior pode ser refeita pela API com `schedule_file` e
+`local_activity_weights_file=DEFAULT_SPATIAL_FILE.with_name("metasettran_cnefe_weights.json")`.
+Cada geração deve usar uma pasta própria.
 
-A regeneração nativa C V7 reproduziu SHA-256
-`3a2ec055425ed86a4481c4276fa0f51064f007af6ebe620b338a859d403e82ce`.
-Foram geradas e validadas também as seleções de seis horas: terça 15–21 (26.552),
-sexta 21–sábado 03 (9.195) e domingo 21–segunda 03 (4.771), mantendo agenda única
-ordenada e extremos válidos. O horizonte de 24.300 s segue coberto pelos testes do
-runner; estas três seleções não foram novamente simuladas naquela rodada de recalibração.
-O sorteio contextual e a harmonização foram implementados posteriormente, conforme
-a seção operacional acima e a validação de integração abaixo.
+## Resultados e interpretação
 
-CSV, rede, sinais oficiais e resultados anteriores permanecem intactos. Os scripts,
-cópias e XMLs usados somente nas verificações temporárias foram removidos; episódios
-retêm suas rotas, parâmetros, seeds, logs e métricas no local habitual. O checkpoint
-`refs/codex/metasettran-before-utc-reduction-20261022` preserva a base anterior,
-sem alterar HEAD nem o índice de trabalho do colaborador.
+### Arquivos e perfis
 
-**Decisão:** apto para uso **experimental** e avanço às transições temporais, sem
-falha estrutural identificada nesta rodada. Isso não significa demanda regional
-empiricamente calibrada nem aprovação irrestrita de `current`: permanecem a hipótese
-UTC, a escala absoluta, sensores não confirmados, fluxos laterais estimados,
-classificação veicular limitada a carros e viagens internas excluídas. Congestionamento
-residual exige interpretação por cenário. Esta rodada encerra a recalibração; novos
-ajustes substanciais de intensidade ou distribuição dependem de autorização.
+Cada chamada cria um lote exclusivo em `outputs/outputs-random/` ou
+`outputs/outputs-metasettran/`. Os nomes operacionais incluem data/hora UTC e
+identificadores exclusivos. Na seleção livre, cada execução também identifica
+seu episódio e grupo. A interface permite navegar pelas pastas e baixar arquivos.
 
-**Validação da integração cronológica (2026-10-23).** A composição
-`metasettran-chronological-v1` foi concluída sobre a calibração aprovada, sem
-alterar seus volumes ou pesos. A seed mestra `20261022` selecionou `[6, 8]`
-para duas faixas, `[6, 8, 22, 23, 4, 1, 12]` para sete e acrescentou `23`
-para oito. Para 16 faixas, acrescentou `[16, 1, 13, 7, 5, 15, 4, 24]`.
-Repetições são sorteios válidos; não há exigência de índices distintos.
+`metrics.json`, schema 3, reúne `execution` e uma lista `metrics`. Identifique
+cada indicador por `metric_name`. Os registros incluem tipo, valor, descrição,
+unidade, natureza e prioridade. `execution` registra fontes, hashes, comandos,
+seeds, variações, seleção e tempos. Os tempos de processamento usam relógio
+monotônico e diferem do tempo simulado.
 
-| Seleção | Expectativa individual somada | Expectativa combinada | Partidas individuais somadas = combinadas |
-|---|---:|---:|---:|
-| Terça 15h–21h | 26.323,12 | 26.323,12 | 26.363 |
-| Sexta 21h–sábado 03h | 7.730,29 | 7.730,29 | 7.753 |
-| Domingo 21h–segunda 03h | 5.225,14 | 5.225,14 | 5.214 |
-| Terça 00h–21h | 62.627,05 | 62.627,05 | 62.734 |
-| Segunda 00h–terça 00h | 53.750,17 | 53.750,17 | 53.968 |
-| Segunda 00h–quarta 00h | 123.694,57 | 123.694,57 | 124.506 |
-| Segunda 00h–segunda seguinte 00h | 446.789,04 | 446.789,04 | 449.170 |
+| Perfil | Retenção após sucesso |
+| --- | --- |
+| `core` | Agregados e contexto. `entity_metrics_file` é `null`. Entradas temporárias e observações intermediárias são removidas. |
+| `full` | Agregados, `entities.json.gz` e observações nativas em `raw/`. |
 
-A diferença entre expectativa e realização é estocástica; a integração acrescentou
-**zero viagens**. Na semana gerada, os 449.170 IDs são únicos, as partidas estão
-ordenadas e as 1.662 rotas distintas usadas respeitam portais, permissões e conexões.
-Todos os **672 intervalos de 15 minutos** conservaram exatamente a quantidade
-programada de suas realizações individuais. O maior resíduo de conservação por
-faixa foi inferior a `8e-12` veículo esperado; o resíduo semanal foi `6e-11`.
+As entidades full são organizadas por `vehicles`, `lanes`, `edges`, `traffic_lights`,
+`approaches` e `intersections`, com escopo, ID e chave. MetaSettran conserva a demanda
+planejada em `metasettran.rou.xml`. Falhas preservam os arquivos disponíveis e seus logs.
 
-Foram verificadas as **35.000 combinações de fronteira**: 56 mudanças cronológicas
-× 25 variações anteriores × 25 seguintes. Nenhuma falhou ou exigiu relaxar o mínimo
-local; nenhuma criou pico superior ao máximo da janela original, além de erro de
-ponto flutuante (`4,5e-16` relativo). As taxas coincidem na junção, e as probabilidades
-OD interpoladas não têm salto de valor. Isso verifica continuidade e conservação;
-não exige contagens iguais em janelas sucessivas, que podem refletir tendências reais.
+No core, referências resumidas substituem o cadastro espacial completo e a calibração.
+O catálogo detalhado de rotas fica disponível em full. A API do gerador também permite
+controlar sua publicação com `include_route_details`. Os perfis compartilham a semântica
+das métricas comuns e as condições de simulação.
 
-Exemplo terça às 18h, V6→V8: nas janelas de cinco minutos anterior/posterior,
-as expectativas passam de 483,77/514,05 para 487,21/499,86; foram programadas
-474/506 partidas. Nas janelas de 15 minutos, as expectativas 1.468,13/1.516,02
-e as contagens 1.427/1.508 permanecem iguais às individuais. A taxa comum é
-1,63190 veículo/s, dentro do intervalo original 1,61006–1,72706. Não se apagou
-o aumento sustentado pela curva nem se acrescentaram veículos para compensar filas.
+### Leitura científica
 
-As execuções abaixo usaram um único SUMO por seleção, perfil `core` e escoamento
-final de 2.700 s. **D** indica os programas diagnósticos já existentes de Niterói e
-Europa com quatro atendimentos, fixos entre esses testes; **C** é `current` oficial,
-sem substituições. Os diagnósticos permanecem temporários, identificados com suas
-fases em `generation.operational_experiment`; não são planos reais SETTRAN.
-Links apontam para os lotes finais preservados em `outputs/outputs-metasettran/`.
+Distinga veículos programados, inseridos, concluídos sem teleporte, chegadas após
+teleporte, incompletos e sem inserção. Eventos de teleporte podem se repetir para
+um mesmo veículo. Ocupação de um trecho (`sampledSeconds > 0`), passagem por uma
+seção e conclusão de viagem são observações distintas.
 
-| Seleção / sinais | Programados | Inseridos | Não inseridos | Naturais | Chegadas após TP | Incompletos | Eventos TP |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| [Terça 15–21 / D](../outputs/outputs-metasettran/20261022T232851003625Z_e823819c/) | 26.363 | 25.540 | 823 | 22.944 | 1.182 | 1.414 | 2.534 |
-| [Terça 15–21 / C](../outputs/outputs-metasettran/20261022T230410652340Z_1354023f/) | 26.363 | 22.967 | 3.396 | 18.738 | 2.323 | 1.906 | 5.257 |
-| [Sexta 21–sábado 03 / D](../outputs/outputs-metasettran/20261022T233439887509Z_7c25b129/) | 7.753 | 7.753 | 0 | 7.753 | 0 | 0 | 0 |
-| [Domingo 21–segunda 03 / D](../outputs/outputs-metasettran/20261022T233533040432Z_236d518e/) | 5.214 | 5.214 | 0 | 5.214 | 0 | 0 | 0 |
-| [Terça 00–21 / D](../outputs/outputs-metasettran/20261022T230401429548Z_d9d9a1fe/) | 62.734 | 52.794 | 9.940 | 45.853 | 5.075 | 1.866 | 10.285 |
-| [Segunda 00–terça 00 / D](../outputs/outputs-metasettran/20261022T230401404718Z_3436b712/) | 53.968 | 49.144 | 4.824 | 43.475 | 4.406 | 1.263 | 8.856 |
-| [Segunda 00–quarta 00 / D](../outputs/outputs-metasettran/20261022T230401422667Z_a4f85aef/) | 124.506 | 115.041 | 9.465 | 102.759 | 10.535 | 1.747 | 20.841 |
+Rotas geradas descrevem intenção de deslocamento. As observações SUMO permitem
+avaliar o movimento ocorrido e as restrições de inserção. MAE/WAPE dos sensores
+são condicionais à correspondência espacial adotada. A projeção em tempo livre
+exclui os efeitos de filas e sinais sobre os instantes de passagem.
 
-Eventos de teleporte não são veículos distintos nem chegadas após teleporte.
-Nos sete episódios, `programados = inseridos + não inseridos` e
-`inseridos = naturais + chegadas após TP + incompletos`; não houve remoções
-de término desconhecido. Os sete passaram no validador compartilhado, com 72
-registros tipados por episódio. Horizontes efetivos: 24.300, 78.300, 89.100 e
-175.500 s para 6, 21, 24 e 48 horas de partidas.
+Os diagnósticos MetaSettran incluem reconciliação de bordas e acessos internos,
+movimentos, progressão e continuidade. Medidas de partida efetiva e atraso ficam
+ausentes para veículos sem inserção. `status=completed` registra término do processamento.
+A interpretação do tráfego exige os indicadores de integridade e suas populações.
 
-Houve continuidade comprovada por IDs: no teste de seis horas D, 1.281 viagens
-sem qualquer teleporte atravessaram as 18h em circulação; nas viradas de sexta
-e domingo, foram 74 e 38. Nas 48 horas, todas as 15 fronteiras mantiveram veículos,
-incluindo 649 sem teleporte na meia-noite entre os dois dias. O veículo
-`ms_s000_000879`, por exemplo, entrou em 10.475 s e chegou naturalmente em 10.805 s,
-atravessando a primeira fronteira de 10.800 s. Essas contagens são conservadoras:
-excluem qualquer viagem que tenha sofrido teleporte em outro momento e não devem
-ser somadas entre fronteiras como veículos distintos. Pendências de inserção também
-persistem; não há liberação instantânea ou descarte na troca de faixa.
+## Programação semafórica
 
-O teste de 48 horas levou 46,3 minutos de processamento nesta máquina. A semana
-completa foi **gerada e validada, mas não simulada no SUMO**, limitando o custo desta
-etapa. Seu XML reproduzível tem SHA-256
-`8feba24e7146859f180d8ccef6077d83235ba00ebc8fadae145c12ed6418e583`.
-O teste de uma faixa terça V7 conservou as 14.562 viagens e o SHA aprovado acima.
-Na seleção terça 15–21, seed mestra e lista explícita `[6, 8]` reproduziram o mesmo
-XML, inclusive nas execuções D/C: SHA-256
-`0159684ea9e1bb164ec0e2b5c446d1e05362bf17050138c571a3343427ef3a83`.
+`current` usa os programas incorporados à rede. `settran` aplica um plano fixo
+selecionado explicitamente pelo CLI. A interface oferece `current`.
 
-Passaram **321 testes**: 104 de demanda, 140 de simulação e 77 de métricas,
-incluindo reprodução, sorteios, conservação, continuidade, `random`, `current`,
-validação de `settran`, `core`, `full` e dez épocas. CSV, calibração, parâmetros
-espaciais e rede oficial mantiveram seus hashes. O checkpoint
-`refs/codex/metasettran-before-chronology-20261022` preserva o estado anterior.
-Os artefatos temporários de geração e os scripts desta verificação foram removidos;
-resultados, rotas e configurações dos episódios permanecem no mecanismo habitual.
+[RondonNorte.xlsx](RondonNorte.xlsx) é a fonte original e
+[settran_programs.json](settran_programs.json) contém a normalização e os suplementos.
+A fonte tem 36 programas, 128 descrições e 512 tempos/células. Os planos reais
+2/4/16/24 aguardam dados de permissões, sequência, transições e referência das
+defasagens. O executor recusa seleções incompletas antes da geração de demanda.
 
-**Decisão da integração:** apta para uso experimental, sem falha estrutural
-identificada na composição. Permanecem filas, teleportes e inserções pendentes,
-inclusive sob sinais diagnósticos; a troca de faixa conserva esses problemas em vez
-de reiniciar a rede. A igualdade do XML D/C permite separar a demanda da configuração
-semafórica, mas não comprova realismo dos programas diagnósticos. A execução semanal
-completa ainda carece de validação operacional. Não houve nova calibração nem
-aprovação científica adicional da escala regional ou dos sensores.
+Um plano válido produz `inputs/settran.add.xml`. Os estados usam índices de
+conexões `linkIndex`, com `G` protegido e `g` permissivo. A posição de uma letra
+em `state` identifica o movimento controlado. Conflitos, escopo e transições
+precisam de evidência operacional. A rede física continua sendo a entrada comum
+aos experimentos com cada controlador.
 
-### Configurações e métricas
-
-Os CSVs de `docs/` são referências para consulta; editá-los não configura o
-programa. `CONFIGURACOES.csv` contém 65 opções selecionadas e seus padrões da
-versão de referência. Todas as opções nativas podem ser consultadas com
-`sumo --save-template -`. O resultado guarda a versão SUMO, os parâmetros do
-experimento e as opções explícitas em `execution.simulation.configured_options`;
-rede e tipos veiculares também definem condições. `Não definido` no padrão de
-fábrica de arquivo significa que nenhuma entrada ou saída foi configurada;
-`Não habilitado` no uso do projeto significa que o perfil não solicita a saída.
-As unidades e o significado de valores especiais, como `-1`, ficam em
-`efeito_e_unidade`. Opções nativas não
-expostas pelo runner exigem alteração explícita no código; não são argumentos
-adicionais aceitos por `RUN_ARGS`.
-
-`core` conserva indicadores globais essenciais; `full` acrescenta detalhes
-por entidade e observações brutas. Ambos usam a mesma demanda, duração e
-semântica nas métricas comuns. Métricas não têm valor de fábrica: são calculadas
-das observações. O CLI seleciona somente `--metrics-profile core/full`, sem
-seleção individual de métricas ou alteração de fórmulas. Acrescentar uma fonte
-exige suporte no código; recursos nativos como SSM/TTC/PET, detectores E2 e
-bateria não estão integrados à coleta atual.
-
-Em MetaSettran, o `core` omite o catálogo diagnóstico `routes` (pesos, custos e
-listas por trecho de cada alternativa) e a cópia de `groups`, já preservada em
-`execution.generation.groups`. A cópia integral do cadastro espacial vira
-`spatial_model_reference`, com versão, hash, escopo e hipóteses principais. A
-calibração interna vira `calibration_reference`, com fonte e hash, relógio,
-método, seleção, quantidade de datas, referências e alvos por sensor. Curvas
-semanais completas, validações diárias da entrada e evidências extensas ficam no
-`full`. Qualificações cartográficas e textos estáticos também não são repetidos
-em cada resultado `core`.
-
-Na contabilidade por origem, o `core` conserva totais programados/inseridos,
-estados finais, teleportes e atraso agregado, mas omite os diagnósticos de atraso
-repetidos em cada intervalo de 15 minutos. As séries temporais de veículos por
-portal, polo e corredor continuam presentes, assim como comparações dos sensores,
-progressão global, reconciliações e continuidade. Permanecem ainda configurações,
-seeds, variações, modos de seleção/agrupamento e o XML das rotas. O `full` conserva
-o detalhamento anterior integralmente. O gerador evita construir a cópia do
-catálogo no `core`; sua API Python mantém esse detalhe por padrão
-(`include_route_details=True`). A diferença é somente de representação dos novos
-resultados, sem recalcular ou regravar históricos.
-
-### O que SETTRAN altera no SUMO
-
-`current` é padrão e independente dos dados SETTRAN. `settran` seleciona
-programação semafórica para teste de plano fixo; a demanda é selecionada
-independentemente por `--demand-profile`, cujo padrão continua `random`.
-As nove interseções documentadas abrangem **17 TLS**, todos fisicamente OK.
-Vínculos e tempos ficam em [`settran_programs.json`](settran_programs.json).
-
-A V2 é a integração das configurações SETTRAN pedida pelo professor.
-O conversor está implementado, mas **nenhum plano real 2/4/16/24 pode ser executado hoje**:
-faltam permissões, intervalos/transições e referência da defasagem.
-A agenda ausente não bloqueia, por si só, um teste fixo.
-
-```bash
-make run-random RUN_ARGS='--signal-profile current --duration 30 --period 5 --end 60'
-make run-random RUN_ARGS='--signal-profile settran --settran-plan 2 --duration 30 --period 5 --end 60'
-make run-random RUN_ARGS='--signal-profile settran --settran-plan 2 --settran-intersection "Av. Rondon Pacheco x Rua Belém" --duration 30 --period 5 --end 60'
-```
-
-Os dois comandos SETTRAN são recusados com os dados atuais, antes de sortear
-seed, gerar demanda ou iniciar SUMO. Selecionar um plano significa executá-lo
-deliberadamente, sem afirmar em qual horário real estaria ativo. O recorte por
-interseção é explícito e repetível; não existe subconjunto automático ou
-fallback. Os demais TLS continuam `current` e são registrados.
-
-Das 29 descrições veiculares, 28 possuem cobertura física vinculada:
-12 `CONFIRMADO` e 16 `INFERIVEL_COM_SEGURANCA`. Falta identificar o estágio D
-Antônio Crescêncio/Rotary: o nome da fonte corresponde à saída, enquanto a
-entrada controlada é Rotary Club. Os cinco controles auxiliares de
-Porto Alegre/Niterói e os controles João Naves ainda precisam de escopo/coordenação.
-Cobertura física não demonstra permissão simultânea: Benjamim e Niterói incluem
-conversões conflitantes com retas. Não converter todos os vínculos em `G`.
-SUMO distingue verde protegido `G` de permissivo `g`:
-[estados e fases](https://sumo.dlr.de/docs/Simulation/Traffic_Lights.html#signal-state-definitions).
-
-Um plano válido gera `inputs/settran.add.xml`, com um `<tlLogic>` por TLS
-aplicado: `type="static"`, `programID="settran_<plano>"` e `offset` calculado.
-Cada intervalo operacional vira `<phase duration="..." state="..." name="...">`.
-O caractere de posição **i** em `state` controla as conexões cujo
-`linkIndex=i` naquele TLS; esse índice também é chamado `signalIndex` nas
-verificações. As posições não são números de fases nem IDs de vias.
-
-Portanto, SETTRAN muda **programa selecionado, sequência de fases, duração,
-estados dos sinais e defasagens**. Os XMLs adicionais carregados por
-`--additional-files` conservam a rede física e o mecanismo de observação.
-Demanda, rotas fornecidas, gerador, seeds, timestep, horizonte e critérios de
-encerramento permanecem os do experimento. Os tempos de percurso e as filas
-podem mudar como consequência esperada da programação semafórica.
-Coordenação requer as referências comprovadas abaixo; a agenda ainda não
-executa trocas automáticas.
-
-#### Contrato para receber os dados restantes
+### Contrato SETTRAN
 
 O [settran_programs.json](settran_programs.json), schema 2, separa fonte,
 suplemento operacional e agenda. Os 36 programas preservam os IDs 2/4/16/24,
@@ -1253,99 +527,8 @@ suplementos ao regenerar e recusa deriva dos valores/células originais. O fluxo
 programas fixos já está implementada. Agenda futura usará tempo simulado SUMO,
 sem contextualizar artificialmente a demanda.
 
-#### Dados externos necessários
 
-- Diagrama/exportação veicular por plano: grupos/movimentos/focos, permissões
-  protegidas ou cedentes, ordem, amarelos, limpeza e continuidade.
-- Identidade Rotary D e escopo/coordenação dos controles auxiliares e João Naves.
-- Defasagem: evento alvo, relógio/TLS/evento de referência, alinhamento e
-  sentido atraso/adiantamento.
-- Agenda: interseção, plano, início/fim, dias, vigência, exceções e política de
-  troca segura. Marco do dia/plano inicial precisam de fonte; não são presumidos.
-
-O [Manual Brasileiro de Sinalização Semafórica, Volume V](https://www.gov.br/transportes/pt-br/assuntos/transito/arquivos-senatran/docs/copy_of___05___MBST_Vol._V___Sinalizacao_Semaforica.pdf)
-e SUMO fundamentam os conceitos, sem comprovar a referência particular da SETTRAN.
-Dados pedestres originais permanecem conservados, fora desta V2 veicular.
-
-### Consultar resultados
-
-Abra `metrics.json` da época desejada. O schema 3 reúne `execution` e a lista `metrics`;
-busque por `metric_name`, não pela posição. Cada registro tem tipo, valor,
-legenda, descrição e unidade; unidade `null` não significa adimensional.
-`execution` registra a versão SUMO, parâmetros, seeds, comandos, tempos e
-cobertura da coleta. Os resultados não dependem de outro arquivo de configuração.
-
-No `core`, `entity_metrics_file` é `null`. No `full`, aponta para
-`entities.json.gz` (schema 1), com `vehicles`, `lanes`, `edges`, `traffic_lights`,
-`approaches` e `intersections` sob `entities`; identifique cada medida por
-escopo + ID + chave. Em MetaSettran, veículos não inseridos conservam
-`metasettran_trip_status: "not_inserted"` e `scheduled_departure_seconds`;
-`actual_departure_seconds` e `insertion_delay_seconds` ficam ausentes porque não
-houve inserção observada. Não se atribui zero a essas medidas ausentes.
-Os arquivos em `raw/` guardam as observações nativas,
-incluindo rotas realizadas com tempos de saída. O CSV de métricas indica onde
-encontrar os 80 indicadores selecionados; o coletor também produz outros
-agregados e registros de amostragem. Em falhas, consulte o erro e os logs;
-entradas e observações disponíveis permanecem para diagnóstico.
-
-## 3. Quero experimentar
-
-### Alterar parâmetros deliberadamente
-
-```bash
-make run-random RUN_ARGS='--duration 1200 --period 3'
-make run-random RUN_ARGS='--duration 1200 --period 3 --end 1500'
-make run-random RUN_ARGS='--episodes 10 --metrics-profile full --output-dir outputs/outputs-random/estudo'
-```
-
-Duração maior prolonga a geração; período menor solicita mais veículos.
-`--end` muda o horizonte e pode interromper viagens. São escolhas explícitas de
-experimento, independentes do perfil de métricas. Não altere regras de teleporte,
-modelos, rede ou semáforos para tornar os indicadores artificialmente melhores.
-
-Use `core` para avaliação inicial e dez épocas rotineiras. Use `full` quando a
-pergunta exigir localização de filas, fases, veículos, trajetórias, emissões ou
-reanálise temporal. Dados não observados não podem ser recuperados a posteriori;
-uma nova análise que precise deles exige outro experimento `full`.
-
-### Interpretar e comparar épocas
-
-Confira primeiro as condições e a população observada. Seeds diferentes
-produzem experimentos independentes. Compare rede, demanda, programação, seed
-SUMO, horizonte, timestep e encerramento. `status=completed` indica o término
-do pipeline, não a calibração do cenário.
-
-- Ausência de dado não significa zero. Cada média usa
-  suas próprias amostras válidas (`_samples`); sem amostras não há média.
-- Médias `completed_*` excluem viagens sem chegada, sem partida e remoções
-  excepcionais (`vaporized`). Chegadas de Summary podem diferir dessa amostra.
-  Compare também incompletas, descartes, colisões e teletransportes.
-- Contadores acumulados de Summary usam o último valor. Velocidade global é
-  média temporal; passos sem veículos não recebem velocidade zero artificial.
-- A fila global soma comprimentos por faixa em cada passo; não é uma fila
-  física única. Passos observados sem fila contribuem zero. Não some medidas
-  de vias às das próprias faixas: representam o mesmo tráfego.
-- Pendência de amostragem no `full`: um comprimento de fila inválido é excluído
-  do agregado global, mas pode entrar como zero nos agregados de faixa/interseção.
-  Revisar esse caso exige definir o tratamento de observações inválidas e comparar
-  as métricas; resultados existentes não são recalculados.
-- No `full`, velocidade ponderada usa veículo-segundos; ruído usa média
-  energética e direção usa média circular. Estados/sinais são categorias.
-  Durações de fase podem incluir fragmentos nas bordas do episódio. Emissões
-  e ruído são estimativas dos modelos, não medições ambientais.
-
-### Retenção dos resultados
-
-Conserve os lotes cujos dados ainda são úteis. As seeds, configurações e
-métricas são os registros do experimento; não há arquivo de reprodução nem
-cópias da rede e do código em outputs. A execução usa a rede atual do projeto.
-Dados não coletados não podem ser recuperados de um resultado `core`.
-
-Excluir uma pasta de lote descartado remove apenas seus resultados locais.
-Não exclua os dados-fonte originais ou a rede para limpar resultados.
-Uma nova chamada de `make run-random` sorteia novas seeds de demanda.
-
-### Validar e medir custo
+## Validar e medir custo
 
 ```bash
 make test
@@ -1354,74 +537,57 @@ python3 -B scripts/audit_settran.py --check
 python3 -B scripts/audit_results.py --episodes outputs/outputs-random/LOTE
 ```
 
-Os testes cobrem demanda, runner, armazenamento, contrato SETTRAN, infraestrutura e
-métricas; não abrem episódios SUMO. Os dois comandos `--check` acima conferem os
-arquivos existentes sem regravá-los nem iniciar SUMO. Regenerar as correções físicas
-é uma operação separada que exige `netconvert` da versão indicada no script.
-A auditoria de resultados verifica contratos, tipos e completude; não substitui a interpretação científica. Para validar a execução
-real, use a prova curta explicitamente parametrizada da seção 1.
+A suíte verifica demanda, composição temporal, executor, interface e métricas.
+Os comandos `--check` conferem os arquivos existentes. A reconstrução da rede é
+uma operação de manutenção separada, vinculada à versão e aos hashes do script.
 
-O check SETTRAN verifica a fonte e o contrato; não declara planos reais prontos.
-Os quatro planos 2/4/16/24 devem continuar recusados antes da demanda/simulação.
-Testes com suplemento sintético verificam o conversor sem certificar plano real.
-Para integridade externa, confira schema XML, TLS, controlledLinks e estados;
-a suíte isolada não substitui essa validação com SUMO.
-
-A comparação técnica entre observadores usa o benchmark existente:
+Para investigar cobertura planejada, execute a auditoria com um arquivo de saída novo.
 
 ```bash
-python3 -B scripts/benchmark_observation_pipeline.py --duration 7200 --period 1.5 --seed 123 --repetitions 2
+python3 -B scripts/audit_results.py \
+  --routes-file outputs/outputs-metasettran/LOTE/EPISODIO/metasettran.rou.xml \
+  --metrics-file outputs/outputs-metasettran/LOTE/EPISODIO/metrics.json \
+  --spatial-file SistemaDeSemaforos/demand/metasettran_spatial.json \
+  --output outputs/auditoria-distribuicao.json
 ```
 
-Ele usa a mesma rede, rotas, seed SUMO e término natural, invertendo a ordem na
-segunda repetição. O controle interno `minimal` grava somente Tripinfo.
-A comparação exige atributos das viagens e métricas comuns idênticos; terminar
-sem erro não comprova equivalência. Tempos abrangem configuração, SUMO, coleta e
-persistência, excluindo a geração compartilhada e a verificação. A memória é o
-RSS máximo de processos novos: Python e SUMO separados, sem somar seus picos.
+O cadastro reconstrói o catálogo com `duarouter`. O relatório separa conectividade,
+rotas disponíveis e ausência no sorteio. Os hashes vinculam as entradas ao episódio.
+`--edge-data` acrescenta ocupação observada e `--sumo-log` acrescenta os eventos de
+teleporte disponíveis. A auditoria identifica lacunas e logs incompletos.
+Para Random, forneça suas rotas disponíveis e omita o cadastro espacial.
 
-O destino padrão é `outputs/benchmarks/`; `--output-dir` permite reunir a
-comparação numa pasta nova dentro do lote. `benchmark.json` guarda a medição;
-`observation.json` guarda valores técnicos sem legendas. Os bytes medidos nesse
-teste excluem entradas compartilhadas e não representam o tamanho
-completo dos resultados operacionais. A janela é explícita no comando: o
-benchmark não redefine os defaults do runner.
+O benchmark compara observadores com a mesma rede, demanda e seed SUMO.
+Escolha explicitamente a duração e o intervalo de partidas.
 
-Dez épocas são viáveis quando o custo total e espaço cabem no ambiente, mantendo
-as condições planejadas e registrando problemas do tráfego. A duração real varia
-com máquina, carga, seed, GUI e observação; medições locais não são promessa de
-tempo em outro computador. Consulte os tempos registrados em cada
-`metrics.json` do experimento para avaliar o custo observado.
+```bash
+python3 -B scripts/benchmark_observation_pipeline.py \
+  --duration 600 --period 1.5 --seed 123 --repetitions 2
+```
 
-## 4. Quero evoluir
+`benchmark.json` registra tempos, tamanhos e memória de processos separados.
+As verificações exigem igualdade dos atributos de viagem e das métricas comuns.
+O perfil interno `minimal` é um controle da ferramenta. O custo observado depende
+do cenário, da máquina e da carga de execução.
 
-### Onde fazer cada alteração
+## Manutenção e histórico
 
-| Evolução | Lugar da alteração | Preservação necessária |
-| --- | --- | --- |
-| Nova opção experimental | Runner; gerador quando pertencer à demanda | Default explícito, registro nos resultados, testes e explicação no guia. |
-| Nova métrica suportada | Configuração de saídas, coletor, apresentação/armazenamento | Fonte, unidade, população, ausência de dado e perfil declarados. |
-| Dados SETTRAN complementares | `docs/settran_programs.json`, sob `operational` e `schedule` | Fonte, evidências, hash da rede, vínculos e validações do contrato. |
-| Reimportar planilha SETTRAN | `scripts/audit_settran.py` | Células originais e suplementos manuais válidos; usar `--help`. |
-| Nova demanda | `SistemaDeSemaforos/demand/`, integrada pelo runner | Rede, protocolo, seed e proveniência; manter `random`. |
-| Correção física comprovada | Rede e `scripts/correct_signal_infrastructure.py` | Efeito comum a `current`/`settran`, fonte e validação estrutural. |
+| Alteração | Local principal |
+| --- | --- |
+| Entradas e seleção de execução | `simulation/episode_runner.py` e interface web. |
+| Hipóteses de demanda | Cadastro espacial, calibração e gerador em `demand/`. |
+| Observações e métricas | Configuração das saídas, coletor e publicação em `metrics/`. |
+| Suplemento SETTRAN | `docs/settran_programs.json` e conversor de planos. |
+| Importação da planilha | `scripts/audit_settran.py --help`. |
+| Correções físicas | Rede e `scripts/correct_signal_infrastructure.py`. |
 
-Configuração consumida pelo programa pertence aos dados estruturados; lógica
-pertence ao código; resultados ficam em outputs; explicação operacional fica
-neste guia; material para o professor fica nos CSVs de `docs/`; validação fica nos
-testes; histórico de desenvolvimento fica no Git. O README orienta o início.
+Configurações operacionais pertencem aos dados estruturados. Resultados, seeds e
+condições dos experimentos ficam em outputs. As diretrizes de colaboração orientam
+a manutenção do código e da documentação. [Diretrizes](DIRETRIZES_COLABORACAO_IA.txt)
 
-Ao receber os dados SETTRAN, preencha o contrato já descrito, valide e selecione
-explicitamente. Não converta vínculos físicos em permissões sem evidência, não
-presuma amarelos/limpeza/offsets e não mude a rede para liberar um plano.
-
-Arquivos de entrada originais (`RondonNorte.xlsx`, `Medicoes_5_6.csv`) permanecem
-preservados. Outputs conservam os dados experimentais; remova apenas lotes
-conscientemente descartados. Falhas de consolidação deixam as observações e
-entradas disponíveis para diagnóstico.
-
-MetaSettran oferece estrutura semanal experimental e transições contínuas; isso
-não confirma a calibração empírica de todos os contextos. Reconstrução integral de fluxo,
-aprendizagem por reforço, Hazarika, Acciai/TFR, novos controladores e treinamento
-continuam futuros. Dados operacionais ausentes bloqueiam planos reais SETTRAN,
-mas não impedem MetaSettran com `current`.
+A cronologia extensa das revisões anteriores é recuperável na árvore Git
+`refs/codex/checkpoints/edi-before-docs-rewrite-20261107`. Ela preserva o guia integral
+anterior à reorganização, incluindo tabelas de ensaios e decisões históricas.
+Os resultados existentes continuam em suas pastas de origem. Para reproduzir uma
+versão anterior, associe código, cadastro, rede, versão SUMO, seeds e seleção
+correspondentes ao experimento.

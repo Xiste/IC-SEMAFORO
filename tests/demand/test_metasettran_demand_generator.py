@@ -141,6 +141,11 @@ class MetaSettranTests(unittest.TestCase):
         return demand.generate_metasettran_demand(net_file=self.net, csv_file=self.csv,
             spatial_file=self.spatial, output_dir=self.directory / output, **kwargs)
 
+    def test_generation_shares_one_network_read_with_route_validation(self):
+        with patch.object(demand, "read_network", wraps=demand.read_network) as read:
+            self.generate()
+        read.assert_called_once_with(self.net.resolve())
+
     def test_every_trip_uses_complete_valid_boundary_route(self):
         metadata = {}
         vehicles = ET.parse(self.generate(metadata=metadata)).getroot().findall("vehicle")
@@ -165,7 +170,7 @@ class MetaSettranTests(unittest.TestCase):
                          {"id": "metasettran_car", "vClass": "passenger"})
 
     def urban_activity_fixture(self):
-        edges, _, _, _ = demand._read_network(self.net)
+        edges = demand.read_network(self.net).edges
         def gate(identifier):
             edge = edges[identifier]
             return {"edge": identifier, "passenger_lanes": 1, "road_type": edge["hierarchy"],
@@ -239,6 +244,124 @@ class MetaSettranTests(unittest.TestCase):
             observed = sum(p["generated_departures"] for p in spatial["portals"][role])
             observed += sum(p["generated_departures"] for z in spatial["activity_locations"] for p in z[activity_role])
             self.assertEqual(observed, metadata["vehicles_generated"])
+
+    def test_native_diversity_has_fixed_seeds_and_does_not_multiply_identical_routes(self):
+        router = self.urban_activity_fixture()
+        with patch.object(demand.subprocess, "run", side_effect=router):
+            before, _, _, _ = demand._route_pairs(self.model, self.net, self.directory, None)
+        self.model["regional_demand"]["urban_activity_model"]["route_diversity"] = {
+            "seeds": [17, 53], "cost_random_factor": 1.3}
+        with patch.object(demand.subprocess, "run", side_effect=router) as run:
+            after, _, catalog, _ = demand._route_pairs(self.model, self.net, self.directory, None)
+        self.assertEqual(run.call_count, 4)
+        self.assertEqual([_option(call.args[0], "--seed") for call in run.call_args_list], ["0", "0", "17", "53"])
+        for call in run.call_args_list[2:]:
+            self.assertEqual(_option(call.args[0], "--weights.random-factor"), "1.3")
+        self.assertEqual({tuple(p["route"]) for p in before.values()}, {tuple(p["route"]) for p in after.values()})
+        self.assertEqual(len(after) + sum(catalog["rejected_by_reason"].values()), catalog["candidate_pairs"])
+
+    def test_native_diversity_rejects_excessive_detours_but_keeps_normal_od_route(self):
+        native = self.urban_activity_fixture()
+        root = ET.parse(self.net).getroot()
+        edge = ET.SubElement(root, "edge", id="longway", type="highway.residential", **{"from": "j1", "to": "j2"})
+        ET.SubElement(edge, "lane", id="longway_0", index="0", length="4000", speed="10")
+        for a, b in (("sensor5", "longway"), ("longway", "middle")):
+            ET.SubElement(root, "connection", **{"from": a, "to": b, "fromLane": "0", "toLane": "0"})
+        ET.ElementTree(root).write(self.net)
+        self.model["regional_demand"]["urban_activity_model"]["route_diversity"] = {"seeds": [17]}
+        def router(command, **kwargs):
+            result = native(command, **kwargs)
+            if "--weights.random-factor" in command:
+                output = Path(_option(command, "--output-file"))
+                trips = {trip.get("id"): trip for trip in ET.parse(_option(command, "--route-files")).getroot()}
+                routes = ET.parse(output).getroot()
+                for vehicle in routes.findall("vehicle"):
+                    trip = trips[vehicle.get("id")]
+                    if trip.get("from") == "entry_a" and trip.get("to") == "exit_a":
+                        vehicle.find("route").set("edges", "entry_a sensor5 longway middle exit_a")
+                ET.ElementTree(routes).write(output)
+            return result
+        with patch.object(demand.subprocess, "run", side_effect=router):
+            pairs, _, catalog, _ = demand._route_pairs(self.model, self.net, self.directory, None)
+        self.assertTrue(any(p["origin"] == "entry_a" and p["destination"] == "exit_a" for p in pairs.values()))
+        self.assertFalse(any("longway" in p["route"] for p in pairs.values()))
+        self.assertEqual(catalog["rejected_by_reason"]["alternative_detour_limit"], 1)
+        self.assertEqual(len(pairs) + sum(catalog["rejected_by_reason"].values()), catalog["candidate_pairs"])
+
+    def test_native_diversity_rejects_invalid_seeds_and_detour_limits(self):
+        router = self.urban_activity_fixture()
+        for policy in ({"seeds": [17, 17]}, {"seeds": [True]}, {"seeds": [-1]},
+                       {"seeds": [17], "max_cost_ratio": .5},
+                       {"seeds": [17], "max_length_ratio": math.inf},
+                       {"seeds": [17], "cost_random_factor": math.nan}):
+            with self.subTest(policy=policy):
+                self.model["regional_demand"]["urban_activity_model"]["route_diversity"] = policy
+                with patch.object(demand.subprocess, "run", side_effect=router), self.assertRaises(ValueError):
+                    demand._route_pairs(self.model, self.net, self.directory, None)
+
+    def coverage_fixture(self, length=500):
+        native=self.urban_activity_fixture()
+        root=ET.parse(self.net).getroot()
+        edge=ET.SubElement(root,'edge',id='gap',type='highway.residential',**{'from':'j1','to':'j2'})
+        ET.SubElement(edge,'lane',id='gap_0',index='0',length=str(length),speed='10')
+        for a,b in (('sensor5','gap'),('gap','middle')):
+            ET.SubElement(root,'connection',**{'from':a,'to':b,'fromLane':'0','toLane':'0'})
+        ET.ElementTree(root).write(self.net)
+        self.model['regional_demand']['coverage_completion']={'method':'bounded_native_alternatives','candidate_od_pairs_per_edge':3}
+        def router(command,**kwargs):
+            if Path(_option(command,'--route-files')).name!='coverage.trips.xml':
+                return native(command,**kwargs)
+            routes=ET.Element('routes')
+            for trip in ET.parse(_option(command,'--route-files')).getroot().findall('trip'):
+                vehicle=ET.SubElement(routes,'vehicle',id=trip.get('id'),depart='0')
+                ET.SubElement(vehicle,'route',edges=f"entry_a sensor5 gap middle {trip.get('to')}")
+            ET.ElementTree(routes).write(_option(command,'--output-file'))
+            return subprocess.CompletedProcess(command,0)
+        return router
+
+    def test_coverage_completion_adds_admissible_route_without_a_vehicle_quota(self):
+        router=self.coverage_fixture()
+        with patch.object(demand.subprocess,'run',side_effect=router):
+            pairs,_,catalog,_=demand._route_pairs(self.model,self.net,self.directory,None)
+        self.assertTrue(any('gap' in pair['route'] for pair in pairs.values()))
+        review=catalog['coverage_completion']
+        self.assertEqual(review['missing_before'],1)
+        self.assertEqual(review['missing_after'],0)
+        self.assertTrue(review['edges'][0]['covered_by_admissible_alternative'])
+        self.assertEqual(len(pairs)+sum(catalog['rejected_by_reason'].values()),catalog['candidate_pairs'])
+
+    def test_coverage_lower_bounds_do_not_bypass_native_detour_validation(self):
+        router=self.coverage_fixture(length=5000)
+        candidate={'origin':'entry_a','destination':'exit_a','via':['gap'],'coverage_edge':'gap'}
+        review={'missing_before':1,'edges':[{'edge':'gap','status':'native_validation_required'}]}
+        with patch.object(demand.subprocess,'run',side_effect=router),patch(
+                'SistemaDeSemaforos.demand.metasettran_demand_generator.coverage_candidates',return_value=([candidate],review)):
+            pairs,_,catalog,_=demand._route_pairs(self.model,self.net,self.directory,None)
+        self.assertFalse(any('gap' in pair['route'] for pair in pairs.values()))
+        self.assertEqual(catalog['coverage_completion']['missing_after'],1)
+        self.assertEqual(catalog['rejected_by_reason']['alternative_detour_limit'],1)
+
+    def test_distinct_accesses_in_residential_zone_can_have_intrazonal_trips(self):
+        native=self.urban_activity_fixture()
+        edge=demand.read_network(self.net).edges['middle'];zone=self.model['activity_zones'][0]
+        zone['kind']='residential_mixed';zone['destinations']=[{'edge':'middle','passenger_lanes':1,
+            'position_xy_m':[(a+b)/2 for a,b in zip(edge['from_xy'],edge['to_xy'])]}]
+        def router(command,**kwargs):
+            result=native(command,**kwargs);output=Path(_option(command,'--output-file'))
+            root=ET.parse(output).getroot()
+            for trip in ET.parse(_option(command,'--route-files')).getroot().findall('trip'):
+                if trip.get('from')=='unseen' and trip.get('to')=='middle':
+                    vehicle=ET.SubElement(root,'vehicle',id=trip.get('id'),depart='0')
+                    ET.SubElement(vehicle,'route',edges='unseen middle')
+            ET.ElementTree(root).write(output);return result
+        with patch.object(demand.subprocess,'run',side_effect=router):
+            before,_,_,_=demand._route_pairs(self.model,self.net,self.directory,None)
+            zone['allow_intrazonal_trips']=True
+            after,_,_,_=demand._route_pairs(self.model,self.net,self.directory,None)
+        self.assertFalse(any(p['origin']== 'unseen' and p['destination']=='middle' for p in before.values()))
+        internal=next(p for p in after.values() if p['origin']=='unseen' and p['destination']=='middle')
+        self.assertFalse(internal['returns_to_same_access'])
+        self.assertEqual(internal['origin_zone'],internal['destination_zone'])
 
     def test_compact_metadata_preserves_routes_and_every_remaining_field(self):
         router = self.urban_activity_fixture()
@@ -423,6 +546,110 @@ class MetaSettranTests(unittest.TestCase):
         self.assertAlmostEqual(result["maximum_origins_total_variation"], transfer)
         self.assertAlmostEqual(sum(row["projected_expected_departures"] for row in result["zones"]["origin_zones"]), 100)
         self.assertEqual(fitted[0], prior[0] + transfer)
+
+    def fixed_od_projection(self, alternative=False, scope="within_fixed_od"):
+        self.model["regional_demand"]["observation_projection_scope"] = scope
+        pairs, _, _, _ = demand._route_pairs(self.model, self.net, self.directory, None)
+        demand._regional_prior(pairs, self.model)
+        if scope == "external_od_internal_prior":
+            for pair in pairs.values():
+                if pair["origin"] in {"entry_c", "entry_d"}:
+                    pair["origin_kind"] = "activity"
+        if alternative:
+            original = next(p for p in pairs.values() if p["origin"] == "entry_a" and p["destination"] == "exit_a")
+            original["prior_weight"] /= 2
+            pairs["alternative"] = {**original, "observation_freeflow_delay_s": {}, "sensor_ids": []}
+        begin = demand.WEEK_START_SECONDS
+        knots = demand._regional_knots(self.calibration, 1200 / sum(
+            demand.integrate_rate(profile["knots"], begin, begin + 10800)
+            for profile in self.calibration["sensors"].values()), "knots")
+        paths = list(pairs.values())
+        before = [demand._route_prior_row(paths, self.model, begin + i * 900 + 450, {
+            sensor: demand.interpolate_rate(self.calibration["sensors"][sensor]["knots"], begin + i * 900 + 450) /
+            (self.calibration["baseline_reference_cars_15_18"][sensor] / 10800) for sensor in ("5", "6")})
+            for i in range(12)]
+        after, projection = demand._observation_projection(pairs, self.model, self.calibration,
+            begin, 10800, knots)
+        return paths, before, after, projection
+
+    def test_fixed_od_does_not_rewrite_origins_destinations_to_match_sensors(self):
+        paths, before, after, projection = self.fixed_od_projection()
+        self.assertEqual(after, before)
+        self.assertEqual(projection["scope"], "within_fixed_od")
+        self.assertEqual(projection["fixed_od_marginals"]["maximum_probability_error"], 0)
+        self.assertTrue(any(abs(row["residual"]) > 1 for row in projection["observations"]))
+        self.assertAlmostEqual(sum(p["expected_departures"] for p in paths), 1200)
+
+    def test_fixed_od_can_change_route_mix_without_changing_each_od_mass(self):
+        paths, before, after, projection = self.fixed_od_projection(alternative=True)
+        self.assertTrue(any(abs(a-b) > 1e-7 for row, fitted in zip(before, after) for a,b in zip(row,fitted)))
+        keys = {(p["origin"], p["destination"]) for p in paths}
+        for row, fitted in zip(before, after):
+            self.assertAlmostEqual(sum(fitted), 1)
+            for key in keys:
+                indices = [i for i,p in enumerate(paths) if (p["origin"],p["destination"]) == key]
+                self.assertAlmostEqual(sum(row[i] for i in indices), sum(fitted[i] for i in indices), places=13)
+        self.assertLess(projection["fixed_od_marginals"]["maximum_probability_error"], 1e-14)
+
+    def test_fixed_od_unattainable_counts_remain_residuals_without_new_vehicles(self):
+        for profile in self.calibration["sensors"].values():
+            for knot in profile["knots"]:
+                knot["rate_per_second"] = 100
+        paths, before, after, projection = self.fixed_od_projection()
+        # The input curve fixes 1200 departures despite incompatible observations.
+        self.assertEqual(after, before)
+        self.assertAlmostEqual(projection["total_fixed"], 1200)
+        self.assertAlmostEqual(sum(p["expected_departures"] for p in paths), projection["total_fixed"])
+        self.assertGreater(max(abs(row["residual"]) for row in projection["observations"]), 10000)
+
+    def test_fixed_od_projection_is_preserved_across_weekly_boundary(self):
+        self.model["regional_demand"]["observation_projection_scope"] = "within_fixed_od"
+        self.write_model()
+        metadata = {}
+        self.generate(metadata=metadata, day="sunday", start="21:00", sections=2, variations=[7,8])
+        projection = metadata["spatial_distribution"]["observation_projection"]
+        self.assertEqual(projection["scope"], "within_fixed_od")
+        self.assertEqual(len(projection["fixed_od_marginals"]["context_checks"]), 2)
+        self.assertEqual(projection["fixed_od_marginals"]["maximum_probability_error"], 0)
+        self.assertEqual(metadata["chronological_composition"]["boundaries"][0]["od_boundary_jump"], 0)
+
+    def test_unknown_observation_scope_is_rejected(self):
+        self.model["regional_demand"]["observation_projection_scope"] = "unknown"
+        self.write_model()
+        with self.assertRaisesRegex(ValueError, "Escopo de projeção"):
+            self.generate()
+
+    def test_protected_activities_preserve_internal_conditional_od_and_route_weights(self):
+        paths, before, after, projection = self.fixed_od_projection(scope="external_od_internal_prior")
+        internal = [i for i,p in enumerate(paths) if p["origin_kind"] == "activity"]
+        self.assertTrue(any(abs(sum(row[i] for i in internal)-sum(fitted[i] for i in internal))>1e-6
+                            for row,fitted in zip(before,after)))
+        for row,fitted in zip(before,after):
+            self.assertAlmostEqual(sum(fitted),1)
+            for i in internal:
+                self.assertAlmostEqual(row[i]/sum(row[j] for j in internal),
+                                       fitted[i]/sum(fitted[j] for j in internal),places=13)
+        self.assertLess(projection["protected_internal_prior"]["maximum_conditional_probability_error"],1e-13)
+        self.assertAlmostEqual(sum(p["expected_departures"] for p in paths),1200)
+
+    def test_protected_activities_can_fit_counts_without_overriding_internal_locations(self):
+        _,_,_,fixed = self.fixed_od_projection()
+        _,_,_,protected = self.fixed_od_projection(scope="external_od_internal_prior")
+        error=lambda projection:sum(abs(r["residual"]) for r in projection["observations"])
+        self.assertLess(error(protected),error(fixed)*.5)
+        self.assertAlmostEqual(protected["total_fixed"],fixed["total_fixed"])
+
+    def test_protected_activities_survive_real_generator_weekly_composition(self):
+        router=self.urban_activity_fixture()
+        self.model["regional_demand"]["observation_projection_scope"]="external_od_internal_prior"
+        self.write_model();metadata={}
+        with patch.object(demand.subprocess,"run",side_effect=router):
+            self.generate(metadata=metadata,day="sunday",start="21:00",sections=2,variations=[7,8])
+        projection=metadata["spatial_distribution"]["observation_projection"]
+        self.assertEqual(projection["scope"],"external_od_internal_prior")
+        self.assertEqual(len(projection["protected_internal_prior"]["context_checks"]),2)
+        self.assertLess(projection["protected_internal_prior"]["maximum_conditional_probability_error"],1e-13)
+        self.assertEqual(metadata["chronological_composition"]["boundaries"][0]["od_boundary_jump"],0)
 
     def test_contextual_choice_limits_merging_lanes_and_preserves_origin_mass(self):
         paths = {
@@ -887,6 +1114,217 @@ class MetaSettranTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.generate(volume_retention=fraction)
 
+    def test_final_reduction_retains_exact_vehicles_from_the_already_reduced_reference(self):
+        self.enable_lateral_reduction()
+        self.model["regional_demand"]["volume_recalibration"]["final_retained_fraction"] = .95
+        self.write_model()
+        for variation in (1, 7, 25):
+            with self.subTest(variation=variation):
+                before, after = {}, {}
+                reference = ET.parse(self.generate(output=f"final-reference-{variation}", variation=variation,
+                    final_volume_retention=1, metadata=before)).getroot()
+                reduced_file = self.generate(output=f"final-reduced-{variation}", variation=variation,
+                                             metadata=after)
+                reduced = ET.parse(reduced_file).getroot()
+                originals = {v.get("id"): ET.tostring(v) for v in reference.findall("vehicle")}
+                vehicles = reduced.findall("vehicle")
+                self.assertEqual(len(vehicles), math.floor(.95 * len(originals)))
+                for vehicle in vehicles:
+                    self.assertEqual(ET.tostring(vehicle), originals[vehicle.get("id")])
+                self.assertEqual([v.attrib for v in reference.findall("vType")],
+                                 [v.attrib for v in reduced.findall("vType")])
+                self.assertEqual(reduced_file.read_bytes(), self.generate(
+                    output=f"final-replay-{variation}", variation=variation,
+                    final_volume_retention=.95).read_bytes())
+                adjustment = after["volume_recalibration"]["final_adjustment"]
+                self.assertEqual(adjustment["requested_retained_fraction"], .95)
+                self.assertEqual(adjustment["applied_retained_fraction"], .95)
+                self.assertEqual(adjustment["reference_programmed"], len(originals))
+                self.assertEqual(adjustment["retained_programmed"], len(vehicles))
+                self.assertEqual(adjustment["removed_programmed"], len(originals) - len(vehicles))
+                self.assertAlmostEqual(adjustment["actual_retained_fraction"], len(vehicles) / len(originals))
+                self.assertAlmostEqual(adjustment["actual_reduction_fraction"], 1 - len(vehicles) / len(originals))
+                self.assertEqual(before["seed"], after["seed"])
+
+    def test_final_reduction_scales_expectations_without_relabeling_historical_reductions(self):
+        self.enable_lateral_reduction()
+        before, after = {}, {}
+        self.generate(output="final-projection-reference", variation=7, final_volume_retention=1, metadata=before)
+        self.generate(output="final-projection-reduced", variation=7, final_volume_retention=.95, metadata=after)
+        self.assertEqual(before["calibration"], after["calibration"])
+        for key in ("reference_programmed", "retained_programmed", "final_programmed_after_origin_reduction"):
+            self.assertEqual(before["volume_recalibration"][key], after["volume_recalibration"][key])
+        for key in ("reference_programmed_after_regional_reduction", "retained_programmed", "removed_programmed",
+                    "reference_expected_after_regional_reduction", "retained_expected", "per_context"):
+            self.assertEqual(before["lateral_origin_reduction"][key], after["lateral_origin_reduction"][key])
+        for old, new in zip(before["groups"][0]["expected_departures_per_bin"],
+                            after["groups"][0]["expected_departures_per_bin"]):
+            self.assertAlmostEqual(new, .95 * old)
+        self.assertAlmostEqual(after["groups"][0]["expected_departures"],
+                               .95 * before["groups"][0]["expected_departures"])
+        self.assertAlmostEqual(sum(after["groups"][0]["expected_departures_per_bin"]),
+                               after["groups"][0]["expected_departures"])
+        for old, new in zip(before["spatial_distribution"]["routes"], after["spatial_distribution"]["routes"]):
+            self.assertEqual(new["id"], old["id"])
+            self.assertEqual(new["prior_weight"], old["prior_weight"])
+            self.assertAlmostEqual(new["expected_departures"], .95 * old["expected_departures"])
+        for old, new in zip(before["spatial_distribution"]["observation_projection"]["observations"],
+                            after["spatial_distribution"]["observation_projection"]["observations"]):
+            self.assertEqual(new["target_passages"], old["target_passages"])
+            self.assertEqual(new["unreduced_projected_freeflow_passages"], old["unreduced_projected_freeflow_passages"])
+            self.assertAlmostEqual(new["projected_freeflow_passages"], .95 * old["projected_freeflow_passages"])
+            self.assertAlmostEqual(new["residual"], new["projected_freeflow_passages"] - new["target_passages"])
+        self.assertEqual(sum(after["groups"][0]["generated_departures_per_bin"]), after["vehicles_generated"])
+        self.assertEqual(sum(after["spatial_distribution"]["trip_populations"].values()), after["vehicles_generated"])
+
+    def test_final_sampler_covers_all_1400_contexts_with_uniform_temporal_quantiles(self):
+        checked = 0
+        for day in demand.DAYS:
+            for start in range(0, 24, 3):
+                for variation in range(1, 26):
+                    contexts = demand.resolve_contexts(day=day, start=f"{start:02}:00", variation=variation)["contexts"]
+                    count = 100 + start + variation
+                    schedule = [{"id": str(i), "depart": str(i * 10800 / count)} for i in range(count)]
+                    reference = {i for i in range(count) if i % 4 != 0}
+                    contexts[0]["programmed"] = len(reference)
+                    kept = demand._reduce_final_schedule(schedule, reference, contexts, .95)
+                    self.assertTrue(kept <= reference)
+                    self.assertEqual(len(kept), math.floor(.95 * len(reference)))
+                    self.assertEqual(contexts[0]["final_reference_programmed"], len(reference))
+                    self.assertEqual(contexts[0]["programmed"], len(kept))
+                    self.assertEqual(kept, demand._reduce_final_schedule(schedule, reference, contexts, .95))
+                    ordered = sorted(reference)
+                    for cut in range(len(ordered) + 1):
+                        self.assertLess(abs(sum(i in kept for i in ordered[:cut]) -
+                                            cut * len(kept) / len(ordered)), 1.000001)
+                    checked += 1
+        self.assertEqual(checked, 1400)
+
+    def test_final_sampler_is_independent_of_origin_labels_and_future_contexts(self):
+        contexts = demand.resolve_contexts(day="sunday", start="21:00", sections=2,
+                                           variations=[7, 8])["contexts"]
+        schedule = []
+        for context, count in zip(contexts, (101, 102)):
+            context["programmed"] = count
+            for i in range(count):
+                schedule.append({"id": str(len(schedule)), "depart": str(context["begin"] + i * 10800 / count),
+                                 "origin": "rondon" if i % 2 else "local"})
+        reference = set(range(len(schedule)))
+        kept = demand._reduce_final_schedule(schedule, reference, contexts, .95)
+        self.assertEqual(len(kept), math.floor(.95 * 101) + math.floor(.95 * 102))
+        self.assertNotEqual(len(kept), math.floor(.95 * len(schedule)))
+        relabeled = [dict(row, origin="local" if row["origin"] == "rondon" else "rondon") for row in schedule]
+        self.assertEqual(kept, demand._reduce_final_schedule(relabeled, reference, contexts, .95))
+        standalone = demand.resolve_contexts(day="sunday", start="21:00", variation=7)["contexts"]
+        standalone[0]["programmed"] = 101
+        self.assertEqual(kept & set(range(101)), demand._reduce_final_schedule(
+            schedule[:101], set(range(101)), standalone, .95))
+        changed = demand.resolve_contexts(day="sunday", start="21:00", sections=2,
+                                          variations=[7, 25])["contexts"]
+        for context, count in zip(changed, (101, 102)):
+            context["programmed"] = count
+        altered = demand._reduce_final_schedule(schedule, reference, changed, .95)
+        self.assertEqual(kept & set(range(101)), altered & set(range(101)))
+
+    def test_final_reduction_preserves_consecutive_routes_and_updates_boundary_accounting(self):
+        for lateral in (False, True):
+            with self.subTest(lateral=lateral):
+                self.model["regional_demand"].pop("lateral_origin_reduction", None)
+                self.model["regional_demand"]["volume_recalibration"] = {"retained_fraction": .85}
+                if lateral:
+                    self.enable_lateral_reduction()
+                self.write_model()
+                before, after = {}, {}
+                options = dict(day="sunday", start="21:00", sections=2, variations=[7, 8])
+                baseline = ET.parse(self.generate(output=f"final-week-before-{lateral}",
+                    final_volume_retention=1, metadata=before, **options)).getroot().findall("vehicle")
+                revised = self.generate(output=f"final-week-after-{lateral}",
+                    final_volume_retention=.95, metadata=after, **options)
+                vehicles = ET.parse(revised).getroot().findall("vehicle")
+                originals = {v.get("id"): ET.tostring(v) for v in baseline}
+                for vehicle in vehicles:
+                    self.assertEqual(ET.tostring(vehicle), originals[vehicle.get("id")])
+                for context in after["context_selection"]["contexts"]:
+                    old = [v for v in baseline if context["begin"] <= float(v.get("depart")) < context["end"]]
+                    new = [v for v in vehicles if context["begin"] <= float(v.get("depart")) < context["end"]]
+                    self.assertEqual(len(new), math.floor(.95 * len(old)))
+                    self.assertEqual(context["final_reference_programmed"], len(old))
+                    self.assertEqual(context["programmed"], len(new))
+                transition = after["chronological_composition"]
+                self.assertEqual(transition["combined_programmed"], len(vehicles))
+                self.assertEqual(transition["programmed_difference"], 0)
+                self.assertEqual(sum(c["programmed"] for c in after["context_selection"]["contexts"]), len(vehicles))
+                for window in transition["boundaries"][0]["windows"]:
+                    self.assertEqual(window["programmed_left"], sum(
+                        10800 - window["seconds"] <= float(v.get("depart")) < 10800 for v in vehicles))
+                    self.assertEqual(window["programmed_right"], sum(
+                        10800 <= float(v.get("depart")) < 10800 + window["seconds"] for v in vehicles))
+                self.assertAlmostEqual(after["groups"][0]["expected_departures"],
+                                       .95 * before["groups"][0]["expected_departures"])
+                self.assertAlmostEqual(sum(after["groups"][0]["expected_departures_per_bin"]),
+                                       after["groups"][0]["expected_departures"])
+                for old, new in zip(before["groups"][0]["expected_departures_per_bin"],
+                                    after["groups"][0]["expected_departures_per_bin"]):
+                    self.assertAlmostEqual(new, .95 * old)
+                self.assertEqual(revised.read_bytes(), self.generate(output=f"final-week-replay-{lateral}",
+                    final_volume_retention=.95, **options).read_bytes())
+
+    def test_final_reduction_is_bypassed_for_an_explicit_paired_population(self):
+        self.enable_lateral_reduction()
+        self.model["regional_demand"]["volume_recalibration"]["final_retained_fraction"] = .95
+        self.write_model()
+        original = self.generate(output="final-paired-source", variation=7)
+        source = ET.parse(original)
+        source.getroot().find("vType").set("accel", "2.1")
+        source.getroot().find("vehicle").set("departSpeed", "3.5")
+        source.write(original, encoding="utf-8", xml_declaration=True)
+        metadata = {}
+        paired = self.generate(output="final-paired", variation=7, schedule_file=original,
+                               final_volume_retention=.95, metadata=metadata)
+        revised = ET.parse(paired).getroot()
+        self.assertEqual([v.attrib for v in source.getroot().findall("vehicle")],
+                         [v.attrib for v in revised.findall("vehicle")])
+        self.assertEqual([v.attrib for v in source.getroot().findall("vType")],
+                         [v.attrib for v in revised.findall("vType")])
+        adjustment = metadata["volume_recalibration"]["final_adjustment"]
+        self.assertEqual(adjustment["requested_retained_fraction"], .95)
+        self.assertEqual(adjustment["applied_retained_fraction"], 1)
+        self.assertEqual(adjustment["removed_programmed"], 0)
+        self.assertEqual(adjustment["reference_programmed"], adjustment["retained_programmed"])
+        self.assertEqual(metadata["vehicles_generated"], len(revised.findall("vehicle")))
+
+    def test_final_reduction_override_reproduces_previous_policy_and_core_full_agree(self):
+        self.enable_lateral_reduction()
+        baseline = self.generate(output="final-policy-before", variation=7).read_bytes()
+        self.model["regional_demand"]["volume_recalibration"]["final_retained_fraction"] = .95
+        self.write_model()
+        self.assertEqual(baseline, self.generate(output="final-policy-disabled", variation=7,
+                                               final_volume_retention=1).read_bytes())
+        detailed, compact = {}, {}
+        full = self.generate(output="final-full", variation=7, metadata=detailed)
+        core = self.generate(output="final-core", variation=7, metadata=compact, include_route_details=False)
+        self.assertEqual(full.read_bytes(), core.read_bytes())
+        self.assertEqual(Path(detailed["trips_file"]).read_bytes(), Path(compact["trips_file"]).read_bytes())
+        for key in ("seed", "context_selection", "groups", "volume_recalibration", "lateral_origin_reduction"):
+            self.assertEqual(detailed[key], compact[key])
+        self.assertNotIn("routes", compact["spatial_distribution"])
+        self.assertEqual(detailed["spatial_distribution"]["trip_populations"],
+                         compact["spatial_distribution"]["trip_populations"])
+
+    def test_invalid_final_retention_is_rejected_before_native_routing(self):
+        invalid = (0, -1, 1.1, True, float("nan"), float("inf"), ".95")
+        with patch.object(demand, "_route_pairs") as native:
+            for fraction in invalid:
+                with self.subTest(override=fraction), self.assertRaises(ValueError):
+                    self.generate(final_volume_retention=fraction)
+            self.model["regional_demand"]["volume_recalibration"] = {"retained_fraction": .85}
+            for fraction in (*invalid, None):
+                self.model["regional_demand"]["volume_recalibration"]["final_retained_fraction"] = fraction
+                self.write_model()
+                with self.subTest(configured=fraction), self.assertRaises(ValueError):
+                    self.generate()
+            native.assert_not_called()
+
     def test_invalid_or_discontinuous_context_selections_are_rejected(self):
         invalid = [dict(day="2026-08-25"), dict(day="Tuesday"), dict(start="16:00"), dict(sections=0), dict(sections=57),
                    dict(sections=True), dict(sections=1.0), dict(variation=0), dict(variation=26),
@@ -1182,6 +1620,11 @@ class MetaSettranTests(unittest.TestCase):
                             [vehicle.find("route").get("edges") for vehicle in changed.findall("vehicle")])
         self.assertEqual(metadata["paired_schedule"]["count"], len(original.findall("vehicle")))
         self.assertEqual(metadata["spatial_distribution"]["expected_network_departures"], len(original.findall("vehicle")))
+
+    def test_local_activity_weights_require_paired_schedule(self):
+        with self.assertRaisesRegex(ValueError, "agenda pareada"):
+            self.generate(output="unpaired", local_activity_weights_file=self.directory / "weights.json")
+        self.assertFalse((self.directory / "unpaired").exists())
 
     def test_invalid_paired_schedule_is_rejected_before_publishing_routes(self):
         baseline = self.generate(output="original")

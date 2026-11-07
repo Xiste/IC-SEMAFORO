@@ -3,7 +3,7 @@
 import random
 import unittest
 
-from SistemaDeSemaforos.simulation.metasettran_selection import (
+from SistemaDeSemaforos.simulation.episode_runner import (
     group_sections, section_identifiers,
 )
 

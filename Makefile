@@ -4,7 +4,7 @@ export PYTHONDONTWRITEBYTECODE := 1
 DEMAND_ARGS ?=
 RUN_ARGS ?=
 
-.PHONY: demand-random run-random web interface test
+.PHONY: demand-random run-random web interface kill-interface test
 
 # Prepara viagens/rotas avulsas, sem iniciar SUMO.
 demand-random:
@@ -17,6 +17,11 @@ run-random:
 # Interface local no navegador, com execução em segundo plano.
 web interface:
 	@$(PYTHON) -m SistemaDeSemaforos.simulation.web_interface
+
+# Encerra todas as interfaces iniciadas pelo módulo, mesmo fora desta pasta.
+kill-interface:
+	@pids="$$(ps -eo pid=,args= | awk '$$0 ~ /(^|[[:space:]])-m[[:space:]]+SistemaDeSemaforos\.simulation\.web_interface([[:space:]]|$$)/ {print $$1}')"; \
+	if [ -n "$$pids" ]; then kill -INT $$pids; else echo "Nenhuma interface em execução."; fi
 
 # Testes automatizados sem iniciar episódios SUMO.
 test:

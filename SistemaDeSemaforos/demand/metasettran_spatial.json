@@ -1,11 +1,11 @@
 {
   "schema_version": 4,
-  "version": "boundary-and-activity-regional-integrated-v4.4-urban",
-  "status": "experimental_urban_activity_model_regional_calibration_pending",
+  "version": "boundary-and-local-coverage-v4.8-directional-local-access",
+  "status": "experimental_distributed_local_protected_activities_calibration_pending",
   "network_sha256": "f30b0807fa46e3d4fb65c573be68f6544d75a64e44a2c32fee71389fd4106d56",
   "vehicle_class": "passenger",
   "count_column": "car",
-  "scope": "População regional única repartida entre portais cartograficamente qualificados, três polos internos de atividade e duas pequenas áreas residenciais/mistas em ruas adjacentes. Percursos determinam incidências sobre observações compartilhadas. Não é uma matriz OD medida; demais extremos internos e classes não passenger permanecem excluídos, sem novo orçamento regional.",
+  "scope": "População regional única repartida entre portais cartograficamente qualificados, três polos internos e zonas distribuídas de atividade residencial/mista no viário local. Curvas car de dois sensores definem o índice temporal; extensão local e perfis de atividade são hipóteses espaciais, não contagens de lotes ou população.",
   "sensor_mapping_status": "unconfirmed",
   "experimental_assumption": {
     "status": "sensor_mapping_authorized_hypothesis_not_empirically_confirmed",
@@ -2844,14 +2844,14 @@
   "route_validation": {
     "depart_pos": "0",
     "arrival_pos": "max",
-    "require_boundary_portals": true,
     "boundary_group_rule": "Mesmo nó ou acesso físico explicitamente pareado identifica retornos, sem excluí-los. Viagens curtas e retornos são permitidos pelo usuário quando há entrada e saída completas e válidas.",
     "length_note": "Comprimento é soma de edges normais e menor conexão interna passenger por transição: limite inferior de percurso por faixa. A distância efetiva vem de tripinfo.routeLength. Não há mínimo global arbitrário em metros.",
     "corridor_mapping": "Rondon mapeada como duas sequências contínuas verificadas. Demais corredores são ruas com portal ou Niterói, identificadas por nome OSM e orientação no eixo predominante de sua geometria; probes são seções individuais próximas do centro, não toda a via somada.",
     "allow_short_trips": true,
     "allow_returns": true,
     "require_connected_passenger_route": true,
-    "template_rule": "Alternativas de atravessamento via corredores não podem revisitar junções; evita circuitos criados somente por via obrigatório. Não filtra por incidência de sensores. Retornos e viagens curtas encontrados naturalmente pelo roteador permanecem disponíveis."
+    "template_rule": "Alternativas de atravessamento via corredores não podem revisitar junções; evita circuitos criados somente por via obrigatório. Não filtra por incidência de sensores. Retornos e viagens curtas encontrados naturalmente pelo roteador permanecem disponíveis.",
+    "require_qualified_endpoints": true
   },
   "limitations": [
     "Total regional não identificável com dois sensores; escala de referência permanece hipótese experimental.",
@@ -5031,17 +5031,19 @@
       "Projeção de tempo livre não modela filas/inserção/sinais; somente passagens físicas SUMO avaliam o fluxo realizado.",
       "Fontes externas modulam priors relativos de outras seções e classes; não medem a demanda destes portais.",
       "Forma temporal arterial/local e escolha OD são hipóteses; não há OD semanal medido.",
-      "Três polos e duas pequenas áreas residenciais internas substituem parte das viagens de passagem; demais viagens internas e classes não passenger permanecem ausentes, sem aumento do orçamento regional.",
       "Comparações históricas v4.3.1 não validam o refinamento contextual v4.3.3 nem comprovam escala regional, posições dos sensores ou adequação integral de current.",
       "Alternativas de continuidade da Niterói ampliam origens possíveis sem cotas; destinos e movimentos permanecem hipóteses, sujeitos a conflitos reais.",
       "Uso do solo, perfis por atividade e oportunidades de polos melhoram plausibilidade geográfica, mas seus coeficientes não identificam densidades reais sem contagens de acessos/OD; gates em ruas próximas abstraem estacionamentos ausentes.",
-      "Censo2022 de domicílios por bairro fundamenta somente uma razão relativa entre duas amostras residenciais; falta população/área/motorização do recorte e contagens de acesso para identificar densidade e viagens dessas quadras."
+      "Atividades locais distribuídas são proxies por extensão de ruas locais e perfis mistos, não cadastro de lotes, densidade observada ou OD medido. Células de600m e quatro gates limitam a resolução; não há meta de cobertura integral.",
+      "A escala1por km de oportunidade local é hipótese explícita sem calibração empírica; pode ser revisada com dados de acessos/OD, sem ajuste para eliminar filas.",
+      "O modelo regional e as reduções15%/10% por origem permanecem experimentais. A proteção das duas entradas da Rondon na redução lateral mantém uma assimetria da política anterior.",
+      "A calibração preserva a distribuição condicional das atividades internas e aprende somente sua participação conjunta, além das viagens entre bordas. Essa separação é hipótese explícita; resíduos de contagem e falta de OD empírico permanecem registrados."
     ],
     "route_choice": {
       "method": "urban_activity_od",
       "kind": "hypothesis_activity_and_generalized_cost_OD",
       "formula": "Zone opportunity * hourly production/attraction * distance deterrence, shared among qualified gates; native alternatives split by freeflow detour cost and path overlap, with positive penalties for U-turn and return to the same physical access. All route and context probabilities normalize within the fixed regional population.",
-      "rationale": "Representa origens e destinos internos georreferenciados antes ausentes, distingue comércio, serviços, ensino e pequenas áreas residenciais/mistas, considera horários de atividade e custo do percurso completo. Não aumenta veículos para preencher zonas, não força ocupação mínima ou fluxo uniforme, e não confunde trecho de rua adjacente com rampa de estacionamento ou garagem comprovada.",
+      "rationale": "Representa polos e atividades locais distribuídas no viário, com oportunidades compartilhadas e alternativas nativas limitadas em desvio. Os sensores ajustam viagens entre bordas e a participação conjunta do componente de atividades internas; a distribuição condicional OD e de percursos de todas as viagens que tocam atividades internas permanece a do prior urbano. Sem orçamento adicional ou fluxo mínimo por rua. A cobertura inclui acessos terminais e viagens entre ruas distintas de uma mesma zona residencial; alternativas de passagem complementares são limitadas e validadas nativamente.",
       "scope": "All7weekdays,8three-hourwindows,25variations and chronological selections; measuredcarcurves and reductions remain shared."
     },
     "scale_assessment": {
@@ -5059,6 +5061,9 @@
     },
     "volume_recalibration": {
       "retained_fraction": 0.85,
+      "final_retained_fraction": 0.95,
+      "final_adjustment_basis": "Cenário experimental uniforme de sensibilidade introduzido na v4.7: reter 95% das partidas depois das retenções regional e lateral. Contagens seccionais, dados demográficos e estudos disponíveis não identificam o total regional nem calibram este percentual.",
+      "final_adjustment_method": "Reusar o seletor sistemático sobre todos os veículos finais de cada faixa, com stream de seed próprio. Nenhuma origem ou rota privilegiada. Preservar IDs, horários, percursos e atributos dos retidos. floor(0.95*N_contexto); agenda pareada explícita ignora todas as retenções. final_volume_retention=1 desativa somente a etapa final no mesmo cadastro espacial.",
       "baseline": "v4.3.1 spatial model and fixed legacy scale, source timestamps interpreted UTC then converted to America/Sao_Paulo",
       "decision": "15% experimental moderation fixed before simulation; project requires strictly more than 10% in every realization. No independent regional count identifies this percentage.",
       "method": "Keep floor(0.85*N) systematically spaced positions of the unreduced stochastic departure agenda. Retained IDs, departure times and OD routes are unchanged; no repeated scaling.",
@@ -5078,7 +5083,7 @@
       "paired_schedule": "Explicit paired agendas bypass both reductions to preserve their fixed population. Existing route files reused between controllers are never reduced again."
     },
     "urban_activity_model": {
-      "version": "urban-activity-od-v1",
+      "version": "urban-activity-od-v2-distributed-local-protected-activities",
       "status": "geographically_grounded_planning_hypothesis_not_measured_OD",
       "zones": [
         {
@@ -5409,18 +5414,28 @@
       "same_access_penalty": 0.05,
       "uturn_penalty": 0.5,
       "path_size_exponent": 1.0,
-      "population_policy": "Repartir a população regional existente entre viagens externas, de acesso a polos internos e entre polos. Não somar orçamento novo, não compensar classes ausentes e não impor contagem mínima por polo ou via.",
-      "opportunity_basis": "Zonas externas herdam a soma das oportunidades físicas orientadas existentes, com hierarquia/faixas e evidência VMD relativa; quantidade de portais não define massa independente. Polos internos usam proxies ordinais4/2/1 comparáveis à escala de um acesso e compartilhados entre gates. Duas pequenas áreas residenciais usam1 e5925/4201 como proxy relativo fundamentado nos domicílios dos bairros(Censo2022), sem atribuir suas populações integrais ao recorte ou derivar veículos por domicílio. Nenhuma proxy identifica densidade real. Não se conta cada bloco universitário/POI como polo independente. Valores operacionais de oportunidade ficam somente em urban_activity_model.zones. A hierarquia de corredores é conferida no mapa municipal2026 mediante road_hierarchy_overrides; nomes de avenidas sozinhos não promovem classificação.",
+      "population_policy": "Repartir a população regional existente entre portais, polos e atividades locais distribuídas; sem orçamento adicional, cotas por rua ou ocupação mínima. Na comparação espacial pareada, conservar exatamente IDs e horários fornecidos. Na produção, conservar as retenções regionais e por origem existentes.",
+      "opportunity_basis": "Portais mantêm faixas/hierarquia e evidência VMD relativa. Três polos mantêm oportunidades ordinais4/2/1, compartilhadas entre gates. Atividades locais usam extensão do viário local em células e escala relativa de local_activity_distribution; não densidade populacional ou viagens por domicílio. As amostras residenciais antigas são substituídas na expansão, com suas fontes preservadas no cadastro.",
       "profile_basis": "Multiplicadores relativos de produção/atração interpolados por hora civil: funções urbanas e horários públicos justificam a forma, mas valores não são contagens, taxas de viagem, lotação ou capacidade calibrada. Diferenças weekday/saturday/sunday são hipóteses moderadas; car5/car6 e suas realizações continuam definindo intensidade regional.",
       "boundary_assignment_basis": "Áreas de captação externas inferidas pela posição cartográfica dos portais qualificados e continuidade dos corredores, não polígonos legais de bairros. Critério: extremos Rondon próprios; x>=4100 e y>=2300 Tibery; x>=3300 e y<2300 Santa Mônica/UFU; y>=3900 Brasil/Umuarama; demais Centro/Aparecida. Coordenadas da rede em metros. Referências municipais e OSM preservadas por portal e zona.",
-      "access_status": "Gates internos são trechos passenger reais do viário público próximo ao equipamento; estacionamento, portões e circulação em lotes não existem na rede e são abstraídos. Não existem viagens com origem e destino na mesma zona interna.",
+      "access_status": "Acessos agregados em trechos públicos passenger, incluindo representação explícita de ramais com uma só ligação. São proxies de atividade, não garagens confirmadas. Viagens intrazonais só são permitidas entre trechos distintos das células residenciais/mistas distribuídas; polos individuais permanecem excluídos.",
       "road_cost_factors": {
         "highway.residential": 1.25,
         "unclassified": 1.25,
         "highway.tertiary": 1.1,
         "highway.tertiary_link": 1.1
       },
-      "road_cost_basis": "Fatores positivos de custo de rota para desestimular tráfego de passagem em vias locais(1,25) e, moderadamente, em coletoras(1,10), após os overrides funcionais municipais. São hipóteses de preferência na escolha do caminho; não alteram limites de velocidade, conexões, capacidade, tempo físico SUMO ou total de veículos."
+      "road_cost_basis": "Fatores positivos de custo de rota para desestimular tráfego de passagem em vias locais(1,25) e, moderadamente, em coletoras(1,10), após os overrides funcionais municipais. São hipóteses de preferência na escolha do caminho; não alteram limites de velocidade, conexões, capacidade, tempo físico SUMO ou total de veículos.",
+      "route_diversity": {
+        "seeds": [
+          17,
+          53
+        ],
+        "cost_random_factor": 1.3,
+        "max_cost_ratio": 1.35,
+        "max_length_ratio": 1.5,
+        "basis": "Duas buscas nativas adicionais com custos funcionais perturbados por fator uniforme [1, 1.3), usando seeds fixas comuns a todos os contextos. Os limites de desvio valem para todas as alternativas, inclusive templates: custo não perturbado de até 1.35 vezes o melhor custo do OD e comprimento de até 1.5 vezes o menor comprimento. Rotas duplicadas são removidas. Representa alternativas de percepção, sem resposta a filas, imposição de via ou aumento da atração do destino."
+      }
     },
     "road_hierarchy_overrides": {
       "-154562663#north": "highway.tertiary",
@@ -5908,6 +5923,38 @@
         "rua_rio_de_janeiro_positive",
         "rua_tupaciguara_positive"
       ]
+    },
+    "local_activity_distribution": {
+      "version": "local-street-opportunity-grid-v2-directional-terminal",
+      "method": "local_street_length_grid",
+      "cell_size_m": 600.0,
+      "max_accesses_per_cell": 4,
+      "minimum_access_length_m": 40.0,
+      "opportunity_per_km": 1.0,
+      "profile_zone": "tibery_residential_blocks",
+      "replace_activity_zones": [
+        "brasil_residential_blocks",
+        "tibery_residential_blocks"
+      ],
+      "references": [
+        "https://www.uberlandia.mg.gov.br/prefeitura/secretarias/planejamento-urbano/mapas-e-bairros/",
+        "https://docs.uberlandia.mg.gov.br/wp-content/uploads/2026/09/Mapa_Sistema_Viario_2026_LC_No_14.850_SETEMBRO_2026_pdf.pdf",
+        "https://www.openstreetmap.org/copyright",
+        "https://sumo.dlr.de/docs/Demand/Importing_O/D_Matrices.html"
+      ],
+      "basis": "Células de 600 m agregam atividades no viário local passenger, com oportunidade proporcional à extensão já cadastrada. Até quatro acessos representativos por célula, acrescidos de acessos em ramais/circuitos ligados por uma só junção que não tinham atividade representada. A oportunidade da célula não aumenta ao acrescentar gates. Origens/destinos em trechos distintos da mesma célula residencial são permitidos; polos únicos continuam sem viagens internas ao próprio polo. Não se cria garagem comprovada, volume adicional ou contagem mínima por trecho.",
+      "legacy_evidence_note": "As duas amostras Brasil/Tibery e suas referências censitárias permanecem na fonte como contexto histórico/perfil temporal; são substituídas na expansão, sem somar suas oportunidades às células nem transferir domicílios de bairros inteiros para o recorte.",
+      "include_terminal_accesses": true,
+      "directional_terminal_edges": ["-30665278#6"],
+      "directional_terminal_basis": "Acesso de origem em trecho residencial de 63,1 m. A entrada nesse sentido exige retorno e há saída direta para a malha. O cruzamento CNEFE 2022 encontrou cinco registros de domicílio particular a até 12 m do interior do trecho. O acesso representa atividade agregada e compartilha a oportunidade da célula 5/3.",
+      "allow_intrazonal_trips": true
+    },
+    "observation_projection_scope": "external_od_internal_prior",
+    "coverage_completion": {
+      "method": "bounded_native_alternatives",
+      "candidate_od_pairs_per_edge": 3,
+      "compatible_witness_search_limit": 32,
+      "basis": "Revisar trechos fora do catálogo com limites inferiores dirigidos de custo e comprimento; selecionar ODs existentes com testemunho simples e validar via duarouter. Aceitar apenas percursos contínuos passenger, sem repetição de edges/junções e dentro dos limites de desvio já definidos. Acrescenta opções, não veículos ou ocupação mínima. Falha de busca não prova impossibilidade física."
     }
   },
   "route_templates": [

@@ -20,9 +20,7 @@ import subprocess
 import threading
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
-from ..demand.metasettran_demand_generator import resolve_contexts
 from . import episode_runner as runner
-from .metasettran_selection import group_sections
 
 
 RESULT_PROFILES = ("outputs-random", "outputs-metasettran")
@@ -108,7 +106,6 @@ def form_options(fields):
                 raise ValueError("Selecione pelo menos uma faixa válida na grade semanal.")
             selected = [int(value) for value in raw_sections]
             grouping = choice("consecutive_grouping_enabled", {"true", "false"}, "false") == "true"
-            groups = group_sections(selected, grouping)
             options.update(selected_sections=selected, consecutive_grouping_enabled=grouping)
             count = len(selected)
         else:
@@ -116,7 +113,6 @@ def form_options(fields):
                 raise ValueError("Grade semanal e agrupamento se aplicam somente à seleção livre.")
             options.update(day=fields.get("day", ""), start=fields.get("start", ""),
                            sections=integer("sections"))
-            groups = [{key: options[key] for key in ("day", "start", "sections")}]
             count = options["sections"]
         master = fields.get("master_seed", "").strip()
         sequence = fields.get("variations", "").strip()
@@ -127,18 +123,7 @@ def form_options(fields):
         variations = parse_variations(sequence, count)
         if variations is not None:
             options["variations"] = variations
-        offset = 0
-        for group in groups:
-            selection = {key: group[key] for key in ("day", "start", "sections")}
-            if master:
-                selection["master_seed"] = options["master_seed"]
-            if variations is not None:
-                selection["variations"] = variations[offset:offset + group["sections"]]
-            # Zero só valida; não é usado como seed automática de uma execução.
-            if not master and not sequence:
-                selection["master_seed"] = 0
-            resolve_contexts(**selection)
-            offset += group["sections"]
+        runner.prepare_metasettran_plans(**{key: options[key] for key in meta_fields if key in options})
     return options
 
 

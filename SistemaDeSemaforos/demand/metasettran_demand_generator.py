@@ -26,13 +26,16 @@ import xml.etree.ElementTree as ET
 from SistemaDeSemaforos.demand.metasettran_calibration import (
     integrate_rate, interpolate_rate,
 )
+from SistemaDeSemaforos.demand.metasettran_network import (
+    apply_local_activity_weights, coverage_candidates, demand_endpoints, expand_local_activity, read_network,
+)
 from SistemaDeSemaforos.demand.metasettran_transitions import compose_rate_curves, transport_times
 from SistemaDeSemaforos.demand.random_demand_generator import (
     DEFAULT_NET_FILE, DEFAULT_OUTPUT_DIR,
 )
 
 
-MODEL_VERSION = "metasettran-regional-integrated-v4.4-urban-activities"
+MODEL_VERSION = "metasettran-regional-integrated-v4.8-directional-local-access"
 SEED_NAMESPACE = "metasettran-prototype-v1"
 ROUTING_SEED = 0
 COMPOSITION_VERSION = "metasettran-chronological-v1"
@@ -121,75 +124,6 @@ def resolve_contexts(day="tuesday", start="15:00", sections=1, variation=None,
             "combinations": 25**sections}
 
 
-def _passenger_allowed(lane):
-    allow = lane.get("allow")
-    disallow = lane.get("disallow", "").split()
-    return (allow is None or "passenger" in allow.split() or "all" in allow.split()) and (
-        "passenger" not in disallow and "all" not in disallow
-    )
-
-
-def _read_network(path):
-    """Lê permissões e conexões para validar; não calcula caminhos."""
-    root = ET.parse(path).getroot()
-    junctions = {j.get("id"): (float(j.get("x")), float(j.get("y")))
-                 for j in root.findall("junction") if j.get("x") is not None}
-    edges, lane_index = {}, {}
-    for edge in root.findall("edge"):
-        for position, lane in enumerate(edge.findall("lane")):
-            lane_index[lane.get("id")] = (edge, lane, str(position))
-        if edge.get("function") == "internal":
-            continue
-        lanes = {lane.get("index"): lane for lane in edge.findall("lane") if _passenger_allowed(lane)}
-        if lanes:
-            edges[edge.get("id")] = {
-                "lanes": lanes,
-                "length": min(float(lane.get("length")) for lane in lanes.values()),
-                "time": min(float(lane.get("length")) / float(lane.get("speed", "13.89")) for lane in lanes.values()),
-                "hierarchy": edge.get("type", "unclassified"),
-                "shape": [tuple(map(float, point.split(","))) for point in next(iter(lanes.values())).get("shape", "").split()],
-                "from": edge.get("from"), "to": edge.get("to"),
-                "from_xy": junctions.get(edge.get("from")), "to_xy": junctions.get(edge.get("to")),
-            }
-    continuations = {}
-    for connection in root.findall("connection"):
-        continuations.setdefault((connection.get("from"), connection.get("fromLane")), []).append(connection)
-
-    def internal_cost(via, destination, destination_lane, visited=frozenset()):
-        if not via:
-            return (0.0, 0.0)
-        if via in visited or via not in lane_index:
-            return None
-        edge, lane, lane_position = lane_index[via]
-        if edge.get("function") != "internal" or not _passenger_allowed(lane):
-            return None
-        options = []
-        for connection in continuations.get((edge.get("id"), lane_position), []):
-            if connection.get("to") == destination and connection.get("toLane") == destination_lane:
-                remainder = internal_cost(connection.get("via"), destination, destination_lane, visited | {via})
-                if remainder is not None:
-                    length = float(lane.get("length"))
-                    options.append((length + remainder[0], length / float(lane.get("speed", "13.89")) + remainder[1]))
-        return min(options) if options else None
-
-    connections, returns, connection_costs = set(), set(), {}
-    for connection in root.findall("connection"):
-        source, target = connection.get("from"), connection.get("to")
-        if source in edges and target in edges:
-            if (connection.get("fromLane") in edges[source]["lanes"] and
-                    connection.get("toLane") in edges[target]["lanes"]):
-                connections.add((source, target))
-                cost = internal_cost(connection.get("via"), target, connection.get("toLane"))
-                if cost is None:
-                    raise ValueError(f"Conexão interna passenger sem continuação: {source} -> {target}")
-                previous = connection_costs.get((source, target))
-                if previous is None or cost < previous:
-                    connection_costs[source, target] = cost
-                if connection.get("dir") == "t":
-                    returns.add((source, target))
-    return edges, connections, returns, connection_costs
-
-
 def _write_xml(path, root):
     ET.indent(root, space="  ")
     ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
@@ -202,41 +136,25 @@ def _routes_root():
     return root
 
 
-def _demand_endpoints(model, role):
-    """Portais periféricos e acessos de atividade conservam identidades distintas."""
-    endpoints = [dict(portal, endpoint_kind="boundary",
-                      zone_id=portal.get("zone_id", portal["boundary_group"]),
-                      position_xy_m=portal.get("position_xy_m", portal.get("boundary_xy_m")))
-                 for portal in model["portals"][role]]
-    activity_role = "origins" if role == "entries" else "destinations"
-    for zone in model.get("activity_zones", []):
-        if not zone.get("references") or not zone.get("id") or not zone.get("kind"):
-            raise ValueError("Zona de atividade exige identificação, uso e referências geográficas.")
-        for access in zone.get(activity_role, []):
-            endpoints.append(dict(access, endpoint_kind="activity", zone_id=zone["id"],
-                                  activity_role=zone["kind"], name=zone["name"],
-                                  boundary_group="activity:" + zone["id"],
-                                  corridor=access.get("corridor", "activity:" + zone["id"])))
-    if len({item["edge"] for item in endpoints}) != len(endpoints):
-        raise ValueError("Um acesso não pode pertencer a vários extremos de demanda do mesmo papel.")
-    return endpoints
+def _run_router(command, log_file, *, append=False):
+    """Executa cada busca nativa com o mesmo contrato de falhas e registro."""
+    if log_file is None:
+        subprocess.run(command, check=True)
+        return
+    log_file = Path(log_file).expanduser().resolve()
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    with log_file.open("a" if append else "w", encoding="utf-8") as log:
+        subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
 
 
-def _route_pairs(model, net_file, directory, log_file):
-    """Descobre caminhos nativos; filtra candidatos antes de sortear viagens."""
-    edges, connections, returns, connection_costs = _read_network(net_file)
-    # A lane changing into several destination lanes remains ONE opportunity.
-    # These are geometric priors, never green times or observed discharge rates.
-    movement_lanes, receiving_lanes = {}, {}
-    for connection in ET.parse(net_file).getroot().findall("connection"):
-        source, target = connection.get("from"), connection.get("to")
-        if (source, target) in connections:
-            if (connection.get("fromLane") in edges[source]["lanes"] and
-                    connection.get("toLane") in edges[target]["lanes"]):
-                movement_lanes.setdefault((source, target), set()).add(connection.get("fromLane"))
-                receiving_lanes.setdefault((source, target), set()).add(connection.get("toLane"))
-    entries = {portal["edge"]: portal for portal in _demand_endpoints(model, "entries")}
-    exits = {portal["edge"]: portal for portal in _demand_endpoints(model, "exits")}
+def _route_pairs(model, net_file, directory, log_file, *, network=None):
+    """Descobre caminhos nativos e valida candidatos antes do sorteio."""
+    if network is None:
+        network = read_network(net_file)
+    edges, connections = network.edges, network.connections
+    returns, connection_costs = network.returns, network.connection_costs
+    entries = {portal["edge"]: portal for portal in demand_endpoints(model, "entries")}
+    exits = {portal["edge"]: portal for portal in demand_endpoints(model, "exits")}
     if not entries or not exits or not (entries.keys() | exits.keys()) <= edges.keys():
         raise ValueError("Portais ausentes ou sem permissão passenger na rede selecionada.")
     boundary_entries = {p["edge"] for p in model["portals"]["entries"]}
@@ -285,17 +203,21 @@ def _route_pairs(model, net_file, directory, log_file):
         probes["rondon_reverse_estimate"] = directional["probe_edge"]
         if directional["probe_edge"] not in edges:
             raise ValueError("Seção direcional estimada ausente da rede.")
-    rejected, pairs = {}, {}
+    rejected, pairs, rejected_candidates = {}, {}, {}
 
-    def reject(reason):
+    def reject(reason, identifier=None):
         rejected[reason] = rejected.get(reason, 0) + 1
+        if identifier is not None:
+            rejected_candidates[identifier] = reason
 
     trips = _routes_root()
+    intrazonal = {zone["id"] for zone in model.get("activity_zones", [])
+                  if zone.get("allow_intrazonal_trips") and zone["kind"] == "residential_mixed"}
     for origin, entry in sorted(entries.items()):
         for destination, exit_portal in sorted(exits.items()):
             if (origin == destination or
                     entry["endpoint_kind"] == exit_portal["endpoint_kind"] == "activity" and
-                    entry["zone_id"] == exit_portal["zone_id"]):
+                    entry["zone_id"] == exit_portal["zone_id"] and entry["zone_id"] not in intrazonal):
                 continue
             identifier = f"od_{len(pairs):04d}"
             pairs[identifier] = {"id": identifier, "origin": origin, "destination": destination}
@@ -327,14 +249,8 @@ def _route_pairs(model, net_file, directory, log_file):
     command = [binary, "--net-file", str(net_file), "--route-files", str(template_trips),
                "--output-file", str(template_routes), "--alternatives-output", str(directory / "alternatives.xml"),
                "--seed", str(ROUTING_SEED), "--ignore-errors", "true", "--no-step-log", "true"]
-    if log_file is None:
-        subprocess.run(command, check=True)
-    else:
-        log_file = Path(log_file).expanduser().resolve()
-        log_file.parent.mkdir(parents=True, exist_ok=True)
-        with log_file.open("w", encoding="utf-8") as log:
-            subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
-    route_outputs = [template_routes]
+    _run_router(command, log_file)
+    route_outputs, diversity_commands = [template_routes], []
     urban = model["regional_demand"].get("route_choice", {}).get("method") == "urban_activity_od"
     cost_factors = model["regional_demand"].get("urban_activity_model", {}).get("road_cost_factors", {})
     overrides = model["regional_demand"].get("road_hierarchy_overrides", {})
@@ -372,82 +288,180 @@ def _route_pairs(model, net_file, directory, log_file):
                                "--weight-files", str(costs_file), "--output-file", str(routes_file),
                                "--alternatives-output", str(directory / "urban-alternatives.xml"),
                                "--seed", str(ROUTING_SEED), "--ignore-errors", "true", "--no-step-log", "true"]
-        if log_file is None:
-            subprocess.run(alternative_command, check=True)
-        else:
-            with log_file.open("a", encoding="utf-8") as log:
-                subprocess.run(alternative_command, check=True, stdout=log, stderr=subprocess.STDOUT)
+        _run_router(alternative_command, log_file, append=True)
         route_outputs.append(routes_file)
+        diversity = model["regional_demand"]["urban_activity_model"].get("route_diversity", {})
+        diversity_seeds = diversity.get("seeds", [])
+        if (not isinstance(diversity_seeds, list) or len(diversity_seeds) > 3 or
+                any(isinstance(value, bool) or not isinstance(value, int) or not 0 <= value < 2**31
+                    for value in diversity_seeds) or len(set(diversity_seeds)) != len(diversity_seeds)):
+            raise ValueError("Alternativas urbanas exigem até três seeds distintas e válidas.")
+        for key, default in (("cost_random_factor", 1.3), ("max_cost_ratio", 1.35), ("max_length_ratio", 1.5)):
+            value = diversity.get(key, default)
+            if (isinstance(value, bool) or not isinstance(value, (int, float)) or
+                    not math.isfinite(value) or not 1 <= value <= 2):
+                raise ValueError(f"Limite de alternativa urbana inválido: {key}.")
+        base_pairs = [pair for pair in pairs.values() if "template" not in pair]
+        for diversity_seed in diversity_seeds:
+            diversified_trips = _routes_root()
+            for pair in base_pairs:
+                identifier = f"od_{len(pairs):04d}"
+                pairs[identifier] = dict(pair, id=identifier, template=f"urban_diversity_{diversity_seed}",
+                                        routing_diversity=True)
+                ET.SubElement(diversified_trips, "trip", id=identifier, type="metasettran_car", depart="0",
+                    **{"from": pair["origin"], "to": pair["destination"], "departPos": "0", "arrivalPos": "max"})
+            trips_file = directory / f"urban-diversity-{diversity_seed}.trips.xml"
+            routes_file = directory / f"urban-diversity-{diversity_seed}.rou.xml"
+            _write_xml(trips_file, diversified_trips)
+            diversified_command = [binary, "--net-file", str(net_file), "--route-files", str(trips_file),
+                "--weight-files", str(costs_file), "--output-file", str(routes_file),
+                "--alternatives-output", str(directory / f"urban-diversity-{diversity_seed}.alternatives.xml"),
+                "--weights.random-factor", str(diversity.get("cost_random_factor", 1.3)),
+                "--seed", str(diversity_seed), "--ignore-errors", "true", "--no-step-log", "true"]
+            _run_router(diversified_command, log_file, append=True)
+            diversity_commands.append(diversified_command)
+            route_outputs.append(routes_file)
+    completion_policy = model["regional_demand"].get("coverage_completion")
     found, accepted, distinct = set(), {}, set()
-    vehicles = (vehicle for output in route_outputs for vehicle in ET.parse(output).getroot().findall("vehicle"))
-    for vehicle in vehicles:
-        identifier = vehicle.get("id")
-        if identifier not in pairs or identifier in found:
-            raise ValueError("duarouter produziu identificador OD inesperado ou duplicado.")
-        found.add(identifier)
-        pair = pairs[identifier]
-        route_element = vehicle.find("route")
-        route = route_element.get("edges", "").split() if route_element is not None else []
-        if (not route or route[0] != pair["origin"] or route[-1] != pair["destination"] or
-                any(edge not in edges for edge in route) or
-                any(connection not in connections for connection in zip(route, route[1:]))):
-            raise ValueError(f"Percurso inválido ou endpoints alterados: {identifier}")
-        via = pair.get("via", [])
-        if any(edge not in route for edge in via) or [route.index(edge) for edge in via] != sorted({route.index(edge) for edge in via}):
-            raise ValueError(f"Percurso não respeita as seções ordenadas do template: {identifier}")
-        if len(route) != len(set(route)):
-            reject("repeated_edge_detour")
-            continue
-        route_nodes = [edges[route[0]]["from"]] + [edges[edge]["to"] for edge in route]
-        if pair.get("require_junction_simple") and len(route_nodes) != len(set(route_nodes)):
-            # Uma via imposta para atravessar um corredor não deve criar uma
-            # volta até o mesmo cruzamento. Retornos nativos entre portais
-            # continuam permitidos; o filtro não depende de sensores.
-            reject("through_template_revisits_junction")
-            continue
-        if tuple(route) in distinct:
-            reject("duplicate_route_alternative")
-            continue
-        distinct.add(tuple(route))
-        entry, exit_portal = entries[pair["origin"]], exits[pair["destination"]]
-        normal_length = sum(edges[e]["length"] for e in route)
-        internal_length = sum(connection_costs[c][0] for c in zip(route, route[1:]))
-        travel_time = sum(edges[e]["time"] for e in route) + sum(connection_costs[c][1] for c in zip(route, route[1:]))
-        sensor_ids = sorted(sensor for sensor, edge in sensors.items() if edge in route)
-        corridors = sorted(item["id"] for item in model.get("corridors", []) if set(item["edges"]) & set(route))
-        passage_delays, elapsed = {}, 0.0
-        for position, edge in enumerate(route):
-            for sensor, probe in probes.items():
-                if edge == probe:
-                    passage_delays[sensor] = elapsed
-            elapsed += edges[edge]["time"]
-            if position + 1 < len(route):
-                elapsed += connection_costs[edge, route[position + 1]][1]
-        pair.update(route=route, sensor_ids=sensor_ids,
-                    origin_kind=entry["endpoint_kind"], destination_kind=exit_portal["endpoint_kind"],
-                    origin_zone=entry["zone_id"], destination_zone=exit_portal["zone_id"],
-                    urban_edge_lengths_m=[edges[edge]["length"] for edge in route],
-                    urban_generalized_cost_s=sum(edges[edge]["time"] * cost_factors.get(
-                        overrides.get(edge, edges[edge]["hierarchy"]), 1.0)
-                        for edge in route) + sum(connection_costs[c][1] for c in zip(route, route[1:])),
-                    movement_opportunities=[len(movement_lanes[c]) for c in zip(route, route[1:])],
-                    movement_receiving_lanes=[len(receiving_lanes[c]) for c in zip(route, route[1:])],
-                    movement_target_hierarchies=[overrides.get(edge, exits.get(edge, {}).get("prior_road_type", edges[edge]["hierarchy"]))
-                                                 for edge in route[1:]],
-                    movement_angles=[_movement_angle(edges[a], edges[b]) for a, b in zip(route, route[1:])],
-                    observation_freeflow_delay_s=passage_delays,
-                    observation_movements={sensor: {"edge": sensors[sensor],
-                        "next_edge": route[route.index(sensors[sensor]) + 1] if route.index(sensors[sensor]) + 1 < len(route) else None}
-                        for sensor in sensor_ids},
-                    returns_to_same_access=entry["boundary_group"] == exit_portal["boundary_group"],
-                    has_uturn=any(connection in returns for connection in zip(route, route[1:])),
-                    normal_edge_count=len(route),
-                    origin_corridor=entry["corridor"], destination_corridor=exit_portal["corridor"],
-                    corridors=corridors, normal_length_m=normal_length, internal_length_m=internal_length,
-                    length_m=normal_length + internal_length, freeflow_time_s=travel_time)
-        accepted[identifier] = pair
-    for _ in set(pairs) - found:
-        reject("unreachable")
+    def collect_routes(outputs):
+        vehicles = (vehicle for output in outputs for vehicle in ET.parse(output).getroot().findall("vehicle"))
+        for vehicle in vehicles:
+            identifier = vehicle.get("id")
+            if identifier not in pairs or identifier in found:
+                raise ValueError("duarouter produziu identificador OD inesperado ou duplicado.")
+            found.add(identifier)
+            pair = pairs[identifier]
+            route_element = vehicle.find("route")
+            route = route_element.get("edges", "").split() if route_element is not None else []
+            if (not route or route[0] != pair["origin"] or route[-1] != pair["destination"] or
+                    any(edge not in edges for edge in route) or
+                    any(connection not in connections for connection in zip(route, route[1:]))):
+                raise ValueError(f"Percurso inválido ou endpoints alterados: {identifier}")
+            via = pair.get("via", [])
+            if any(edge not in route for edge in via) or [route.index(edge) for edge in via] != sorted({route.index(edge) for edge in via}):
+                raise ValueError(f"Percurso não respeita as seções ordenadas do template: {identifier}")
+            if len(route) != len(set(route)):
+                reject("repeated_edge_detour", identifier)
+                continue
+            route_nodes = [edges[route[0]]["from"]] + [edges[edge]["to"] for edge in route]
+            if pair.get("require_junction_simple") and len(route_nodes) != len(set(route_nodes)):
+                # Uma via imposta para atravessar um corredor não deve criar uma
+                # volta até o mesmo cruzamento. Retornos nativos entre portais
+                # continuam permitidos; o filtro não depende de sensores.
+                reject("through_template_revisits_junction", identifier)
+                continue
+            if tuple(route) in distinct:
+                reject("duplicate_route_alternative", identifier)
+                continue
+            distinct.add(tuple(route))
+            entry, exit_portal = entries[pair["origin"]], exits[pair["destination"]]
+            normal_length = sum(edges[e]["length"] for e in route)
+            internal_length = sum(connection_costs[c][0] for c in zip(route, route[1:]))
+            travel_time = sum(edges[e]["time"] for e in route) + sum(connection_costs[c][1] for c in zip(route, route[1:]))
+            sensor_ids = sorted(sensor for sensor, edge in sensors.items() if edge in route)
+            corridors = sorted(item["id"] for item in model.get("corridors", []) if set(item["edges"]) & set(route))
+            passage_delays, elapsed = {}, 0.0
+            for position, edge in enumerate(route):
+                for sensor, probe in probes.items():
+                    if edge == probe:
+                        passage_delays[sensor] = elapsed
+                elapsed += edges[edge]["time"]
+                if position + 1 < len(route):
+                    elapsed += connection_costs[edge, route[position + 1]][1]
+            pair.update(route=route, sensor_ids=sensor_ids,
+                        origin_kind=entry["endpoint_kind"], destination_kind=exit_portal["endpoint_kind"],
+                        origin_zone=entry["zone_id"], destination_zone=exit_portal["zone_id"],
+                        urban_edge_lengths_m=[edges[edge]["length"] for edge in route],
+                        urban_generalized_cost_s=sum(edges[edge]["time"] * cost_factors.get(
+                            overrides.get(edge, edges[edge]["hierarchy"]), 1.0)
+                            for edge in route) + sum(connection_costs[c][1] for c in zip(route, route[1:])),
+                        movement_opportunities=[len(network.departure_lanes[c]) for c in zip(route, route[1:])],
+                        movement_receiving_lanes=[len(network.receiving_lanes[c]) for c in zip(route, route[1:])],
+                        movement_target_hierarchies=[overrides.get(edge, exits.get(edge, {}).get("prior_road_type", edges[edge]["hierarchy"]))
+                                                     for edge in route[1:]],
+                        movement_angles=[_movement_angle(edges[a], edges[b]) for a, b in zip(route, route[1:])],
+                        observation_freeflow_delay_s=passage_delays,
+                        observation_movements={sensor: {"edge": sensors[sensor],
+                            "next_edge": route[route.index(sensors[sensor]) + 1] if route.index(sensors[sensor]) + 1 < len(route) else None}
+                            for sensor in sensor_ids},
+                        returns_to_same_access=(entry["endpoint_kind"] == exit_portal["endpoint_kind"] == "boundary"
+                                               and entry["boundary_group"] == exit_portal["boundary_group"]),
+                        has_uturn=any(connection in returns for connection in zip(route, route[1:])),
+                        normal_edge_count=len(route),
+                        origin_corridor=entry["corridor"], destination_corridor=exit_portal["corridor"],
+                        corridors=corridors, normal_length_m=normal_length, internal_length_m=internal_length,
+                        length_m=normal_length + internal_length, freeflow_time_s=travel_time)
+            accepted[identifier] = pair
+    def filter_detours():
+        if urban and (diversity or completion_policy):
+            # Perturbar custos só oferece opções. Desvios excessivos não entram no
+            # sorteio, mesmo quando aumentariam a cobertura ou reduziriam as filas.
+            best_cost, best_length = {}, {}
+            for pair in accepted.values():
+                od = pair["origin"], pair["destination"]
+                best_cost[od] = min(best_cost.get(od, math.inf), pair["urban_generalized_cost_s"])
+                best_length[od] = min(best_length.get(od, math.inf), pair["length_m"])
+            for identifier, pair in list(accepted.items()):
+                od = pair["origin"], pair["destination"]
+                if pair.get("template") and (
+                        pair["urban_generalized_cost_s"] > best_cost[od] * diversity.get("max_cost_ratio", 1.35) or
+                        pair["length_m"] > best_length[od] * diversity.get("max_length_ratio", 1.5)):
+                    del accepted[identifier]
+                    reject("alternative_detour_limit", identifier)
+
+    collect_routes(route_outputs)
+    filter_detours()
+    completion = None
+    if completion_policy:
+        if not urban or completion_policy.get("method") != "bounded_native_alternatives":
+            raise ValueError("Complementação de cobertura exige alternativas urbanas nativas limitadas.")
+        candidates, completion = coverage_candidates(edges, connections, connection_costs, accepted,
+            cost_factors=cost_factors, hierarchy_overrides=overrides,
+            max_cost_ratio=diversity.get("max_cost_ratio",1.35),
+            max_length_ratio=diversity.get("max_length_ratio",1.5),
+            candidates_per_edge=completion_policy.get("candidate_od_pairs_per_edge",3),
+            compatible_witness_search_limit=completion_policy.get("compatible_witness_search_limit", 0))
+        before = {edge for pair in accepted.values() for edge in pair["route"]}
+        completion_ids = []
+        if candidates:
+            trips = _routes_root()
+            for candidate in candidates:
+                identifier = f"od_{len(pairs):04d}"
+                pairs[identifier] = dict(candidate, id=identifier, template="coverage_completion",
+                                         require_junction_simple=True)
+                completion_ids.append(identifier)
+                ET.SubElement(trips,"trip",id=identifier,type="metasettran_car",depart="0",
+                    **{"from":candidate["origin"],"to":candidate["destination"],
+                       "via":" ".join(candidate["via"]),"departPos":"0","arrivalPos":"max"})
+            trips_file, routes_file = directory/"coverage.trips.xml", directory/"coverage.rou.xml"
+            _write_xml(trips_file,trips)
+            completion_command = [binary,"--net-file",str(net_file),"--route-files",str(trips_file),
+                "--weight-files",str(costs_file),"--output-file",str(routes_file),
+                "--alternatives-output",str(directory/"coverage.alternatives.xml"),
+                "--seed",str(ROUTING_SEED),"--ignore-errors","true","--no-step-log","true"]
+            _run_router(completion_command, log_file, append=True)
+            collect_routes([routes_file])
+            filter_detours()
+            completion["command"] = completion_command
+        after = {edge for pair in accepted.values() for edge in pair["route"]}
+        completion.update(candidate_routes=len(completion_ids),
+            accepted_routes=sum(identifier in accepted for identifier in completion_ids),
+            added_catalog_edges=len(after-before),missing_after=len(edges.keys()-after))
+        by_edge = {}
+        for identifier in completion_ids:
+            pair = pairs[identifier]
+            by_edge.setdefault(pair["coverage_edge"],[]).append({
+                "origin":pair["origin"],"destination":pair["destination"],
+                "status":"admissible" if identifier in accepted else rejected_candidates.get(identifier,"unreachable")})
+        for row in completion["edges"]:
+            row["native_results"] = by_edge.get(row["edge"],[])
+            row["covered_by_admissible_alternative"] = row["edge"] in after
+            if row["edge"] in after:
+                row["status"] = "covered_by_admissible_alternative"
+            elif row["native_results"]:
+                row["status"] = "no_admissible_candidate_found"
+    for identifier in set(pairs) - found:
+        reject("unreachable", identifier)
     if not accepted:
         raise ValueError("Nenhum percurso contínuo entre os portais de entrada e saída.")
     catalog = {"candidate_pairs": len(pairs), "distinct_endpoint_pairs": len(entries) * len(exits), "routed_candidates": len(pairs),
@@ -460,6 +474,11 @@ def _route_pairs(model, net_file, directory, log_file):
     if urban:
         catalog["alternative_routing_command"] = alternative_command
         catalog["alternative_routing_basis"] = "native_freeflow_and_functional_road_cost; no_congestion_fitting"
+        if diversity_commands:
+            catalog["diversity_routing_commands"] = diversity_commands
+            catalog["diversity_policy"] = diversity
+    if completion is not None:
+        catalog["coverage_completion"] = completion
     if len(accepted) + sum(rejected.values()) != catalog["candidate_pairs"]:
         raise ValueError("Auditoria de pares OD não conserva todos os candidatos.")
     return accepted, command, catalog, edges
@@ -535,7 +554,7 @@ def _regional_prior(pairs, model):
     config = model["regional_demand"]
     importance = config["destination_hierarchy_weights"]
     urban = config.get("route_choice", {}).get("method") == "urban_activity_od"
-    endpoint_lists = ({role: _demand_endpoints(model, role) for role in ("entries", "exits")}
+    endpoint_lists = ({role: demand_endpoints(model, role) for role in ("entries", "exits")}
                       if urban else model["portals"])
     hierarchy_overrides = config.get("road_hierarchy_overrides", {})
     relative_evidence = config.get("relative_corridor_evidence", {})
@@ -859,6 +878,16 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
     """
     bins = round(duration / 900)
     routes = list(pairs.values())
+    scope = model["regional_demand"].get("observation_projection_scope", "global_od_and_routes")
+    if scope not in {"global_od_and_routes", "within_fixed_od", "external_od_internal_prior"}:
+        raise ValueError("Escopo de projeção das observações desconhecido.")
+    fixed_od = scope == "within_fixed_od"
+    protect_internal = scope == "external_od_internal_prior"
+    groups, route_group = {}, []
+    for index, pair in enumerate(routes):
+        key = pair["origin"], pair["destination"]
+        groups.setdefault(key, []).append(index)
+        route_group.append(key)
     if fixed_schedule is not None:
         samples = [(float(attrs["depart"]), 1.0) for attrs in fixed_schedule]
     else:
@@ -893,6 +922,13 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
         row = _route_prior_row(routes, model, timestamp, relative)
         base.append(row)
         weights.append(row.copy())
+    od_masses = [{key: sum(row[r] for r in members) for key, members in groups.items()}
+                 for row in base] if fixed_od else []
+    internal = [r for r, pair in enumerate(routes)
+                if "activity" in (pair.get("origin_kind"), pair.get("destination_kind"))]
+    internal_set = set(internal)
+    external = [r for r in range(len(routes)) if r not in internal_set]
+    internal_mass = [sum(row[r] for r in internal) for row in base]
     constraints = []
     observation_ids = ["5", "6"]
     direction = model["regional_demand"].get("directional_prior", {})
@@ -918,13 +954,43 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
                     if coefficient > 1e-12 and masses[index] > 0:
                         terms.append((index, route_index, coefficient))
             constraints.append((sensor, observed_bin, target, terms))
-    # Deterministic generalized iterative scaling. Half-steps damp overlapping
-    # fractional constraints, not traffic intensity; no demand multiplier.
-    maximum_iterations = 80
-    for iteration in range(maximum_iterations):
-        greatest_error = 0.0
+    # Sem uma matriz OD observada, os contadores não podem reescrever produção,
+    # atração e localidades de viagem. No escopo fixo só se repartem alternativas
+    # do MESMO OD; incompatibilidades ficam nos resíduos, sem inventar viagens.
+    solver_constraints = constraints
+    if protect_internal:
+        # Um único componente contém TODAS as viagens que tocam atividades
+        # internas. Sua distribuição condicional (OD e percursos) é o prior;
+        # só a participação conjunta desse componente pode ser calibrada.
+        # O restante são rotas entre bordas, informadas pelas contagens.
+        columns = {r: index for index, r in enumerate(external)}
+        cohort = len(external)
+        weights = [[row[r] for r in external] + [internal_mass[i]] for i, row in enumerate(base)]
+        solver_constraints = []
         for sensor, observed_bin, target, terms in constraints:
-            predicted = sum(weights[i][r] * coefficient for i, r, coefficient in terms)
+            reduced, cohort_terms = [], {}
+            for i, r, coefficient in terms:
+                if r in internal_set:
+                    if internal_mass[i] > 0:
+                        cohort_terms[i] = cohort_terms.get(i, 0.0) + coefficient * base[i][r] / internal_mass[i]
+                else:
+                    reduced.append((i, columns[r], coefficient))
+            reduced.extend((i, cohort, coefficient) for i, coefficient in cohort_terms.items())
+            solver_constraints.append((sensor, observed_bin, target, reduced))
+    fitting = []
+    for _, _, target, terms in solver_constraints:
+        if fixed_od:
+            mutable = [(i, r, c) for i, r, c in terms if len(groups[route_group[r]]) > 1]
+            constant = sum(base[i][r] * c for i, r, c in terms if len(groups[route_group[r]]) == 1)
+            fitting.append((target, constant, mutable))
+        else:
+            fitting.append((target, 0.0, terms))
+    maximum_iterations = 80
+    adjustable = any(terms for _, _, terms in fitting)
+    for iteration in range(maximum_iterations if adjustable else 1):
+        greatest_error = 0.0
+        for target, constant, terms in fitting:
+            predicted = constant + sum(weights[i][r] * coefficient for i, r, coefficient in terms)
             greatest_error = max(greatest_error, abs(predicted - target) / max(target, 1.0))
             if predicted <= 0:
                 continue
@@ -933,12 +999,32 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
             for index, route_index, coefficient in terms:
                 weights[index][route_index] *= math.exp(max(-30.0, min(30.0,
                     correction * coefficient / masses[index])))
-                changed.add(index)
-            for index in changed:
-                denominator = sum(weights[index])
-                weights[index] = [value / denominator for value in weights[index]]
+                changed.add((index, route_group[route_index]) if fixed_od else index)
+            if fixed_od:
+                for index, key in changed:
+                    members = groups[key]
+                    denominator = sum(weights[index][r] for r in members)
+                    target_mass = od_masses[index][key]
+                    for r in members:
+                        weights[index][r] = (weights[index][r] * target_mass / denominator
+                                             if denominator > 0 else base[index][r])
+            else:
+                for index in changed:
+                    denominator = sum(weights[index])
+                    weights[index] = [value / denominator for value in weights[index]]
         if greatest_error < .001:
             break
+    if protect_internal:
+        expanded = []
+        for i, row in enumerate(weights):
+            values = [0.0] * len(routes)
+            for column, r in enumerate(external):
+                values[r] = row[column]
+            for r in internal:
+                values[r] = row[cohort] * base[i][r] / internal_mass[i] if internal_mass[i] else 0.0
+            expanded.append(values)
+        weights = expanded
+    fitted_internal_mass = [sum(row[r] for r in internal) for row in weights] if protect_internal else []
     if origin_factors is None:
         origin_factors = _origin_retention_factors(model)
     route_factors = [origin_factors[pair["origin"]] for pair in routes]
@@ -956,9 +1042,27 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
                     generated_departures=0, generated_departures_per_bin=[0] * bins)
     return weights, {
         "method": "fixed_departure_mass_fractional_raking_shared_observations",
+        "scope": scope,
+        **({"protected_internal_prior": {
+            "routes": len(internal),
+            "prior_mass_per_bin": internal_mass,
+            "fitted_mass_per_bin": fitted_internal_mass,
+            "maximum_conditional_probability_error": max((abs(
+                weights[i][r] / fitted_internal_mass[i] - base[i][r] / internal_mass[i])
+                for i in range(bins) if internal_mass[i] > 0 and fitted_internal_mass[i] > 0
+                for r in internal), default=0.0),
+            "basis": "conditional_internal_OD_and_route_prior_preserved; external_OD_and_total_internal_share_may_fit_counts"}}
+           if protect_internal else {}),
+        **({"fixed_od_marginals": {"od_pairs": len(groups),
+            "maximum_probability_error": max(abs(sum(weights[i][r] for r in members) - od_masses[i][key])
+                for i in range(bins) for key, members in groups.items()),
+            "basis": "urban_spatial_prior_at_each_15min_center; origin_destination_and_trip_purpose_unchanged_by_sensors"}}
+           if fixed_od else {}),
         "operator": "continuous_linear_OD_probability; passage=departure+native_freeflow_time_to_probe_entry",
         "iterations": iteration + 1, "maximum_iterations": maximum_iterations,
-        "total_fixed": sum(masses), "target_basis": curve_key + "_car_passages_assuming_boundary_to_boundary_representation",
+        "total_fixed": sum(masses), "target_basis": curve_key + (
+            "_car_passages_conditional_on_sensor_mapping_and_fixed_OD" if fixed_od else
+            "_car_passages_assuming_boundary_to_boundary_representation"),
         "origin_retained_departures_per_bin": [sum(
             retained_rows[i] * weighted_basis(i, quarter * 900, (quarter + 1) * 900)
             for i in range(bins)) for quarter in range(bins)],
@@ -1007,7 +1111,7 @@ def _retained_indices(count, fraction, seed):
 def _origin_retention_factors(model):
     """A redução por origem sucede a escolha OD; nunca renormaliza suas cotas."""
     policy = model["regional_demand"].get("lateral_origin_reduction")
-    entries = _demand_endpoints(model, "entries")
+    entries = demand_endpoints(model, "entries")
     if policy is None:
         return {portal["edge"]: 1.0 for portal in entries}
     fraction = policy.get("retained_fraction")
@@ -1053,6 +1157,24 @@ def _regional_knots(calibration, scale, curve_key):
             for timestamp in times]
 
 
+def _reduce_final_schedule(schedule, retained_indices, contexts, fraction):
+    """Retém uma amostra uniforme da população final, separadamente por faixa.
+
+    Reusa o seletor sistemático; nenhuma origem, destino ou rota recebe peso.
+    O stream próprio conserva os sorteios anteriores e o isolamento das faixas.
+    """
+    candidates = [[] for _ in contexts]
+    for index in sorted(retained_indices):
+        candidates[int(float(schedule[index]["depart"]) // DEFAULT_DURATION)].append(index)
+    kept = set()
+    for context, indices in zip(contexts, candidates):
+        seed = _stream_seed(context["effective_seed"], "final_volume", "volume_retention")
+        positions = _retained_indices(len(indices), fraction, seed)
+        kept.update(indices[position] for position in positions)
+        context.update(final_reference_programmed=len(indices), programmed=len(positions))
+    return kept
+
+
 def _compose_sections(pairs, model, components, contexts, scale, retention):
     """Compõe comportamentos aprovados, conservando cada população selecionada.
 
@@ -1064,11 +1186,16 @@ def _compose_sections(pairs, model, components, contexts, scale, retention):
     curves = [_regional_knots(calibration, scale, "realization_knots") for calibration in components]
     knots, transition = compose_rate_curves(curves, starts)
     weights, observations, schedule, reference_count = [], [], [], 0
+    marginal_checks, internal_checks = [], []
     for context, calibration, curve in zip(contexts, components, curves):
         begin, seed = context["start_week_second"], context["effective_seed"]
         local_weights, projection = _observation_projection(
             pairs, model, calibration, begin, int(DEFAULT_DURATION), curve, curve_key="realization_knots")
         weights.extend(local_weights)
+        if "fixed_od_marginals" in projection:
+            marginal_checks.append({"context_index": context["index"], **projection["fixed_od_marginals"]})
+        if "protected_internal_prior" in projection:
+            internal_checks.append({"context_index": context["index"], **projection["protected_internal_prior"]})
         observations.extend(dict(row, bin=row["bin"] + context["index"] * 12)
                             for row in projection["observations"])
         original = list(_departures(_linear_segments(curve, begin=begin, duration=DEFAULT_DURATION),
@@ -1149,6 +1276,14 @@ def _compose_sections(pairs, model, components, contexts, scale, retention):
         for key in ("expected_before", "expected_after", "difference"):
             row[key] *= retention
     projection = {"method": "composition_of_approved_individual_context_projections",
+                  "scope": model["regional_demand"].get("observation_projection_scope", "global_od_and_routes"),
+                  **({"fixed_od_marginals": {"context_checks": marginal_checks,
+                       "maximum_probability_error": max(row["maximum_probability_error"] for row in marginal_checks)}}
+                     if marginal_checks else {}),
+                  **({"protected_internal_prior": {"context_checks": internal_checks,
+                       "maximum_conditional_probability_error": max(
+                           row["maximum_conditional_probability_error"] for row in internal_checks)}}
+                     if internal_checks else {}),
                   "total_fixed": total, "observations": observations,
                   "origin_retained_departures_per_bin": retained_bins,
                   "status": "individual_projection_references_not_recomputed_passages_after_harmonization",
@@ -1164,15 +1299,18 @@ def generate_metasettran_demand(
     master_seed=None, variations=None,
     spatial_scenario="regional-integrated", metadata=None, log_file=None,
     schedule_file=None, source_time_convention="utc", volume_retention=None,
-    include_route_details=True,
+    final_volume_retention=None, include_route_details=True, local_activity_weights_file=None,
 ):
     """Gera viagens regionais; schedule_file isola a distribuição espacial.
 
-    include_route_details controla apenas o catálogo diagnóstico nos metadados;
-    viagens, rotas XML, cálculos e agregados são os mesmos nos dois casos.
+    local_activity_weights_file redistribui oportunidades entre células e exige
+    uma agenda pareada para conservar os mesmos veículos e partidas.
+    include_route_details controla apenas os detalhes do catálogo nos metadados.
     """
     from SistemaDeSemaforos.demand.metasettran_calibration import calibrate_weekly, weekly_window
 
+    if local_activity_weights_file is not None and schedule_file is None:
+        raise ValueError("Pesos experimentais de atividade local exigem schedule_file para uma agenda pareada.")
     selection = resolve_contexts(day, start, sections, variation, seed, master_seed, variations)
     if schedule_file is not None and sections != 1:
         raise ValueError("Agenda pareada legada exige uma faixa; reutilize o XML completo para comparar controladores.")
@@ -1190,10 +1328,16 @@ def generate_metasettran_demand(
             raise FileNotFoundError(f"Entrada MetaSettran não encontrada: {path}")
     started = time.perf_counter()
     spatial_bytes = spatial_file.read_bytes()
+    spatial_sha256 = hashlib.sha256(spatial_bytes).hexdigest()
     model = json.loads(spatial_bytes)
     network_sha256 = _sha256(net_file)
     if model.get("network_sha256") != network_sha256:
         raise ValueError("O cadastro de portais pertence a outra versão da rede.")
+    network = read_network(net_file)
+    model = expand_local_activity(model, network.edges, network.connections)
+    weight_reference = None
+    if local_activity_weights_file is not None:
+        weight_reference = apply_local_activity_weights(model, local_activity_weights_file, spatial_sha256)
     origin_factors = _origin_retention_factors(model)
     reference_total = model["regional_demand"]["reference_expected_departures"]
     if isinstance(reference_total, bool) or not isinstance(reference_total, (float, int)) or not math.isfinite(reference_total) or reference_total <= 0:
@@ -1202,9 +1346,18 @@ def generate_metasettran_demand(
                  if volume_retention is None else volume_retention)
     if isinstance(retention, bool) or not isinstance(retention, (float, int)) or not math.isfinite(retention) or not 0 < retention <= 1:
         raise ValueError("Fração de retenção deve estar em (0, 1].")
+    volume_policy = model["regional_demand"].get("volume_recalibration", {})
+    requested_final_retention = (volume_policy.get("final_retained_fraction", 1.0)
+                                 if final_volume_retention is None else final_volume_retention)
+    if (isinstance(requested_final_retention, bool) or
+            not isinstance(requested_final_retention, (float, int)) or
+            not math.isfinite(requested_final_retention) or not 0 < requested_final_retention <= 1):
+        raise ValueError("Fração de retenção final deve estar em (0, 1].")
+    final_retention = requested_final_retention
     # Agenda pareada é um contrato de população fixa; não reduzir novamente.
     if schedule_file is not None:
         retention = 1.0
+        final_retention = 1.0
         origin_factors = {edge: 1.0 for edge in origin_factors}
     lateral_reduction_applied = any(factor < 1 for factor in origin_factors.values())
     weekly = calibrate_weekly(csv_file, variation=selection["contexts"][0]["variation"], seed=selection["contexts"][0]["effective_seed"],
@@ -1267,7 +1420,7 @@ def generate_metasettran_demand(
         start_week_second=begin, sections=sections, begin=0.0, duration=duration,
         vehicle_class="passenger", measured_class="car", validate=True,
         net_file=str(net_file), source_network_sha256=network_sha256,
-        csv_file=str(csv_file), spatial_file=str(spatial_file), spatial_sha256=hashlib.sha256(spatial_bytes).hexdigest(),
+        csv_file=str(csv_file), spatial_file=str(spatial_file), spatial_sha256=spatial_sha256,
         trips_file=str(trips_file), routes_file=str(routes_file), calibration=calibration,
         spatial_model=model, status=model.get("status", "experimental_regional_model_sensor_mapping_unconfirmed"),
         variability=calibration.get("realization", weekly.get("realization", {})),
@@ -1276,6 +1429,10 @@ def generate_metasettran_demand(
                         "empirical_status": "local_car_curves; regional_OD_and_scale_experimental"},
         started_at_utc=datetime.now(timezone.utc).isoformat(),
     )
+    if weight_reference is None:
+        metadata.pop("local_activity_weights", None)
+    else:
+        metadata["local_activity_weights"] = weight_reference
     if fixed_schedule is not None:
         metadata["paired_schedule"] = {"file": str(schedule_file), "sha256": _sha256(schedule_file),
             "preserved": ["vehicle_ids", "departure_times", "vehicle_attributes", "vehicle_types", "vehicle_count"],
@@ -1283,7 +1440,8 @@ def generate_metasettran_demand(
     try:
         with TemporaryDirectory(prefix=".metasettran-", dir=output_dir) as temporary:
             directory = Path(temporary)
-            pairs, command, catalog, network_edges = _route_pairs(model, net_file, directory, log_file)
+            pairs, command, catalog, network_edges = _route_pairs(
+                model, net_file, directory, log_file, network=network)
             metadata["command"] = command
             _regional_prior(pairs, model)
             if sections > 1:
@@ -1325,6 +1483,12 @@ def generate_metasettran_demand(
                     retained_indices, selection["contexts"], origin_factors)
             if not retained_indices:
                 raise ValueError("A redução lateral não deixou viagens nesta realização; não forçar inserções.")
+            origin_programmed = len(retained_indices)
+            origin_contexts = deepcopy(selection["contexts"])
+            retained_indices = _reduce_final_schedule(
+                schedule, retained_indices, selection["contexts"], final_retention)
+            if not retained_indices:
+                raise ValueError("A redução final não deixou viagens nesta realização; não forçar inserções.")
             used_lengths, generated_bins = [], [0] * bins
             new_trips, new_routes = directory / trips_file.name, directory / routes_file.name
             with ExitStack() as stack:
@@ -1360,15 +1524,18 @@ def generate_metasettran_demand(
             regional_expected = projection["total_fixed"] * retention
             for pair in pairs.values():
                 pair["expected_departures"] *= retention * origin_factors[pair["origin"]]
+            origin_expected = sum(pair["expected_departures"] for pair in pairs.values())
+            for pair in pairs.values():
+                pair["expected_departures"] *= final_retention
             projection["unreduced_total_fixed"] = projection["total_fixed"]
             projection["total_fixed"] = sum(pair["expected_departures"] for pair in pairs.values())
             for observation in projection["observations"]:
                 observation["unreduced_projected_freeflow_passages"] = observation["projected_freeflow_passages"]
-                observation["projected_freeflow_passages"] = retention * observation.pop(
+                observation["projected_freeflow_passages"] = retention * final_retention * observation.pop(
                     "origin_retained_projected_freeflow_passages", observation["projected_freeflow_passages"])
-                observation["experimental_target_passages"] = observation["target_passages"] * retention
+                observation["experimental_target_passages"] = observation["target_passages"] * retention * final_retention
                 observation["residual"] = observation["projected_freeflow_passages"] - observation["target_passages"]
-            projection["retention_note"] = "OD fitted at unreduced reference; regional and origin retention applied afterwards, without redistribution. Measured targets unchanged; reduced projections remain experimental."
+            projection["retention_note"] = "OD fitted at unreduced reference; regional, origin and uniform final retention applied afterwards, without redistribution. Measured targets unchanged; reduced projections remain experimental."
             used_lengths.sort()
             if sections == 1:
                 _write_xml(new_trips, trips)
@@ -1378,29 +1545,33 @@ def generate_metasettran_demand(
                 expected_bins = [retention * value for value in projection["origin_retained_departures_per_bin"]]
                 # As duas quadraturas partilham a mesma massa; só corrigir erro
                 # numérico de soma, sem alterar o orçamento do modelo.
-                normalization = projection["total_fixed"] / sum(expected_bins)
+                normalization = origin_expected / sum(expected_bins)
                 expected_bins = [value * normalization for value in expected_bins]
-                if sections > 1:
-                    transition = metadata["chronological_composition"]
-                    transition["pre_lateral_standalone_programmed_sum"] = transition.pop("standalone_programmed_sum")
-                    transition["reference_combined_programmed"] = transition["combined_programmed"]
-                    transition.update(context_programmed_sum=sum(c["programmed"] for c in selection["contexts"]),
-                        combined_programmed=len(schedule), programmed_difference=0,
-                        rate_diagnostics_basis="regional_reference_before_lateral_origin_reduction",
-                        origin_retained_expected=projection["total_fixed"],
-                        origin_retained_expected_departures_per_bin=expected_bins,
-                        origin_retained_rate="reference_rate(t) * sum(OD_probability_r(t) * origin_retention_r); continuous, no renormalization")
-                    timestamps = [float(attrs["depart"]) for attrs in schedule]
-                    for boundary in transition["boundaries"]:
-                        relative = boundary["week_second"] - begin
-                        for window in boundary["windows"]:
-                            width = window["seconds"]
-                            window["programmed_left"] = bisect_left(timestamps, relative) - bisect_left(timestamps, relative - width)
-                            window["programmed_right"] = bisect_left(timestamps, relative + width) - bisect_left(timestamps, relative)
+            if sections > 1 and (lateral_reduction_applied or final_retention < 1):
+                transition = metadata["chronological_composition"]
+                reference_key = ("pre_lateral_standalone_programmed_sum" if lateral_reduction_applied
+                                 else "pre_final_standalone_programmed_sum")
+                transition[reference_key] = transition.pop("standalone_programmed_sum")
+                transition["reference_combined_programmed"] = transition["combined_programmed"]
+                transition.update(context_programmed_sum=sum(c["programmed"] for c in selection["contexts"]),
+                    combined_programmed=len(schedule), programmed_difference=0,
+                    rate_diagnostics_basis="regional_reference_before_origin_and_final_retention",
+                    origin_retained_expected=origin_expected,
+                    origin_retained_expected_departures_per_bin=expected_bins,
+                    origin_retained_rate="reference_rate(t) * sum(OD_probability_r(t) * origin_retention_r); continuous, no renormalization",
+                    final_rate_factor=final_retention, final_retained_expected=projection["total_fixed"])
+                timestamps = [float(attrs["depart"]) for attrs in schedule]
+                for boundary in transition["boundaries"]:
+                    relative = boundary["week_second"] - begin
+                    for window in boundary["windows"]:
+                        width = window["seconds"]
+                        window["programmed_left"] = bisect_left(timestamps, relative) - bisect_left(timestamps, relative - width)
+                        window["programmed_right"] = bisect_left(timestamps, relative + width) - bisect_left(timestamps, relative)
+            expected_bins = [value * final_retention for value in expected_bins]
             projection.pop("origin_retained_departures_per_bin", None)
             groups = [{"id": "regional", "sensor_ids": [], "basis": {"kind": "fixed_regional_scale_hypothesis",
                        "reference_expected_departures": reference_total,
-                       "scale": "regional_retention * frozen_v4.3.1_coefficient * (car5(t)+car6(t)) * OD-weighted origin retention; not sensor coverage",
+                       "scale": "regional_retention * frozen_v4.3.1_coefficient * (car5(t)+car6(t)) * OD-weighted origin retention * final_retention; not sensor coverage",
                        "unreduced_coefficient": scale, "frozen_reference_cars": reference_counts},
                        "expected_departures": projection["total_fixed"], "generated_departures": len(schedule),
                        "expected_departures_per_bin": ([sum(1 for attrs in schedule if index * 900 <= float(attrs['depart']) < (index + 1) * 900)
@@ -1449,7 +1620,21 @@ def generate_metasettran_demand(
                 volume_recalibration={"retained_fraction": retention,
                     "reference_programmed": reference_count, "retained_programmed": regional_programmed,
                     "actual_reduction_fraction": 1 - regional_programmed / reference_count,
-                    "final_programmed_after_origin_reduction": len(schedule),
+                    "final_programmed_after_origin_reduction": origin_programmed,
+                    "final_adjustment": {
+                        "requested_retained_fraction": requested_final_retention,
+                        "applied_retained_fraction": final_retention,
+                        "reference_model_version": volume_policy.get("final_reference_model_version", MODEL_VERSION),
+                        "reference_spatial_sha256": volume_policy.get("final_reference_spatial_sha256", metadata["spatial_sha256"]),
+                        "reference_programmed": origin_programmed, "retained_programmed": len(schedule),
+                        "removed_programmed": origin_programmed - len(schedule),
+                        "actual_retained_fraction": len(schedule) / origin_programmed,
+                        "actual_reduction_fraction": 1 - len(schedule) / origin_programmed,
+                        "reference_expected": origin_expected, "retained_expected": projection["total_fixed"],
+                        "paired_schedule_bypasses_reduction": fixed_schedule is not None,
+                        "method": "existing_systematic_subset_of_final_departures_per_context; independent_seed_stream; no_spatial_weights",
+                        "rounding": "sum(floor(fraction * final_reference_context_count)); at most sections-1 below floor(fraction * total)",
+                        "status": "explicit_sensitivity_scenario_not_empirically_calibrated"},
                     "method": ("per_context_fixed_count_subset_then_mass_conserving_time_transport" if sections > 1
                                else "fixed_count_systematic_subset_of_reference_schedule"),
                     "paired_schedule_bypasses_reduction": fixed_schedule is not None,
@@ -1461,13 +1646,13 @@ def generate_metasettran_demand(
                     "applied": lateral_reduction_applied,
                     "paired_schedule_bypasses_reduction": fixed_schedule is not None,
                     "reference_programmed_after_regional_reduction": regional_programmed,
-                    "retained_programmed": len(schedule), "removed_programmed": regional_programmed - len(schedule),
+                    "retained_programmed": origin_programmed, "removed_programmed": regional_programmed - origin_programmed,
                     "reference_expected_after_regional_reduction": regional_expected,
-                    "retained_expected": projection["total_fixed"],
+                    "retained_expected": origin_expected,
                     "per_context": [{key: context[key] for key in (
                         "index", "day", "start", "variation", "effective_seed", "reference_programmed", "programmed",
                         "lateral_reference_programmed", "lateral_programmed", "protected_origin_programmed") if key in context}
-                        for context in selection["contexts"]],
+                        for context in origin_contexts],
                     "rounding": "floor(retained_fraction * lateral_count) per context; no positive-count exception",
                     "status": "experimental_reduction_not_measured_boundary_flows"},
                 vehicles_requested=len(schedule), vehicles_generated=len(schedule), trips_generated=len(schedule),

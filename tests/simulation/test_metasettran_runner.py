@@ -83,6 +83,12 @@ class MetaSettranRunnerTests(unittest.TestCase):
             groups=[{"id": "regional", "generated_departures": 2}],
             spatial_distribution={"expected_network_departures": 2.0,
                                   "trip_populations": {"boundary_to_boundary": 2},
+                                  "catalog": {"accepted_pairs": 1,
+                                      "alternative_routing_command": ["duarouter", "alternative"],
+                                      "diversity_routing_commands": [["duarouter", "diversity"]],
+                                      "coverage_completion": {"candidate_routes": 1, "missing_after": 0,
+                                          "edges": [{"edge": "entry", "status": "covered"}],
+                                          "command": ["duarouter", "coverage"]}},
                                   "portals": {"entries": [{"edge": "entry", "generated_departures": 2,
                                                                "qualification": {"status": "synthetic"}}],
                                               "exits": [{"edge": "exit", "generated_departures": 2,
@@ -253,6 +259,14 @@ class MetaSettranRunnerTests(unittest.TestCase):
                 self.assertEqual("calibration_reference" in generation, profile == "core")
                 self.assertEqual("limitations" in spatial, profile == "full")
                 self.assertEqual("qualification" in spatial["portals"]["entries"][0], profile == "full")
+                self.assertEqual(spatial["catalog"]["accepted_pairs"], 1)
+                completion = spatial["catalog"]["coverage_completion"]
+                self.assertEqual(completion["candidate_routes"], 1)
+                self.assertEqual(completion["missing_after"], 0)
+                self.assertEqual("edges" in completion, profile == "full")
+                self.assertEqual("command" in completion, profile == "full")
+                for key in ("alternative_routing_command", "diversity_routing_commands"):
+                    self.assertEqual(key in spatial["catalog"], profile == "full")
                 if profile == "core":
                     self.assertEqual(generation["spatial_model_reference"]["network_sha256"], "network-hash")
                     calibration = generation["calibration_reference"]
@@ -268,6 +282,10 @@ class MetaSettranRunnerTests(unittest.TestCase):
                 collected_generation = self.validate.call_args.args[1]
                 self.assertIn("spatial_model", collected_generation)
                 self.assertIn("calibration", collected_generation)
+                original_catalog = collected_generation["spatial_distribution"]["catalog"]
+                self.assertIn("edges", original_catalog["coverage_completion"])
+                self.assertIn("command", original_catalog["coverage_completion"])
+                self.assertIn("diversity_routing_commands", original_catalog)
                 self.assertIn("intervals", self.validation_result["spatial_observation"]
                               ["portal_trip_accounting"]["entries"][0])
                 if profile == "full":

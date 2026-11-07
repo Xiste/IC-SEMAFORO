@@ -45,9 +45,10 @@ class FormTests(unittest.TestCase):
                 web.form_options(RANDOM | values)
 
     def test_meta_selection_uses_existing_validator_and_preserves_options(self):
-        with patch.object(web, "resolve_contexts", wraps=web.resolve_contexts) as resolve:
+        with patch.object(web.runner, "resolve_contexts", wraps=web.runner.resolve_contexts) as resolve:
             options = web.form_options(META | dict(sections="56", episodes="5", metrics_profile="full"))
-        resolve.assert_called_once_with(day="tuesday", start="15:00", sections=56, master_seed=0)
+        resolve.assert_called_once_with(day="tuesday", start="15:00", sections=56,
+                                        variation=None, master_seed=0, variations=None)
         self.assertNotIn("master_seed", options)
         self.assertNotIn("end", options)
         self.assertNotIn("duration", options)
@@ -90,12 +91,12 @@ class FormTests(unittest.TestCase):
         self.assertEqual(options["selected_sections"], [2, 3, 55, 0])
         self.assertIs(options["consecutive_grouping_enabled"], False)
         self.assertFalse({"day", "start", "sections", "master_seed"} & set(options))
-        with patch.object(web, "resolve_contexts", wraps=web.resolve_contexts) as resolve:
+        with patch.object(web.runner, "resolve_contexts", wraps=web.runner.resolve_contexts) as resolve:
             options = web.form_options(FREE | dict(consecutive_grouping_enabled="true", variations="4,17,9,23"))
         # Segunda 06h/09h, depois domingo 21h/segunda 00h: mesma ordem do resumo.
         self.assertEqual([call.kwargs for call in resolve.call_args_list], [
-            dict(day="monday", start="06:00", sections=2, variations=[4, 17]),
-            dict(day="sunday", start="21:00", sections=2, variations=[9, 23]),
+            dict(day="monday", start="06:00", sections=2, variation=None, master_seed=None, variations=[4, 17]),
+            dict(day="sunday", start="21:00", sections=2, variation=None, master_seed=None, variations=[9, 23]),
         ])
         self.assertEqual(options["variations"], [4, 17, 9, 23])
 

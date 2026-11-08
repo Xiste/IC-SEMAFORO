@@ -280,6 +280,8 @@ def expand_local_activity(model, edges, connections):
                          and edge["to"] == counterpart["from"])
         if bidirectional:
             reverse_directions[identifier] = reverse
+        # Dois sentidos reconhecidos compartilham a extensão da rua física;
+        # somá-los integralmente duplicaria sua oportunidade de atividade.
         exposure[identifier] = edge["length"] / (2 if bidirectional else 1)
 
     def access_gate(identifier, status):
@@ -318,6 +320,8 @@ def expand_local_activity(model, edges, connections):
             "allow_intrazonal_trips": policy.get("allow_intrazonal_trips", False),
             "basis": "Atividades residenciais/mistas agregadas no viário local, sem cadastro de lotes, população ou portões. Célula computacional; não é limite de bairro nem densidade medida.",
             "origins": gates, "destinations": deepcopy(gates)})
+        # Esta escala distribui probabilidade entre áreas; não mede população
+        # nem acrescenta veículos ao orçamento temporal da demanda.
         opportunity = length / 1000 * policy["opportunity_per_km"]
         result["regional_demand"]["urban_activity_model"]["zones"].append({
             "id": identifier, "name": name, "kind": "residential_mixed",

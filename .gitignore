@@ -3,6 +3,8 @@
 /SistemaDeSemaforos/demandas/
 # Resultados experimentais locais (preservados, mas não versionados).
 /outputs/
+# Controle local da instância web, recriado automaticamente.
+/.runtime/
 # Cache criado pela execução dos módulos e testes Python.
 __pycache__/
 *.py[cod]

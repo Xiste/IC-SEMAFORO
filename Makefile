@@ -1,8 +1,13 @@
 # Interface operacional. Opções e manutenção: docs/GUIA_DE_FUNCIONAMENTO.md.
+ifeq ($(OS),Windows_NT)
+PYTHON ?= py -3
+else
 PYTHON ?= python3
+endif
 export PYTHONDONTWRITEBYTECODE := 1
 DEMAND_ARGS ?=
 RUN_ARGS ?=
+INTERFACE_ARGS ?=
 
 .PHONY: demand-random run-random web interface kill-interface test
 
@@ -14,14 +19,13 @@ demand-random:
 run-random:
 	@$(PYTHON) -m SistemaDeSemaforos.simulation.episode_runner $(RUN_ARGS)
 
-# Interface local no navegador, com execução em segundo plano.
+# Servidor no terminal; o lote SUMO executa em uma thread.
 web interface:
-	@$(PYTHON) -m SistemaDeSemaforos.simulation.web_interface
+	@$(PYTHON) -m SistemaDeSemaforos.simulation.web_interface $(INTERFACE_ARGS)
 
-# Encerra todas as interfaces iniciadas pelo módulo, mesmo fora desta pasta.
+# Solicita o encerramento somente da interface desta cópia do projeto.
 kill-interface:
-	@pids="$$(ps -eo pid=,args= | awk '$$0 ~ /(^|[[:space:]])-m[[:space:]]+SistemaDeSemaforos\.simulation\.web_interface([[:space:]]|$$)/ {print $$1}')"; \
-	if [ -n "$$pids" ]; then kill -INT $$pids; else echo "Nenhuma interface em execução."; fi
+	@$(PYTHON) -m SistemaDeSemaforos.simulation.web_interface --stop
 
 # Testes automatizados sem iniciar episódios SUMO.
 test:

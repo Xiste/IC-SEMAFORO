@@ -333,8 +333,8 @@ def _metasettran_portal_accounting(planned, scheduled, departures, trip_statuses
         inserted_ids = [identifier for identifier in identifiers if identifier in departures]
         status_counts = Counter(trip_statuses[identifier] for identifier in identifiers)
         scheduled_times = sorted(scheduled[identifier] for identifier in identifiers)
-        # An insertion rounded down by SUMO by <=0.5 ms must not subtract a
-        # different pending vehicle before its own scheduled boundary.
+        # Uma inserção antecipada pelo arredondamento do SUMO (até 0,5 ms) não
+        # pode descontar outro veículo pendente antes de sua própria faixa.
         released_times = sorted(max(scheduled[identifier], departures[identifier]) for identifier in inserted_ids)
         programmed_bins = Counter(int(scheduled[identifier] // 900) for identifier in identifiers)
         delay_bins = defaultdict(list)
@@ -343,8 +343,8 @@ def _metasettran_portal_accounting(planned, scheduled, departures, trip_statuses
         intervals = []
         for index in range(math.ceil(horizon / 900)):
             begin, end = index * 900, min((index + 1) * 900, horizon)
-            # Half-open civil windows. At a boundary, a departure exactly at
-            # end belongs to the next interval, as does its scheduled time.
+            # Janelas civis são semiabertas: uma partida exatamente no fim
+            # pertence ao intervalo seguinte, assim como seu horário programado.
             pending = bisect_left(scheduled_times, end) - bisect_left(released_times, end)
             intervals.append({
                 "begin": begin, "end": end,
@@ -421,6 +421,8 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
         raise ValueError("Acesso MetaSettran não pode ser periférico e de atividade ao mesmo tempo.")
     origin_edges = entry_edges | activity_origins.keys()
     destination_edges = exit_edges | activity_destinations.keys()
+    # A agenda é intenção de partida; somente Tripinfo confirma inserção e
+    # chegada. Ausência de observação não deve virar fluxo ou atraso zero.
     planned, planned_routes, scheduled, departures, endings = {}, {}, {}, {}, {}
     route_cache = {}
     route_count = 0
@@ -568,6 +570,8 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
             if identifier not in counts or identifier in interval_edges:
                 raise ValueError("Observação MetaSettran contém via desconhecida ou duplicada.")
             interval_edges.add(identifier)
+            # entered conta passagens nesta via e janela. Somar sensores não
+            # deduplica os veículos que atravessaram mais de um deles.
             value = int(edge.get("entered", "0"))
             if value < 0:
                 raise ValueError("Contagem MetaSettran negativa.")
@@ -953,6 +957,8 @@ def _trips(path, metrics, vehicles=None):
         depart = float(attributes["depart"])
         arrival = float(attributes["arrival"])
         vaporized = attributes.get("vaporized", "")
+        # Tempos negativos são marcadores de ausência, não tempos de viagem.
+        # Separar as situações evita misturar censura pelo horizonte e conclusão.
         if depart < 0:
             status = "undeparted"
         elif arrival < 0:
@@ -1367,6 +1373,8 @@ def collect_episode(raw_dir: Path, net_file: Path, profile: str = "core") -> dic
         lanes, edges, _, groups, membership = _network(net_file)
         metrics["collection_network_time_seconds"] = time.perf_counter() - started
     parsers = [
+        # Os agregados comuns usam os mesmos parsers em core/full; o parâmetro
+        # de entidades controla retenção individual, sem redefinir a população.
         ("trips", _trips, (raw_dir / "trips.xml.gz", metrics, entities["vehicles"] if profile == "full" else None)),
         ("statistics", _statistics, (raw_dir / "statistics.xml", metrics)),
         ("queues", _queues, (raw_dir / "queues.xml.gz", lanes, groups, membership, entities if profile == "full" else None, metrics)),

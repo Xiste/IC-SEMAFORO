@@ -194,6 +194,8 @@ def _aggregate(records, offset_hours=0, source_time_convention=None):
                 begin, end = begin + shift, end + shift
             else:
                 begin, end = (_source_to_civil(stamp, source_time_convention) for stamp in (begin, end))
+            # Ratear a contagem pela sobreposição supõe taxa uniforme dentro do
+            # intervalo aceito; um intervalo ausente não ganha exposição artificial.
             while begin < end:
                 bucket = begin.replace(minute=begin.minute // 15 * 15, second=0, microsecond=0)
                 stop = min(end, bucket + timedelta(seconds=BIN_SECONDS))
@@ -560,6 +562,8 @@ def calibrate_weekly(csv_path=DEFAULT_CSV, variation=1, seed=None, source_time_c
     records, quality, digest = _read_measurements(csv_path, source_time_convention=source_time_convention)
     bins = _aggregate(records, source_time_convention=source_time_convention)
     observed_dates = sorted({stamp.date() for values in bins.values() for stamp in values})
+    # A separação treino/validação é civil e cronológica; escolher datas pelo
+    # ajuste das métricas vazaria informação de validação para a demanda.
     training = [day for day in observed_dates if day < TRAIN_BEFORE and day not in HOLIDAYS]
     if len(training) < MIN_TRAINING_DATES:
         raise ValueError("MetaSettran semanal requer ao menos três datas de treino.")
@@ -600,6 +604,8 @@ def calibrate_weekly(csv_path=DEFAULT_CSV, variation=1, seed=None, source_time_c
         pool = complete or candidates
         token = hashlib.sha256(f"{WEEKLY_VERSION}|{effective_seed}|{weekday}".encode()).digest()
         chosen = pool[int.from_bytes(token[:8], "big") % len(pool)] if pool else None
+        # O mesmo dia fornece os 96 intervalos dos dois sensores. Reamostrar
+        # cada intervalo/sensor separadamente destruiria a dependência observada.
         observed_bins = 0
         for index in range(96):
             eligible = chosen is not None and chosen in eligible_dates[weekday, index]

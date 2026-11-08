@@ -67,6 +67,8 @@ def prepare_outputs(directory: Path, profile: str = "core", *,
         })
     for option, filename in files.items():
         options.extend([f"--{option}", str(raw / filename)])
+    # Incluir quem não partiu ou não terminou impede avaliar só as viagens
+    # concluídas, que podem esconder congestionamento no horizonte escolhido.
     flags = [
         "tripinfo-output.write-unfinished", "tripinfo-output.write-undeparted",
     ]

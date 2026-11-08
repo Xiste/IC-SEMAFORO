@@ -21,9 +21,13 @@ def write_json(path: Path, contents: dict) -> None:
         compressed = path.suffix == ".gz"
         opener = gzip.open if compressed else open
         with opener(temporary, "wt", encoding="utf-8") as stream:
+            # NaN/inf não representam ausência de medição. Rejeitá-los aqui
+            # preserva o JSON anterior em vez de publicar um resultado ambíguo.
             json.dump(contents, stream, ensure_ascii=False, allow_nan=False,
                       indent=None if compressed else 2)
             stream.write("\n")
+        # O temporário fica na mesma pasta para a publicação trocar o arquivo
+        # completo sem expor conteúdo parcial à consulta pela interface.
         temporary.replace(path)
     finally:
         if temporary is not None:

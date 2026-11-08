@@ -242,6 +242,8 @@ function updateSelection() {
   get('selected-count').textContent = selected.length;
   get('group-count').textContent = groups.length;
   get('selected-groups').replaceChildren();
+  // A lista manual de variações segue esta numeração por grupo, inclusive
+  // quando a seleção atravessa de domingo para segunda.
   let number = 1;
   for (const group of groups) {
     const item = document.createElement('li');
@@ -267,6 +269,8 @@ function updateSelection() {
 }
 
 function updateButtons() {
+  // Desabilitar botões é feedback local; o lock no backend decide se pode
+  // iniciar um lote ou excluir resultados, inclusive entre abas diferentes.
   const busy = !connected || submitting || deleting || serverState?.status === 'running';
   get('run').disabled = busy || Boolean(variationError) || Boolean(selectionError);
   get('delete-results').disabled = busy;
@@ -435,6 +439,7 @@ get('delete-results').addEventListener('click', async () => {
   updateButtons();
   get('delete-message').textContent = 'Apagando resultados...';
   try {
+    // O escopo da exclusão pertence ao servidor; só enviamos a confirmação.
     const response = await fetch('/delete-results', {
       method: 'POST', body: new URLSearchParams({confirmation: 'delete'})
     });
@@ -446,6 +451,8 @@ get('delete-results').addEventListener('click', async () => {
     deleting = false;
     connected = false;
     updateButtons();
+    // Uma falha de permissão pode ocorrer após exclusão parcial; reler a
+    // listagem evita mostrar arquivos que já foram removidos.
     refreshOutputs();
   }
 });

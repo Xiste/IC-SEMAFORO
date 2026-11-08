@@ -24,6 +24,31 @@ O EDI usa processos nativos aguardados por `subprocess.run`, arquivos XML e cole
 posterior à simulação. O servidor web executa o lote em uma thread e oferece consulta
 de estado e navegação pelos resultados.
 
+`make interface` mantém o servidor no terminal. `make kill-interface` solicita
+que somente a instância desta cópia do projeto pare de atender e aguarde o lote
+terminar, como `Ctrl+C`. Não há encerramento por PID, nome ou porta. Um lock
+nativo (`fcntl` no Linux, `msvcrt` no Windows) impede instâncias duplicadas e é
+liberado pelo sistema se o processo falhar. Em `.runtime/`, `interface.lock`
+permanece entre execuções; `interface.json` identifica a instância e sua porta,
+e `interface.stop` leva o pedido de parada. Identificadores antigos são ignorados.
+O lock permanece ocupado durante a conclusão do lote. Não remova essa pasta
+enquanto a interface estiver ativa. As ferramentas SUMO chamadas pelo worker
+ficam em uma sessão/grupo separado para que o `Ctrl+C` do servidor não as interrompa;
+as chamadas CLI na thread principal mantêm o comportamento anterior.
+
+No Windows, `tzdata` fornece `America/Sao_Paulo`; não há mudança na conversão
+temporal nem nas seeds. Configuração, execução e consulta usam os mesmos módulos.
+Na exclusão, o Git protege arquivos do índice e de HEAD. A mesma rotina Python
+percorre apenas os dois perfis autorizados e preserva links, incluindo junctions.
+Ela usa operações por nome dentro de diretórios cuja identidade foi conferida,
+em um processo curto com CWD próprio; assim não depende de `fwalk`/`dir_fd` nem
+altera o diretório do servidor. Pastas sem leitura não são percorridas, como no
+mecanismo anterior. Trocas de diretório e falhas ao remover arquivos interrompem
+a exclusão, sem forçar permissões ou reverter arquivos já removidos.
+O lock do lote permanece adquirido até a operação terminar.
+A instalação está no README. A validação nativa de Make, lock, sinais, exclusão,
+SUMO/SUMO-GUI e caminhos Windows permanece pendente; mocks não substituem esse ensaio.
+
 | Componente | Responsabilidade |
 | --- | --- |
 | `simulation/episode_runner.py` | Planejar faixas e grupos, executar episódios e registrar condições. |

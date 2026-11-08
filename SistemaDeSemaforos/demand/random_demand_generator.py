@@ -16,6 +16,7 @@ import random
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
+import threading
 import time
 import xml.etree.ElementTree as ET
 
@@ -28,6 +29,15 @@ DEFAULT_NET_FILE = (
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "demandas"
 DEFAULT_DURATION = 7200.0
 DEFAULT_PERIOD = 1.5
+
+
+def sumo_process_options():
+    """Protege ferramentas do lote web contra Ctrl+C; o CLI mantém seus sinais."""
+    if threading.current_thread() is threading.main_thread():
+        return {}
+    if os.name == "nt":
+        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {"start_new_session": True}
 
 
 def _find_random_trips() -> Path:
@@ -137,13 +147,16 @@ def generate_random_demand(
             if metadata is not None:
                 metadata["command"] = command
             if log_file is None:
-                subprocess.run(command, check=True)
+                subprocess.run(command, check=True, **sumo_process_options())
             else:
                 log_file = Path(log_file).expanduser().resolve()
                 log_file.parent.mkdir(parents=True, exist_ok=True)
                 with log_file.open("w", encoding="utf-8") as log:
-                    subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
+                    subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT,
+                                   **sumo_process_options())
 
+            # Pedido, rota validada e inserção são etapas distintas. Estes XMLs
+            # comprovam só a geração; a inserção será medida na execução SUMO.
             trip_count = _validate_xml_output(new_trips_file, "trip")
             vehicle_count = _validate_xml_output(new_routes_file, "vehicle")
             new_trips_file.replace(trips_file)

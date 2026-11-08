@@ -31,7 +31,7 @@ from SistemaDeSemaforos.demand.metasettran_network import (
 )
 from SistemaDeSemaforos.demand.metasettran_transitions import compose_rate_curves, transport_times
 from SistemaDeSemaforos.demand.random_demand_generator import (
-    DEFAULT_NET_FILE, DEFAULT_OUTPUT_DIR,
+    DEFAULT_NET_FILE, DEFAULT_OUTPUT_DIR, sumo_process_options,
 )
 
 
@@ -76,6 +76,8 @@ def _sha256(path):
 
 
 def _stream_seed(seed, group_id, purpose):
+    # Separar os propósitos evita que novos sorteios de rotas alterem as partidas.
+    # Não usar hash() do Python: seu valor pode mudar entre processos.
     return int.from_bytes(hashlib.sha256(f"{seed}:{group_id}:{purpose}".encode()).digest(), "big")
 
 
@@ -103,6 +105,8 @@ def resolve_contexts(day="tuesday", start="15:00", sections=1, variation=None,
     else:
         master_seed = secrets.randbits(63) if master_seed is None else master_seed
         rng = random.Random(_stream_seed(master_seed, COMPOSITION_VERSION, "context_variations"))
+        # O sorteio é com reposição: repetir uma das 25 realizações é permitido.
+        # Esses índices não representam 25 semanas observadas independentes.
         selected_variations = [rng.randrange(1, 26) for _ in range(sections)]
         method = "independent_uniform_1_to_25"
     begin = selection_start_week_second(day, start)
@@ -139,12 +143,13 @@ def _routes_root():
 def _run_router(command, log_file, *, append=False):
     """Executa cada busca nativa com o mesmo contrato de falhas e registro."""
     if log_file is None:
-        subprocess.run(command, check=True)
+        subprocess.run(command, check=True, **sumo_process_options())
         return
     log_file = Path(log_file).expanduser().resolve()
     log_file.parent.mkdir(parents=True, exist_ok=True)
     with log_file.open("a" if append else "w", encoding="utf-8") as log:
-        subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
+        subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT,
+                       **sumo_process_options())
 
 
 def _route_pairs(model, net_file, directory, log_file, *, network=None):
@@ -689,7 +694,7 @@ def _urban_prior(pairs, model, endpoint_lists, entries, exits):
         through = entry.get("endpoint_kind", "boundary") == exit_portal.get("endpoint_kind", "boundary") == "boundary"
         if through:
             chord = math.dist(entry["position_xy_m"], exit_portal["position_xy_m"])
-            # The one-metre floor is numerical, not a minimum number of trips.
+            # O piso de um metro é numérico; não impõe quantidade mínima de viagens.
             affinity = min(1.0, max(chord, 1.0) / shortest_length) ** 2
         else:
             affinity = math.exp(-shortest_length / config.get("distance_scale_m", 2000.0))
@@ -720,6 +725,8 @@ def _urban_prior(pairs, model, endpoint_lists, entries, exits):
         utility_total = sum(utilities)
         hierarchy = model["regional_demand"].get("road_hierarchy_overrides", {}).get(origin,
             entry.get("prior_road_type", entry.get("road_type", "")))
+        # Repartir a massa do OD entre suas alternativas evita que acrescentar
+        # percursos equivalentes multiplique a oportunidade desse destino.
         for pair, utility in zip(members, utilities):
             pair.update(urban_origin_opportunity=entries[origin], urban_destination_weight=destination_weight,
                         urban_route_probability=utility / utility_total,
@@ -1079,6 +1086,8 @@ def _observation_projection(pairs, model, calibration, begin, duration, knots, f
 
 
 def _choose_route(weights, timestamp, rng, uniforms=None, cumulative_weights=None):
+    # Misturar as distribuições dos centros de 15 min suaviza probabilidades;
+    # não modifica o percurso de um veículo que já entrou no SUMO.
     coordinate = timestamp / 900 - .5
     left = max(0, min(len(weights) - 1, math.floor(coordinate)))
     right = max(0, min(len(weights) - 1, math.ceil(coordinate)))

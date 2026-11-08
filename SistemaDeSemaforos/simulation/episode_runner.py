@@ -29,6 +29,7 @@ from ..demand.random_demand_generator import (
     DEFAULT_NET_FILE,
     DEFAULT_PERIOD,
     generate_random_demand,
+    sumo_process_options,
 )
 from ..metrics.metrics_storage import save_entities, save_episode
 from ..metrics.sumo_output_configuration import prepare_outputs
@@ -114,9 +115,9 @@ def _compact_metasettran_core(execution: dict) -> dict:
 def read_sumo_configuration(binary: str) -> dict:
     """Consulta versão e defaults como dados, sem copiar ferramentas ou entradas."""
     version = subprocess.run([binary, "--version"], check=True,
-                             capture_output=True, text=True).stdout.strip()
+                             capture_output=True, text=True, **sumo_process_options()).stdout.strip()
     template = subprocess.run([binary, "--save-template", "-"], check=True,
-                              capture_output=True, text=True).stdout
+                              capture_output=True, text=True, **sumo_process_options()).stdout
     return {
         "sumo_version": version,
         "sumo_defaults": {item.tag: item.get("value")
@@ -204,13 +205,14 @@ def run_simulation(
         if recording_dir is None:
             with tempfile.TemporaryDirectory(prefix="settran-fixed-") as temporary:
                 additional = compile_selection(selection, Path(temporary) / "settran.add.xml")
-                subprocess.run(command + ["--additional-files", str(additional)], check=True)
+                subprocess.run(command + ["--additional-files", str(additional)], check=True,
+                               **sumo_process_options())
             return
         inputs = recording_dir / "inputs"
         inputs.mkdir(parents=True, exist_ok=True)
         additional = compile_selection(selection, inputs / "settran.add.xml")
     elif recording_dir is None:
-        subprocess.run(command, check=True)
+        subprocess.run(command, check=True, **sumo_process_options())
         return
 
     preparation_started = perf_counter()
@@ -247,7 +249,7 @@ def run_simulation(
         # temporária; defaults são consultados em memória e a versão fica no resultado.
         subprocess.run(command + ["--save-configuration",
                                  str(recording_dir / "inputs" / "sumo_config.sumocfg")],
-                       check=True, stdout=log, stderr=subprocess.STDOUT)
+                       check=True, stdout=log, stderr=subprocess.STDOUT, **sumo_process_options())
         configured = ET.parse(recording_dir / "inputs" / "sumo_config.sumocfg").getroot()
         metadata["configured_options"] = {
             item.tag: item.get("value") for group in configured for item in group
@@ -259,7 +261,8 @@ def run_simulation(
         metadata["configuration_time_seconds"] = perf_counter() - preparation_started
         started = perf_counter()
         try:
-            subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
+            subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT,
+                           **sumo_process_options())
         finally:
             metadata["duration_seconds"] = perf_counter() - started
 
@@ -293,6 +296,8 @@ def group_sections(selected_sections, group_consecutive=False):
     if not group_consecutive:
         groups = [[index] for index in sorted(selected)]
     elif len(selected) == 56:
+        # Sem lacuna semanal não há início natural de grupo; fixar segunda 00h
+        # mantém a ordem reproduzível e evita um ciclo sem ponto de parada.
         groups = [list(range(56))]
     else:
         starts = sorted(index for index in selected if (index - 1) % 56 not in selected)
@@ -474,6 +479,8 @@ def run_episodes(
                         selection_group_index=group_index, selection_group_count=len(plans))
                 duration = 10800.0 * plan["sections"]
                 end = duration + drain_limit
+            # Cada grupo inicia um SUMO novo. Faixas dentro do mesmo grupo
+            # compartilham veículos, filas e semáforos até o escoamento final.
             _run_episode(net_file, batch_dir, episode, episodes, gui, duration, period,
                          end, metrics_profile, context, signal_profile, selection, episode_demand)
     return batch_dir
@@ -626,6 +633,8 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
             metrics.update(validation.pop("metrics"))
             execution["demand_validation"] = validation
         metrics["aggregation_time_seconds"] = perf_counter() - aggregation_started
+        # Conclusão do processamento não implica que todos os veículos chegaram;
+        # viagens incompletas e não inseridas continuam registradas nas métricas.
         metrics["status"] = "completed"
     except BaseException as exc:
         metrics["status"] = "interrupted" if isinstance(exc, KeyboardInterrupt) else "failed"

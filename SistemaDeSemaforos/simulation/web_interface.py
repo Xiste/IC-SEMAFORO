@@ -1,10 +1,11 @@
-"""Interface HTTP local, sem dependências, sobre run_episodes.
+"""Interface HTTP local sobre run_episodes.
 
 Uso: python3 -B -m SistemaDeSemaforos.simulation.web_interface
 O único lote ativo fica numa thread; os resultados continuam pertencendo ao runner.
 """
 
 import argparse
+from contextlib import contextmanager
 import errno
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -15,8 +16,10 @@ from pathlib import Path
 import re
 import secrets
 import shutil
+import signal
 import stat
 import subprocess
+import sys
 import threading
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
@@ -132,6 +135,7 @@ class BatchState:
         self.lock = threading.Lock()
         self.state = {"status": "idle", "results_url": "/results/"}
         self.worker = None
+        self.stopping = False
 
     def snapshot(self):
         with self.lock:
@@ -139,10 +143,14 @@ class BatchState:
 
     def start(self, options):
         with self.lock:
+            if self.stopping:
+                raise RuntimeError("A interface está encerrando; não aceita novos lotes.")
             if self.state["status"] == "running":
                 raise RuntimeError("Já existe um lote em execução. Aguarde sua conclusão.")
             self.state = {"status": "running", "results_url":
                           f'/results/outputs-{options["demand_profile"]}/'}
+            # O lote não depende da aba do navegador; a thread não daemon permite
+            # que o encerramento aguarde a publicação dos resultados.
             self.worker = threading.Thread(target=self._run, args=(dict(options),), daemon=False)
             self.worker.start()
             return dict(self.state)
@@ -163,7 +171,8 @@ class BatchState:
             self.state.update(result)
 
     def delete_results(self):
-        # O mesmo lock serializa a limpeza e o início de um lote.
+        # O mesmo lock serializa a limpeza e o início de um lote. Ele permanece
+        # adquirido até a exclusão terminar, incluindo a chamada Python isolada.
         with self.lock:
             if self.state["status"] == "running":
                 raise RuntimeError("Não é possível apagar resultados durante uma simulação.")
@@ -177,41 +186,141 @@ def delete_outputs():
     """Remove só outputs não versionados; nunca percorre links simbólicos."""
     roots = [result_path(name) for name in RESULT_PROFILES]
     project = runner.PROJECT_ROOT
+    project_stat = project.stat()
     tracked = set()
     try:
         # HEAD também protege arquivos cuja exclusão foi apenas colocada no índice.
         for arguments in (("ls-files", "--cached", "-z"), ("ls-tree", "-r", "--name-only", "-z", "HEAD")):
             data = subprocess.check_output(["git", "-C", str(project), *arguments, "--",
-                                            *(str(path.relative_to(project)) for path in roots)],
+                                            *(path.relative_to(project).as_posix() for path in roots)],
                                            stderr=subprocess.PIPE)
             tracked.update(project / os.fsdecode(name) for name in data.split(b"\0") if name)
     except (OSError, subprocess.CalledProcessError) as exc:
         raise ValueError("Não foi possível consultar o Git. Nenhum resultado foi apagado.") from exc
 
+    # CWD ancora operações por nome nos dois sistemas. Como ele é compartilhado
+    # pelas threads, só o processo curto de exclusão pode mudá-lo; o servidor não muda.
+    command = [sys.executable, "-B", "-c",
+               "import json, sys; "
+               "from SistemaDeSemaforos.simulation.web_interface import _delete_output_tree; "
+               "print(json.dumps(_delete_output_tree(json.load(sys.stdin))))"]
+    payload = {"project": str(project), "identity": [project_stat.st_dev, project_stat.st_ino],
+               "output_parts": list(runner.OUTPUT_ROOT.relative_to(project).parts),
+               "tracked": [str(path.relative_to(project)) for path in tracked]}
+    result = subprocess.run(command, input=json.dumps(payload), capture_output=True,
+                            text=True, encoding="utf-8", cwd=Path(__file__).resolve().parents[2])
+    if result.returncode:
+        raise ValueError("Não foi possível concluir a exclusão dos resultados.")
+    result = json.loads(result.stdout)
+    if "error" in result:
+        if result["errno"] is not None:
+            raise OSError(result["errno"], result["strerror"], result["filename"])
+        raise ValueError(result["error"])
+    return result["deleted_files"]
+
+
+def _delete_output_tree(payload):
+    """Rotina comum de exclusão; chamada somente num processo com CWD próprio."""
+    tracked = {Path(name) for name in payload["tracked"]}
+
     def protected(path):
         return any(item == path or item in path.parents for item in tracked)
 
-    deleted = 0
-    for root in roots:
-        root.mkdir(parents=True, exist_ok=True)
-        # Descritores e follow_symlinks=False evitam percorrer links, inclusive
-        # se uma entrada for trocada enquanto os diretórios são examinados.
-        for directory, dirs, files, fd in os.fwalk(root, topdown=False, follow_symlinks=False):
-            for name in files:
-                if not protected(Path(directory) / name) and stat.S_ISREG(
-                        os.stat(name, dir_fd=fd, follow_symlinks=False).st_mode):
-                    os.unlink(name, dir_fd=fd)
-                    deleted += 1
-            for name in dirs:
-                if protected(Path(directory) / name) or not stat.S_ISDIR(
-                        os.stat(name, dir_fd=fd, follow_symlinks=False).st_mode):
-                    continue
-                try:
-                    os.rmdir(name, dir_fd=fd)
-                except OSError as exc:
-                    if exc.errno not in {errno.ENOTEMPTY, errno.EEXIST}:
-                        raise
-    return deleted
+    def linked(info):
+        # Junctions do Windows também redirecionam diretórios, sem serem symlinks.
+        return (stat.S_ISLNK(info.st_mode)
+                or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT))
+
+    def enter(name, info):
+        if linked(info) or not stat.S_ISDIR(info.st_mode) or not info.st_ino:
+            raise ValueError("Diretório de resultados não pode ser acessado com segurança.")
+        try:
+            os.chdir(name)
+        except OSError:
+            # fwalk não percorria diretórios que não conseguia abrir para leitura.
+            # Manter esse caso preserva seus arquivos e permite limpar os demais.
+            try:
+                os.listdir(name)
+            except OSError:
+                return False
+            raise
+        # Se trocaram o diretório por um link entre lstat e chdir, não apagar nada nele.
+        if not os.path.samestat(info, os.stat(".")):
+            raise ValueError("Diretório de resultados foi substituído durante a exclusão.")
+        return True
+
+    def walk(directory):
+        deleted = 0
+        dirs, files = [], []
+        try:
+            names = os.listdir(".")
+        except OSError:
+            return 0  # Mesmo tratamento de falhas de leitura do fwalk anterior.
+        for name in names:
+            info = os.lstat(name)
+            if not linked(info):
+                (dirs if stat.S_ISDIR(info.st_mode) else files).append(name)
+        for name in dirs:
+            info = os.lstat(name)
+            if linked(info) or not stat.S_ISDIR(info.st_mode):
+                continue
+            parent = os.stat(".")
+            if not enter(name, info):
+                continue
+            deleted += walk(directory / name)
+            os.chdir("..")
+            if not os.path.samestat(parent, os.stat(".")):
+                raise ValueError("Diretório pai foi substituído durante a exclusão.")
+        # Manter a ordem de baixo para cima e remover somente entradas regulares.
+        # Nomes sem separadores ficam ancorados no CWD, mesmo se um ancestral mudar.
+        for name in files:
+            info = os.lstat(name)
+            if not protected(directory / name) and not linked(info) and stat.S_ISREG(info.st_mode):
+                os.unlink(name)
+                deleted += 1
+        for name in dirs:
+            info = os.lstat(name)
+            if protected(directory / name) or linked(info) or not stat.S_ISDIR(info.st_mode):
+                continue
+            try:
+                os.rmdir(name)
+            except OSError as exc:
+                if exc.errno not in {errno.ENOTEMPTY, errno.EEXIST}:
+                    raise
+        return deleted
+
+    try:
+        os.chdir(payload["project"])
+        info = os.stat(".")
+        if [info.st_dev, info.st_ino] != payload["identity"] or not info.st_ino:
+            raise ValueError("Diretório do projeto foi substituído durante a exclusão.")
+        parts = payload["output_parts"]
+        for name in parts:
+            try:
+                os.mkdir(name)
+            except FileExistsError:
+                pass
+            if not enter(name, os.lstat(name)):
+                return {"deleted_files": 0}
+        deleted = 0
+        for name in RESULT_PROFILES:
+            try:
+                os.mkdir(name)
+            except FileExistsError:
+                pass
+            parent = os.stat(".")
+            if not enter(name, os.lstat(name)):
+                continue
+            deleted += walk(Path(*parts) / name)
+            os.chdir("..")
+            if not os.path.samestat(parent, os.stat(".")):
+                raise ValueError("Diretório de outputs foi substituído durante a exclusão.")
+        return {"deleted_files": deleted}
+    except (OSError, ValueError) as exc:
+        # Falhas de permissão/bloqueio interrompem a operação, sem forçar chmod,
+        # seguir links ou tentar excluir dados de outro perfil para compensar.
+        return {"error": str(exc), "errno": getattr(exc, "errno", None),
+                "strerror": getattr(exc, "strerror", None), "filename": getattr(exc, "filename", None)}
 
 
 def result_url(path):
@@ -361,6 +470,8 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("Campos duplicados não são permitidos.")
             fields = {key: values[0] for key, values in fields.items()}
             if self.path == "/delete-results":
+                # A confirmação é o único campo aceito: o navegador não escolhe
+                # pastas, perfis ou arquivos para a exclusão.
                 if fields != {"confirmation": "delete"}:
                     raise ValueError("Confirme explicitamente a exclusão permanente dos resultados.")
                 self.json_reply(self.server.batch.delete_results())
@@ -375,26 +486,128 @@ class Handler(BaseHTTPRequestHandler):
         pass  # Polling não precisa preencher o terminal; erros são exibidos na página.
 
 
+class InterfaceServer(ThreadingHTTPServer):
+    # No Windows, SO_REUSEADDR pode compartilhar a porta de outro servidor.
+    allow_reuse_address = os.name != "nt"
+
+
 def make_server(port=8000):
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = InterfaceServer(("127.0.0.1", port), Handler)
     server.batch = BatchState()
     return server
 
 
-def main():
+@contextmanager
+def instance_lock(runtime):
+    """Lock do sistema, liberado ao fechar o arquivo, inclusive após falha do processo."""
+    runtime.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # O arquivo permanece: apagá-lo permitiria locks em arquivos diferentes.
+    with (runtime / "interface.lock").open("a+b") as lock:
+        lock.seek(0, os.SEEK_END)
+        if lock.tell() == 0:
+            lock.write(b"\0")
+            lock.flush()
+        lock.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            if exc.errno not in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}:
+                raise
+            acquired = False
+        else:
+            acquired = True
+        yield acquired
+
+
+def stop_interface(runtime):
+    """Pede ao próprio servidor para parar; não usa PID, porta nem sinais."""
+    with instance_lock(runtime) as acquired:
+        if acquired:
+            (runtime / "interface.json").unlink(missing_ok=True)
+            (runtime / "interface.stop").unlink(missing_ok=True)
+            print("Nenhuma interface em execução nesta cópia do projeto.", flush=True)
+            return
+        try:
+            info = json.loads((runtime / "interface.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise ValueError("Interface iniciando ou controle indisponível. Tente novamente.") from exc
+        instance = info.get("instance") if isinstance(info, dict) else None
+        if not isinstance(instance, str) or not re.fullmatch(r"[0-9a-f]{32}", instance):
+            raise ValueError("Controle de instância inválido; nenhum processo foi encerrado.")
+        # O pedido leva a identidade atual; um arquivo de parada antigo não
+        # deve encerrar uma instância iniciada depois dele.
+        (runtime / "interface.stop").write_text(instance, encoding="utf-8")
+        print("Encerramento solicitado. A interface aguarda o lote ativo terminar; "
+              "mantenha o terminal do servidor aberto.", flush=True)
+
+
+def serve_interface(port, runtime):
+    # Manter o lock até o join impede iniciar outra instância enquanto o lote
+    # anterior ainda grava resultados, mesmo com a porta web já liberada.
+    with instance_lock(runtime) as acquired:
+        if not acquired:
+            raise ValueError("Já existe uma interface ativa nesta cópia do projeto, "
+                             "possivelmente aguardando um lote terminar.")
+        info_path = runtime / "interface.json"
+        stop_path = runtime / "interface.stop"
+        info_path.unlink(missing_ok=True)
+        stop_path.unlink(missing_ok=True)
+        try:
+            with make_server(port) as server:
+                instance = secrets.token_hex(16)
+                info_path.write_text(json.dumps({"instance": instance, "port": server.server_port}),
+                                     encoding="utf-8")
+                server.timeout = 0.2
+                print(f"Abra http://127.0.0.1:{server.server_port} no navegador.", flush=True)
+                try:
+                    while True:
+                        try:
+                            if stop_path.read_text(encoding="utf-8") == instance:
+                                break
+                        except (FileNotFoundError, UnicodeError):
+                            pass
+                        server.handle_request()
+                except KeyboardInterrupt:
+                    pass
+                finally:
+                    # Um segundo Ctrl+C não deve interromper a publicação dos resultados.
+                    previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
+                    try:
+                        with server.batch.lock:
+                            server.batch.stopping = True
+                            worker = server.batch.worker
+                        server.server_close()
+                        print("Servidor encerrado. Aguardando o lote ativo terminar, se houver.", flush=True)
+                        if worker is not None:
+                            worker.join()
+                    finally:
+                        signal.signal(signal.SIGINT, previous)
+        finally:
+            info_path.unlink(missing_ok=True)
+            stop_path.unlink(missing_ok=True)
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8000)
-    args = parser.parse_args()
-    with make_server(args.port) as server:
-        print(f"Abra http://127.0.0.1:{server.server_port} no navegador.", flush=True)
-        try:
-            server.serve_forever()
-        except KeyboardInterrupt:
-            print("Servidor encerrado. Aguardando o lote ativo terminar, se houver.", flush=True)
-        finally:
-            if server.batch.worker is not None:
-                server.batch.worker.join()
+    parser.add_argument("--stop", action="store_true", help="Encerra somente a interface desta cópia do EDI.")
+    args = parser.parse_args(argv)
+    runtime = runner.PROJECT_ROOT / ".runtime"
+    try:
+        if args.stop:
+            stop_interface(runtime)
+        else:
+            serve_interface(args.port, runtime)
+    except (OSError, ValueError) as exc:
+        print(f"Erro: {exc}", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

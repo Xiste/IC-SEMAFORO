@@ -6,10 +6,12 @@ devem preservar uma demanda anterior. Executado pelo comando ``make test``.
 """
 
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from unittest.mock import call, patch
 import xml.etree.ElementTree as ET
@@ -289,6 +291,27 @@ class RandomDemandTests(unittest.TestCase):
             self.generate()
 
         run.assert_not_called()
+
+
+class ProcessSignalTests(unittest.TestCase):
+    def test_cli_keeps_default_process_behavior(self):
+        self.assertEqual(demand.sumo_process_options(), {})
+
+    def test_worker_isolates_console_signals_on_each_platform(self):
+        for platform in ('posix', 'nt'):
+            captured = []
+
+            def options():
+                captured.append(demand.sumo_process_options())
+
+            with self.subTest(platform=platform), patch.object(os, 'name', platform), \
+                    patch.object(subprocess, 'CREATE_NEW_PROCESS_GROUP', 512, create=True):
+                worker = threading.Thread(target=options)
+                worker.start()
+                worker.join(5)
+            self.assertFalse(worker.is_alive())
+            self.assertEqual(captured, [{'creationflags': 512} if platform == 'nt'
+                                        else {'start_new_session': True}])
 
 
 if __name__ == "__main__":

@@ -144,6 +144,8 @@ def compose_rate_curves(section_knots, starts, duration=10800, half_window=900):
     for index, boundary in enumerate(starts[1:]):
         left, right = originals[index], originals[index + 1]
         begin, end = boundary - half_window, boundary + half_window
+        # Conservar cada lado separadamente impede transferir volume de uma
+        # faixa para outra apenas para tornar a fronteira visualmente contínua.
         left_mass, right_mass = left.integral(begin, boundary), right.integral(boundary, end)
         outer_left, outer_right = left.rate(begin), right.rate(end)
         old_left, old_right = left.rate(boundary), right.rate(boundary)
@@ -264,6 +266,8 @@ def transport_times(times, old_knots, new_knots, begin, duration):
                 raise ValueError("Partida fora do intervalo semiaberto da seção.")
             quantile = old.cumulative(second) / old.mass[-1]
             moved = new.inverse(min(new.mass[-1], quantile * new.mass[-1]))
+            # O fim é exclusivo: erro de ponto flutuante não pode deslocar o ID
+            # para a faixa seguinte nem mudar suas regras de retenção.
             result.append(min(math.nextafter(end, begin), max(begin, moved)))
     if any(not math.isfinite(second) or not begin <= second < end for second in result):
         raise ValueError("Partida fora do intervalo semiaberto da seção.")

@@ -2,14 +2,19 @@
 
 from http.client import HTTPConnection
 from html import unescape
+import io
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 from tempfile import TemporaryDirectory
 import threading
+import time
 import unittest
 from unittest.mock import patch
+from contextlib import redirect_stdout
 from urllib.parse import urlencode
 
 from SistemaDeSemaforos.simulation import web_interface as web
@@ -122,7 +127,7 @@ class FormTests(unittest.TestCase):
 
 class HTTPTests(unittest.TestCase):
     def setUp(self):
-        temporary = TemporaryDirectory()
+        temporary = TemporaryDirectory(prefix='EDI outputs espaços ação ')
         self.addCleanup(temporary.cleanup)
         self.project = Path(temporary.name)
         self.git('init', '-q')
@@ -348,6 +353,172 @@ class HTTPTests(unittest.TestCase):
                                       headers={'Origin': 'https://other.invalid'})[0], 403)
         self.assertEqual(json.loads((self.episode / 'metrics.json').read_text()), self.document)
 
+    def test_stopping_interface_refuses_new_batches(self):
+        self.server.batch.stopping = True
+        with patch.object(web.runner, 'run_episodes') as run:
+            self.assertEqual(self.request('/run', RANDOM)[0], 409)
+        run.assert_not_called()
+
+    def delete_with_hook(self, hook):
+        """Instrumenta só o processo de exclusão, sem alterar o CWD do servidor."""
+        original_run = subprocess.run
+
+        def run(command, **kwargs):
+            if '-c' not in command:
+                return original_run(command, **kwargs)
+            script = ('import json, sys, os, stat\nfrom pathlib import Path\n'
+                      'from types import SimpleNamespace\n'
+                      'from SistemaDeSemaforos.simulation import web_interface as web\n'
+                      'payload = json.load(sys.stdin)\nproject = Path(payload["project"])\n'
+                      + hook + '\nprint(json.dumps(web._delete_output_tree(payload)))')
+            return original_run([*command[:-1], script], **kwargs)
+
+        with patch.object(web.subprocess, 'run', side_effect=run):
+            return self.request('/delete-results', {'confirmation': 'delete'})
+
+    def test_delete_works_without_fwalk_or_dir_fd_and_keeps_server_cwd(self):
+        before = Path.cwd()
+        code, body, _ = self.delete_with_hook('''
+if hasattr(os, 'fwalk'):
+    del os.fwalk
+original_unlink, original_rmdir, original_stat = os.unlink, os.rmdir, os.stat
+def unlink(name):
+    return original_unlink(name)
+def rmdir(name):
+    return original_rmdir(name)
+def stat_path(name):
+    return original_stat(name)
+os.unlink, os.rmdir, os.stat = unlink, rmdir, stat_path
+''')
+        self.assertEqual(code, 200, body)
+        self.assertEqual(json.loads(body)['deleted_files'], 2)
+        self.assertEqual(Path.cwd(), before)
+        self.assertEqual(self.request('/')[0], 200)
+
+    def test_delete_permission_or_locked_file_error_stops_without_forcing_removal(self):
+        other = self.root / 'outputs-metasettran'
+        other.mkdir()
+        (other / 'keep.txt').write_text('other profile')
+        for error in ('PermissionError(13, "Arquivo bloqueado", name)',
+                      'PermissionError(13, "Permissão negada", name)'):
+            with self.subTest(error=error):
+                blocked = self.episode / 'blocked.txt'
+                blocked.write_text('keep')
+                code, body, _ = self.delete_with_hook('''
+original = os.unlink
+def unlink(name):
+    if name == 'blocked.txt':
+        raise ''' + error + '''
+    return original(name)
+os.unlink = unlink
+''')
+                self.assertEqual(code, 400, body)
+                self.assertEqual(blocked.read_text(), 'keep')
+                self.assertEqual((other / 'keep.txt').read_text(), 'other profile')
+                self.assertEqual(json.loads(self.request('/status')[1])['status'], 'idle')
+
+    @unittest.skipUnless(hasattr(os, 'geteuid') and os.geteuid() != 0, 'Exige permissões POSIX sem root.')
+    def test_delete_real_permission_error_preserves_unwritable_episode(self):
+        self.episode.chmod(0o500)
+        try:
+            code, body, _ = self.request('/delete-results', {'confirmation': 'delete'})
+            self.assertEqual(code, 400, body)
+            self.assertEqual(json.loads((self.episode / 'metrics.json').read_text()), self.document)
+        finally:
+            self.episode.chmod(0o700)
+
+    @unittest.skipUnless(hasattr(os, 'geteuid') and os.geteuid() != 0, 'Exige permissões POSIX sem root.')
+    def test_delete_keeps_legacy_behavior_for_unreadable_directories(self):
+        unreadable = self.episode / 'unreadable'
+        unreadable.mkdir()
+        (unreadable / 'keep.txt').write_text('protected')
+        other = self.root / 'outputs-metasettran'
+        other.mkdir()
+        for index, mode in enumerate((0o100, 0o000)):
+            with self.subTest(mode=oct(mode)):
+                (other / 'generated.txt').write_text('generated')
+                unreadable.chmod(mode)
+                try:
+                    code, body, _ = self.request('/delete-results', {'confirmation': 'delete'})
+                    self.assertEqual(code, 200, body)
+                    self.assertEqual(json.loads(body)['deleted_files'], 3 if index == 0 else 1)
+                finally:
+                    unreadable.chmod(0o700)
+                self.assertEqual((unreadable / 'keep.txt').read_text(), 'protected')
+                self.assertFalse((other / 'generated.txt').exists())
+
+    def test_delete_preserves_windows_reparse_entries_and_refuses_reparse_root(self):
+        reparse = self.episode / 'junction'
+        reparse.mkdir()
+        (reparse / 'keep.txt').write_text('protected')
+        hook = '''
+original = os.lstat
+def lstat(name):
+    info = original(name)
+    if str(name) == 'junction':
+        return SimpleNamespace(st_mode=info.st_mode, st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT)
+    return info
+os.lstat = lstat
+'''
+        code, body, _ = self.delete_with_hook(hook)
+        self.assertEqual(code, 200, body)
+        self.assertEqual((reparse / 'keep.txt').read_text(), 'protected')
+        (self.episode / 'new.txt').write_text('keep')
+        code, body, _ = self.delete_with_hook(hook.replace("'junction'", "'outputs'"))
+        self.assertEqual(code, 400, body)
+        self.assertEqual((self.episode / 'new.txt').read_text(), 'keep')
+
+    def test_delete_detects_directory_replacement_before_entering_it(self):
+        outside = self.project / 'outside'
+        outside.mkdir()
+        (outside / 'important.txt').write_text('protected')
+        code, body, _ = self.delete_with_hook('''
+original = os.chdir
+def chdir(name):
+    # Emula um link trocado depois do lstat, sem exigir privilégio para symlinks.
+    return original(project / 'outside' if str(name) == 'batch' else name)
+os.chdir = chdir
+''')
+        self.assertEqual(code, 400, body)
+        self.assertIn('substituído', body)
+        self.assertEqual((outside / 'important.txt').read_text(), 'protected')
+        self.assertEqual(json.loads((self.episode / 'metrics.json').read_text()), self.document)
+
+    @unittest.skipUnless(os.name == 'posix', 'Troca de ancestral aberto é um cenário POSIX.')
+    def test_delete_does_not_follow_ancestor_replaced_while_removing_files(self):
+        outside = self.project / 'outside'
+        (outside / 'episode').mkdir(parents=True)
+        (outside / 'episode/metrics.json').write_text('protected')
+        code, body, _ = self.delete_with_hook('''
+original = os.unlink
+def unlink(name):
+    if name == 'metrics.json':
+        ancestor = project / 'outputs/outputs-random/batch'
+        ancestor.rename(ancestor.with_name('moved'))
+        ancestor.symlink_to(project / 'outside', target_is_directory=True)
+    return original(name)
+os.unlink = unlink
+''')
+        self.assertEqual(code, 200, body)
+        self.assertEqual((outside / 'episode/metrics.json').read_text(), 'protected')
+        self.assertTrue(self.batch.is_symlink())
+
+    @unittest.skipUnless(os.name == 'nt', 'Exige Windows nativo para junction real.')
+    def test_delete_preserves_real_windows_junction(self):
+        outside = self.project / 'outside'
+        outside.mkdir()
+        (outside / 'keep.txt').write_text('protected')
+        junction = self.episode / 'junction'
+        subprocess.run(['cmd', '/c', 'mklink', '/J', str(junction), str(outside)],
+                       check=True, capture_output=True)
+        try:
+            code, body, _ = self.request('/delete-results', {'confirmation': 'delete'})
+            self.assertEqual(code, 200, body)
+            self.assertEqual((outside / 'keep.txt').read_text(), 'protected')
+            self.assertTrue(junction.exists())
+        finally:
+            junction.rmdir()
+
     def test_delete_only_authorized_outputs_preserves_git_links_and_roots(self):
         other = self.root / 'outputs-metasettran' / 'batch' / 'episode'
         other.mkdir(parents=True)
@@ -383,6 +554,21 @@ class HTTPTests(unittest.TestCase):
         self.assertFalse((other / 'generated.xml').exists())
         self.assertEqual(json.loads(self.request('/status')[1])['status'], 'idle')
 
+    def test_delete_preserves_tracked_unicode_paths_and_refreshes_results(self):
+        folder = self.root / 'outputs-random/lote ação com espaços'
+        folder.mkdir()
+        tracked = folder / 'métrica versão.json'
+        tracked.write_text('protected', encoding='utf-8')
+        generated = folder / 'resultado gerado.json'
+        generated.write_text('generated', encoding='utf-8')
+        self.git('add', tracked.relative_to(self.project).as_posix())
+        code, body, _ = self.request('/delete-results', {'confirmation': 'delete'})
+        self.assertEqual(code, 200, body)
+        self.assertEqual(json.loads(body)['deleted_files'], 3)
+        self.assertEqual(tracked.read_text(encoding='utf-8'), 'protected')
+        self.assertFalse(generated.exists())
+        self.assertEqual(self.request('/results/outputs-random/batch/episode/sumo.log')[0], 404)
+
     def test_delete_refuses_symlink_root_or_unavailable_git_before_any_removal(self):
         outside = self.project / 'outside'
         outside.mkdir()
@@ -409,6 +595,167 @@ class HTTPTests(unittest.TestCase):
             self.assertEqual(self.request('/run', RANDOM)[0], 202)
             self.server.batch.worker.join(5)
             run.assert_called_once_with(**web.form_options(RANDOM))
+
+
+class InstanceTests(unittest.TestCase):
+    """Processos reais e isolados; nenhum episódio SUMO é iniciado."""
+
+    def setUp(self):
+        temporary = TemporaryDirectory(prefix='EDI espaços ação ')
+        self.addCleanup(temporary.cleanup)
+        self.project = Path(temporary.name)
+        self.runtime = self.project / '.runtime'
+        encoding = patch.dict(os.environ, PYTHONIOENCODING='utf-8')
+        encoding.start()
+        self.addCleanup(encoding.stop)
+        self.command = [sys.executable, '-B', '-c',
+                        'from pathlib import Path; import sys; '
+                        'from SistemaDeSemaforos.simulation import web_interface as web; '
+                        'web.runner.PROJECT_ROOT = Path(sys.argv[1]); '
+                        'raise SystemExit(web.main(sys.argv[2:]))', str(self.project)]
+
+    def start(self):
+        try:
+            previous = json.loads((self.runtime / 'interface.json').read_text()).get('instance')
+        except (OSError, ValueError):
+            previous = None
+        process = subprocess.Popen(self.command + ['--port', '0'], stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT, text=True, encoding='utf-8')
+        self.addCleanup(self.finish, process)
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            if process.poll() is not None:
+                self.fail(process.communicate()[0])
+            try:
+                info = json.loads((self.runtime / 'interface.json').read_text())
+                if info['instance'] != previous:
+                    self.port = info['port']
+                    return process
+            except (OSError, ValueError, KeyError):
+                time.sleep(0.02)
+        self.fail('Interface não iniciou em cinco segundos.')
+
+    def finish(self, process):
+        if process.poll() is None:
+            try:
+                with redirect_stdout(io.StringIO()):
+                    web.stop_interface(self.runtime)
+            except (OSError, ValueError):
+                pass
+            try:
+                process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                # Apenas o processo sem simulação criado por este teste.
+                process.kill()
+                process.communicate(timeout=5)
+        else:
+            process.communicate()
+
+    def stop(self):
+        result = subprocess.run(self.command + ['--stop'], capture_output=True,
+                                text=True, encoding='utf-8', timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout
+
+    def assert_serving(self, process):
+        connection = HTTPConnection('127.0.0.1', self.port, timeout=3)
+        try:
+            connection.request('GET', '/status')
+            response = connection.getresponse()
+            self.assertEqual(response.status, 200)
+            self.assertEqual(json.loads(response.read())['status'], 'idle')
+        finally:
+            connection.close()
+        self.assertIsNone(process.poll())
+
+    def test_duplicate_different_port_stop_offline_and_restart(self):
+        process = self.start()
+        duplicate = subprocess.run(self.command + ['--port', '0'], capture_output=True,
+                                   text=True, encoding='utf-8', timeout=5)
+        self.assertEqual(duplicate.returncode, 1)
+        self.assertIn('Já existe uma interface', duplicate.stderr)
+        self.assert_serving(process)
+        self.assertIn('Encerramento solicitado', self.stop())
+        output = process.communicate(timeout=5)[0]
+        self.assertEqual(process.returncode, 0, output)
+        self.assertIn('Abra http://127.0.0.1:', output)
+        self.assertFalse((self.runtime / 'interface.json').exists())
+        self.assertFalse((self.runtime / 'interface.stop').exists())
+        self.assertIn('Nenhuma interface', self.stop())
+        self.assert_serving(self.start())
+
+    def test_stale_control_and_unrelated_pid_are_never_used_to_kill(self):
+        self.runtime.mkdir()
+        # Este PID pertence ao próprio processo de testes e nunca deve receber sinal.
+        stale = {'instance': '0' * 32, 'pid': os.getpid(), 'port': 1}
+        (self.runtime / 'interface.json').write_text(json.dumps(stale))
+        (self.runtime / 'interface.stop').write_text(stale['instance'])
+        with patch.object(web.os, 'kill', side_effect=AssertionError('Não sinalizar PIDs')), \
+                redirect_stdout(io.StringIO()):
+            web.stop_interface(self.runtime)
+        self.assertFalse((self.runtime / 'interface.json').exists())
+        (self.runtime / 'interface.json').write_text(json.dumps(stale))
+        process = self.start()
+        # Um pedido antigo e um controle corrompido não encerram a instância nova.
+        (self.runtime / 'interface.stop').write_text(stale['instance'])
+        (self.runtime / 'interface.json').write_text('{')
+        invalid = subprocess.run(self.command + ['--stop'], capture_output=True, timeout=5)
+        self.assertEqual(invalid.returncode, 1)
+        time.sleep(0.3)
+        self.assert_serving(process)
+        (self.runtime / 'interface.json').write_text(json.dumps({'instance': 12345678901234567890123456789012}))
+        invalid = subprocess.run(self.command + ['--stop'], capture_output=True, timeout=5)
+        self.assertEqual(invalid.returncode, 1)
+        self.assert_serving(process)
+        # Uma falha abrupta deixa metadados antigos, mas libera o lock do sistema.
+        process.kill()
+        process.communicate(timeout=5)
+        self.assert_serving(self.start())
+
+    def test_stop_keeps_lock_and_worker_until_results_are_published(self):
+        self.command[3] = '''
+from pathlib import Path
+import sys, time
+from SistemaDeSemaforos.simulation import web_interface as web
+web.runner.PROJECT_ROOT = project = Path(sys.argv[1])
+web.runner.OUTPUT_ROOT = project / 'outputs'
+def run(**options):
+    (project / 'entered').touch()
+    deadline = time.monotonic() + 5
+    while not (project / 'release').exists():
+        if time.monotonic() > deadline:
+            raise RuntimeError('Teste não liberou o lote.')
+        time.sleep(0.02)
+    batch = web.runner.OUTPUT_ROOT / 'outputs-random' / 'batch'
+    batch.mkdir(parents=True)
+    (batch / 'result.txt').write_text('completed')
+    return batch
+web.runner.run_episodes = run
+raise SystemExit(web.main(sys.argv[2:]))
+'''
+        process = self.start()
+        connection = HTTPConnection('127.0.0.1', self.port, timeout=3)
+        try:
+            connection.request('POST', '/run', body=urlencode(RANDOM),
+                               headers={'Content-Type': 'application/x-www-form-urlencoded'})
+            self.assertEqual(connection.getresponse().status, 202)
+        finally:
+            connection.close()
+        deadline = time.monotonic() + 3
+        while not (self.project / 'entered').exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        self.assertTrue((self.project / 'entered').exists())
+        self.stop()
+        time.sleep(0.3)
+        self.assertIsNone(process.poll())
+        duplicate = subprocess.run(self.command + ['--port', '0'], capture_output=True, timeout=3)
+        self.assertEqual(duplicate.returncode, 1)
+        (self.project / 'release').touch()
+        output = process.communicate(timeout=5)[0]
+        self.assertEqual(process.returncode, 0, output)
+        self.assertEqual((self.project / 'outputs/outputs-random/batch/result.txt').read_text(), 'completed')
+        with web.instance_lock(self.runtime) as acquired:
+            self.assertTrue(acquired)
 
 
 if __name__ == "__main__":

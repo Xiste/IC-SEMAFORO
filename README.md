@@ -12,7 +12,8 @@ em Uberlândia. A interface web local permite configurar execuções e consultar
 ## Instalação
 
 Requer **Python 3.10+**, **GNU Make** e **SUMO**, com `sumo`, `duarouter` e
-`tools/randomTrips.py` disponíveis. O código de produção usa a biblioteca padrão Python.
+`tools/randomTrips.py` disponíveis. No Linux, o código de produção usa a biblioteca padrão Python;
+no Windows, instale também os dados de fuso horário `tzdata`, conforme abaixo.
 Os ensaios recentes foram executados com SUMO **1.28.0**. A versão efetivamente usada
 fica registrada em cada resultado.
 
@@ -28,6 +29,49 @@ make interface
 
 Ajuste `SUMO_HOME` para a sua instalação e mantenha essa variável nos terminais de execução.
 As instruções para outras plataformas estão na documentação oficial. [Instalação do SUMO](https://sumo.dlr.de/docs/Installing/)
+
+### Windows nativo (10/11, 64 bits)
+
+No PowerShell, instale Python, SUMO e GNU Make pelo WinGet:
+
+```powershell
+winget install --exact --id Python.Python.3.13 --scope user
+winget install --exact --id EclipseFoundation.SUMO
+winget install --exact --id GnuWin32.Make
+```
+
+Em **Editar as variáveis de ambiente da sua conta → Path → Novo**, adicione
+`C:\Program Files (x86)\GnuWin32\bin` (ajuste se mudou a pasta de instalação).
+O instalador MSI do SUMO configura `SUMO_HOME` e seu `bin` no `Path`.
+Feche e reabra o PowerShell; na pasta deste repositório, execute:
+
+```powershell
+py -3 -m pip install tzdata
+py -3 --version
+make --version
+sumo --version
+duarouter --version
+Test-Path "$env:SUMO_HOME\tools\randomTrips.py"
+make interface
+```
+
+`Test-Path` deve retornar `True`. Se o ambiente SUMO não estiver configurado,
+crie `SUMO_HOME` nas variáveis da conta apontando para a pasta que contém `bin` e
+`tools`, e acrescente `%SUMO_HOME%\bin` ao `Path`; reabra o terminal.
+O EDI é executado diretamente do repositório; `tzdata` é a única dependência
+Python adicional no Windows. O Make usa `py -3` no Windows e `python3` no Linux;
+`PYTHON` continua configurável, por exemplo `make interface PYTHON=python`.
+
+Para **Apagar resultados**, use uma cópia Git do projeto e mantenha `git` no `Path`,
+como no Linux: a exclusão consulta os arquivos versionados antes de agir.
+Se necessário, instale com `winget install --id Git.Git -e --source winget`
+e reabra o terminal. [Git para Windows](https://git-scm.com/install/windows)
+
+Em outro terminal na mesma pasta, use `make kill-interface` para encerrar.
+A instalação segue os pacotes do [WinGet](https://github.com/microsoft/winget-pkgs),
+a [configuração oficial do SUMO](https://sumo.dlr.de/docs/Basics/Basic_Computer_Skills.html#configuring_path_settings)
+e os [dados de fuso do Python](https://docs.python.org/3/library/zoneinfo.html#data-sources).
+A execução nativa no Windows ainda requer validação; os testes desta adaptação foram feitos no Linux.
 
 ## Executar pela interface
 
@@ -53,9 +97,16 @@ realização entre episódios. Os horários MetaSettran são civis de Brasília.
 
 A opção **Exibir interface gráfica do SUMO** abre `sumo-gui` e exige sessão gráfica.
 Há um lote ativo por servidor. Fechar a aba mantém o lote em execução.
-**Ctrl+C** encerra o atendimento web e aguarda o lote terminar.
+**Ctrl+C** ou `make kill-interface`, em outro terminal na mesma pasta, encerra o
+atendimento web e aguarda o lote terminar, preservando a execução SUMO/SUMO-GUI
+e seus resultados. Mantenha o terminal do servidor aberto até a conclusão.
+Há uma instância por cópia do projeto, inclusive ao escolher outra porta.
+O controle fica em `.runtime/`, ignorada pelo Git e recriada automaticamente.
 A ação **Apagar resultados** faz exclusão permanente dos outputs não versionados,
-com confirmação e somente quando o servidor estiver sem lote ativo.
+com confirmação e somente quando o servidor estiver sem lote ativo, no Linux
+e no Windows. Arquivos versionados e links são preservados; pastas sem permissão
+de leitura não são percorridas. Falhas ao remover arquivos interrompem a operação,
+e a listagem é atualizada; arquivos já removidos não são restaurados automaticamente.
 
 ## Executar pelo terminal
 
@@ -102,7 +153,7 @@ estão descritas no guia. [Verificações técnicas](docs/GUIA_DE_FUNCIONAMENTO.
 | Situação | Verificação |
 | --- | --- |
 | Ferramenta SUMO ausente | Confira `sumo` e `duarouter` no `PATH`, além de `$SUMO_HOME/tools/randomTrips.py`. |
-| Porta 8000 ocupada | Inicie `python3 -B -m SistemaDeSemaforos.simulation.web_interface --port 8001`. |
+| Porta 8000 ocupada | Inicie `make interface INTERFACE_ARGS="--port 8001"`. |
 | Falha em uma execução | Abra o lote em **Outputs** e consulte `metrics.json`, `generation.log` e `sumo.log`. |
 | Janela SUMO indisponível | Confira a instalação de `sumo-gui` e a sessão gráfica. A interface web também executa com a opção gráfica desativada. |
 

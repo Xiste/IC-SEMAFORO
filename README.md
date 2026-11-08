@@ -11,67 +11,221 @@ em Uberlândia. A interface web local permite configurar execuções e consultar
 
 ## Instalação
 
-Requer **Python 3.10+**, **GNU Make** e **SUMO**, com `sumo`, `duarouter` e
-`tools/randomTrips.py` disponíveis. No Linux, o código de produção usa a biblioteca padrão Python;
-no Windows, instale também os dados de fuso horário `tzdata`, conforme abaixo.
-Os ensaios recentes foram executados com SUMO **1.28.0**. A versão efetivamente usada
-fica registrada em cada resultado.
+Este guia começa com um computador recém-formatado, conectado à internet e com
+permissão para instalar programas. Escolha as instruções do seu sistema. No Linux,
+o passo a passo cobre Ubuntu 22.04 ou mais recente e derivados, além do Debian 12
+e 13, em computadores de 64 bits (Intel, AMD ou ARM). No Windows, as instruções
+são para Windows 10/11 de 64 bits.
 
-Em Debian/Ubuntu, abra um terminal na raiz deste repositório e prepare o ambiente.
+O EDI **não tem um instalador próprio**: seus arquivos são baixados do repositório
+e a aplicação é iniciada a partir dessa pasta. Você precisará de:
+
+- **Git** para baixar o projeto e permitir a função de apagar resultados.
+- **Python 3.10 ou mais recente** para executar o EDI.
+- **GNU Make** para iniciar a aplicação pelos comandos deste guia.
+- **SUMO**, incluindo `sumo`, `sumo-gui`, `duarouter` e a ferramenta `randomTrips.py`.
+- Um navegador de internet. No Windows, também é necessário instalar o pacote
+  Python **tzdata**, usado para reconhecer o horário de Brasília.
+
+Os testes recentes do projeto foram feitos no Linux com SUMO **1.28.0**. Versões
+antigas, como a 1.18, não reconhecem a rede incluída no EDI. A versão utilizada
+fica registrada nos resultados. A execução no Debian e a execução nativa no
+Windows ainda precisam ser validadas.
+
+### 1. Instale os programas necessários
+
+Digite os comandos no terminal, um de cada vez, pressionando **Enter** e
+aguardando cada um terminar antes de seguir. Quando houver uma confirmação de
+instalação, responda conforme solicitado.
+
+#### Linux — Ubuntu e Debian
+
+Abra o aplicativo **Terminal** pelo menu de aplicativos ou pressione
+**Ctrl+Alt+T**. Instale as ferramentas básicas:
 
 ```bash
-sudo apt-get update
-sudo apt-get install python3 make sumo sumo-tools
-export SUMO_HOME=/usr/share/sumo
-sumo --version
-make interface
+sudo apt update
+sudo apt install python3 python3-venv make git tzdata
 ```
 
-Ajuste `SUMO_HOME` para a sua instalação e mantenha essa variável nos terminais de execução.
-As instruções para outras plataformas estão na documentação oficial. [Instalação do SUMO](https://sumo.dlr.de/docs/Installing/)
+O `sudo` pode pedir a senha da sua conta; os caracteres não aparecem enquanto
+você digita. Depois, crie e ative um ambiente separado para instalar a versão
+testada do SUMO. Assim você não depende das versões antigas disponíveis nos
+repositórios de algumas distribuições:
 
-### Windows nativo (10/11, 64 bits)
-
-No PowerShell, instale Python, SUMO e GNU Make pelo WinGet:
-
-```powershell
-winget install --exact --id Python.Python.3.13 --scope user
-winget install --exact --id EclipseFoundation.SUMO
-winget install --exact --id GnuWin32.Make
+```bash
+python3 -m venv ~/edi-ambiente
+source ~/edi-ambiente/bin/activate
+python3 -m pip install eclipse-sumo==1.28.0
+export SUMO_HOME="$(python3 -c 'import sumo; print(sumo.SUMO_HOME)')"
 ```
 
-Em **Editar as variáveis de ambiente da sua conta → Path → Novo**, adicione
-`C:\Program Files (x86)\GnuWin32\bin` (ajuste se mudou a pasta de instalação).
-O instalador MSI do SUMO configura `SUMO_HOME` e seu `bin` no `Path`.
-Feche e reabra o PowerShell; na pasta deste repositório, execute:
+O pacote oficial [eclipse-sumo](https://sumo.dlr.de/docs/Downloads.php#python-packages-virtual-environments)
+inclui os programas e as ferramentas do SUMO. Mantenha esse terminal aberto para
+os próximos passos. Ao abrir outro terminal para executar o EDI, ative o ambiente
+e defina `SUMO_HOME` novamente, como mostrado ao final da instalação.
+
+Em outras distribuições Linux, os nomes dos pacotes podem ser diferentes.
+Consulte a [instalação oficial do SUMO](https://sumo.dlr.de/docs/Installing/index.html#linux)
+e instale também Git, Python 3.10+, GNU Make e os dados de fuso horário. Use o
+SUMO 1.28.0 para seguir a referência testada do projeto e ajuste `SUMO_HOME` para
+a pasta que contém `tools/randomTrips.py`.
+
+#### Windows 10/11 — 64 bits
+
+1. Abra o menu **Iniciar**, procure **PowerShell** e abra o aplicativo.
+   Confira se o gerenciador de aplicativos do Windows está disponível:
+
+   ```powershell
+   winget --version
+   ```
+
+   Se o comando não for reconhecido, instale ou atualize o **Instalador de
+   Aplicativo** pela Microsoft Store, feche e abra o PowerShell novamente.
+   Consulte a [ajuda da Microsoft para o WinGet](https://learn.microsoft.com/pt-br/windows/package-manager/winget/)
+   se precisar de ajuda.
+
+2. Instale os quatro programas abaixo, um comando por vez. Aceite os termos
+   exibidos e, se o Windows pedir, autorize a instalação. O SUMO é fixado na
+   versão usada nos testes recentes do projeto.
+
+   ```powershell
+   winget install --exact --id Git.Git --source winget
+   winget install --exact --id Python.Python.3.13 --source winget
+   winget install --exact --id EclipseFoundation.SUMO --version 1.28.0 --source winget
+   winget install --exact --id GnuWin32.Make --source winget
+   ```
+
+3. Para que o Windows encontre o Make, pesquise no menu Iniciar por **Editar as
+   variáveis de ambiente da conta**. Em **Variáveis de usuário**, selecione
+   **Path**, clique em **Editar** e depois em **Novo**. Adicione o caminho abaixo
+   e confirme em **OK** em todas as janelas. Se `Path` não existir, crie-o em
+   **Variáveis de usuário**.
+
+   ```text
+   C:\Program Files (x86)\GnuWin32\bin
+   ```
+
+   Caso tenha escolhido outra pasta na instalação, use o caminho da pasta `bin`
+   que contém `make.exe`.
+
+4. Feche e abra o PowerShell para carregar os novos caminhos. Instale os dados de
+   fuso horário para o mesmo Python usado pelo Make:
+
+   ```powershell
+   py -3 -m pip install --user tzdata
+   ```
+
+O instalador MSI do SUMO normalmente configura `SUMO_HOME` e o caminho de seus
+executáveis. Se as verificações abaixo falharem, veja a correção indicada ao
+final delas.
+
+### 2. Baixe o EDI
+
+No mesmo terminal, escolha onde guardar o projeto. Os comandos abaixo usam a
+pasta pessoal do usuário e criarão nela uma pasta chamada `edi`.
+
+No Linux:
+
+```bash
+cd ~
+```
+
+No Windows PowerShell:
 
 ```powershell
-py -3 -m pip install tzdata
-py -3 --version
+cd $env:USERPROFILE
+```
+
+Nos dois sistemas, execute:
+
+```text
+git clone --depth 1 --single-branch --branch "Demanda-02-(Diego)" https://github.com/Xiste/IC-SEMAFORO.git edi
+cd edi
+```
+
+O comando baixa os arquivos atuais do ramo `Demanda-02-(Diego)`, onde está esta
+versão do EDI. A opção `--depth 1` evita baixar todo o histórico. Se a pasta `edi`
+já existir, use a cópia que você já possui ou escolha outro nome no comando de
+download. Nesse caso, substitua `edi` pelo nome escolhido nos comandos `cd`.
+
+### 3. Confira a instalação
+
+Os comandos a seguir podem ser executados de dentro da pasta `edi`. No Linux:
+
+```bash
+python3 --version
+git --version
 make --version
 sumo --version
 duarouter --version
+sumo-gui --version
+echo "$SUMO_HOME"
+test -f "$SUMO_HOME/tools/randomTrips.py" && echo "randomTrips.py encontrado" || echo "randomTrips.py não encontrado"
+python3 -c "from zoneinfo import ZoneInfo; print(ZoneInfo('America/Sao_Paulo'))"
+```
+
+No Windows PowerShell:
+
+```powershell
+py -3 --version
+git --version
+make --version
+sumo --version
+duarouter --version
+sumo-gui --version
+echo $env:SUMO_HOME
 Test-Path "$env:SUMO_HOME\tools\randomTrips.py"
+py -3 -c "from zoneinfo import ZoneInfo; print(ZoneInfo('America/Sao_Paulo'))"
+```
+
+Os programas devem mostrar suas versões, o Python deve ser 3.10 ou mais recente,
+e o último comando deve mostrar `America/Sao_Paulo`. A verificação de
+`randomTrips.py` deve informar que o arquivo foi encontrado no Linux ou retornar
+`True` no Windows.
+
+Se algum comando não for reconhecido, confira se a instalação correspondente
+terminou e reabra o terminal. No Windows, se `SUMO_HOME` estiver vazio ou o
+`Test-Path` retornar `False`, encontre no Explorador de Arquivos a pasta de
+instalação do SUMO que contém `bin` e `tools`. Na janela de variáveis de
+ambiente da conta, crie `SUMO_HOME` com o caminho dessa pasta e adicione
+`%SUMO_HOME%\bin` ao `Path`. Confirme, reabra o PowerShell e repita as
+verificações. No Linux, confira se `SUMO_HOME` aponta para a instalação correta.
+
+### 4. Abra a interface e faça uma primeira simulação
+
+Ainda na pasta `edi`, inicie a aplicação:
+
+```text
 make interface
 ```
 
-`Test-Path` deve retornar `True`. Se o ambiente SUMO não estiver configurado,
-crie `SUMO_HOME` nas variáveis da conta apontando para a pasta que contém `bin` e
-`tools`, e acrescente `%SUMO_HOME%\bin` ao `Path`; reabra o terminal.
-O EDI é executado diretamente do repositório; `tzdata` é a única dependência
-Python adicional no Windows. O Make usa `py -3` no Windows e `python3` no Linux;
-`PYTHON` continua configurável, por exemplo `make interface PYTHON=python`.
+Deixe o terminal aberto e acesse [http://127.0.0.1:8000](http://127.0.0.1:8000)
+no navegador do próprio computador. Para conferir também a geração de demanda e
+o SUMO:
 
-Para **Apagar resultados**, use uma cópia Git do projeto e mantenha `git` no `Path`,
-como no Linux: a exclusão consulta os arquivos versionados antes de agir.
-Se necessário, instale com `winget install --id Git.Git -e --source winget`
-e reabra o terminal. [Git para Windows](https://git-scm.com/install/windows)
+1. Escolha o perfil de demanda **random**.
+2. Defina **Duração da geração de veículos** como `60` e mantenha o intervalo
+   entre partidas em `1.5`, um episódio, métricas `core` e a interface gráfica do
+   SUMO desativada.
+3. Clique em **Run** e aguarde **Simulação concluída**. Em **Outputs**, abra o
+   resultado para consultar os arquivos gerados.
 
-Em outro terminal na mesma pasta, use `make kill-interface` para encerrar.
-A instalação segue os pacotes do [WinGet](https://github.com/microsoft/winget-pkgs),
-a [configuração oficial do SUMO](https://sumo.dlr.de/docs/Basics/Basic_Computer_Skills.html#configuring_path_settings)
-e os [dados de fuso do Python](https://docs.python.org/3/library/zoneinfo.html#data-sources).
-A execução nativa no Windows ainda requer validação; os testes desta adaptação foram feitos no Linux.
+Para encerrar, volte ao terminal e pressione **Ctrl+C**. Se houver uma simulação
+em andamento, mantenha o terminal aberto até ela terminar.
+
+Para abrir o EDI novamente, abra um terminal e entre na pasta do projeto com
+`cd ~/edi` no Linux ou `cd "$env:USERPROFILE\edi"` no PowerShell. No Linux,
+ative o ambiente e configure o SUMO também nesse novo terminal:
+
+```bash
+source ~/edi-ambiente/bin/activate
+export SUMO_HOME="$(python3 -c 'import sumo; print(sumo.SUMO_HOME)')"
+```
+
+Depois, execute `make interface`. Em outro terminal na mesma pasta,
+`make kill-interface` também solicita o encerramento. No Linux, ative antes
+o ambiente nesse terminal, como mostrado acima.
 
 ## Executar pela interface
 

@@ -97,10 +97,10 @@ a pasta que contém `tools/randomTrips.py`.
    ```
 
 3. Para que o Windows encontre o Make, pesquise no menu Iniciar por **Editar as
-   variáveis de ambiente da conta**. Em **Variáveis de usuário**, selecione
+   variáveis de ambiente da conta**. Em **Variáveis de ambiente**, selecione
    **Path**, clique em **Editar** e depois em **Novo**. Adicione o caminho abaixo
    e confirme em **OK** em todas as janelas. Se `Path` não existir, crie-o em
-   **Variáveis de usuário**.
+   **Variáveis de ambiente**.
 
    ```text
    C:\Program Files (x86)\GnuWin32\bin

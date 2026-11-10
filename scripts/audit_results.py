@@ -19,7 +19,9 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from SistemaDeSemaforos.metrics.metrics_storage import describe_metric
+from SistemaDeSemaforos.metrics.metrics_storage import (
+    describe_metric, open_result, read_json, result_path, result_sha256,
+)
 from SistemaDeSemaforos.demand.metasettran_demand_generator import _route_pairs, _sha256
 from SistemaDeSemaforos.demand.metasettran_network import demand_endpoints, expand_local_activity, read_network
 from SistemaDeSemaforos.demand.random_demand_generator import DEFAULT_NET_FILE
@@ -86,12 +88,19 @@ def audit(episodes):
     directory = Path(episodes)
     if not directory.is_dir():
         raise ValueError(f"Pasta de episódios não encontrada: {episodes}")
-    episode_paths = sorted(directory.rglob("metrics.json"))
+    found = sorted([*directory.rglob("metrics.json"), *directory.rglob("metrics.json.gz")])
+    by_episode = {}
+    for path in found:
+        previous = by_episode.get(path.parent)
+        if previous is not None and result_sha256(previous) != result_sha256(path):
+            raise ValueError(f"Resultados de métricas divergentes em: {path.parent}")
+        by_episode[path.parent] = path
+    episode_paths = list(by_episode.values())
     if not episode_paths:
         raise ValueError(f"Nenhum episódio encontrado em: {episodes}")
     observed, record_count = set(), 0
     for path in episode_paths:
-        document = json.loads(path.read_text(encoding="utf-8"))
+        document = read_json(path)
         if document.get("schema_version") != 3:
             raise ValueError(f"Episódio exige schema_version=3: {path}")
         record_count += episode_records_valid(document, observed)
@@ -100,7 +109,7 @@ def audit(episodes):
         if execution.get("status") != "completed" or metrics.get("status") != "completed":
             raise ValueError(f"Episódio incompleto: {path}")
         profile = execution.get("collection", {}).get("profile")
-        if profile not in {"core", "full"} or metrics.get("metrics_profile") != profile:
+        if profile not in {"core", "full", "diagnostic"} or metrics.get("metrics_profile") != profile:
             raise ValueError(f"Perfil inconsistente: {path}")
         if not isinstance(execution.get("sumo_version"), str) or not execution["sumo_version"].strip():
             raise ValueError(f"Versão SUMO ausente ou inválida: {path}")
@@ -114,7 +123,7 @@ def audit(episodes):
                 raise ValueError(f"Entidades existentes mas não declaradas: {path}")
             continue
         if entity_file != "entities.json.gz" or not (path.parent / entity_file).is_file():
-            raise ValueError(f"Arquivo de entidades full ausente ou inválido: {path}")
+            raise ValueError(f"Arquivo de entidades {profile} ausente ou inválido: {path}")
         with gzip.open(path.parent / entity_file, "rt", encoding="utf-8") as source:
             entities_document = json.load(source)
         if entities_document.get("schema_version") != 1:
@@ -140,7 +149,7 @@ def _reachable(seeds, graph):
 
 def _edge_observations(path, edges, metric_values):
     """Lê um único conjunto edgeData, sem transformar registros ausentes em zeros."""
-    path = Path(path).resolve()
+    path = result_path(Path(path).resolve())
     samples, records = Counter(), Counter()
     interval_count, gaps, first, last = 0, 0, None, None
     ignored = set()
@@ -200,14 +209,14 @@ def _edge_observations(path, edges, metric_values):
 
 def _teleport_observations(path, net_file, metric_values):
     """Conta avisos nativos; agregação/truncamento do log não vira zero de eventos."""
-    path = Path(path).resolve()
+    path = result_path(Path(path).resolve())
     network = ET.parse(net_file).getroot()
     lane_edges = {lane.get("id"): edge.get("id") for edge in network.findall("edge")
                   for lane in edge.findall("lane")}
     by_edge, by_reason, vehicles, unknown_lanes = defaultdict(Counter), Counter(), set(), set()
     messages, unparsed = 0, 0
     pattern = re.compile(r"Teleporting vehicle '([^']+)'; (.*), lane='([^']+)', time=([0-9]+(?:\.[0-9]+)?)")
-    with path.open(encoding="utf-8") as source:
+    with open_result(path, "rt", encoding="utf-8") as source:
         for line in source:
             if "Teleporting vehicle '" not in line:
                 continue
@@ -227,7 +236,7 @@ def _teleport_observations(path, net_file, metric_values):
             by_edge[lane_edges[lane]][reason] += 1
     expected = metric_values.get("teleports")
     return {
-        "file": str(path), "sha256": _sha256(path),
+        "file": str(path), "sha256": result_sha256(path),
         "reported_start_messages": messages, "unparsed_start_messages": unparsed,
         "unique_vehicles_in_parsed_messages": len(vehicles),
         "expected_episode_events": expected,
@@ -245,11 +254,11 @@ def _teleport_observations(path, net_file, metric_values):
 def audit_distribution(*, routes_file, net_file=DEFAULT_NET_FILE, spatial_file=None, metrics_file=None,
           edge_data=None, sumo_log=None):
     """Retorna resumo e uma linha por trecho passenger, incluindo os não usados."""
-    routes_file, net_file = Path(routes_file).resolve(), Path(net_file).resolve()
-    hashes = {"network_sha256": _sha256(net_file), "routes_sha256": _sha256(routes_file)}
+    routes_file, net_file = result_path(Path(routes_file).resolve()), Path(net_file).resolve()
+    hashes = {"network_sha256": _sha256(net_file), "routes_sha256": result_sha256(routes_file)}
     generation, metric_values = {}, {}
     if metrics_file is not None:
-        document = json.loads(Path(metrics_file).read_text(encoding="utf-8"))
+        document = read_json(metrics_file)
         generation = document["execution"]["generation"]
         metric_values = {record["metric_name"]: record["value"] for record in document["metrics"]}
         for field, actual in (("source_network_sha256", hashes["network_sha256"]),
@@ -261,7 +270,7 @@ def audit_distribution(*, routes_file, net_file=DEFAULT_NET_FILE, spatial_file=N
     counts, movements, origins, destinations = Counter(), Counter(), Counter(), Counter()
     route_counts, departure_lanes, identifiers = Counter(), Counter(), set()
     first, last, previous, repeated_routes = math.inf, -math.inf, -math.inf, 0
-    with routes_file.open("rb") as source:
+    with open_result(routes_file) as source:
         parsed = ET.iterparse(source, events=("start", "end"))
         _, root = next(parsed)
         if root.tag != "routes":

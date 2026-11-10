@@ -5,6 +5,7 @@ import hashlib
 import io
 import math
 from pathlib import Path
+import re
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
@@ -425,7 +426,7 @@ APPROVED_EDGES.update({"30620737#13", "30620737#14", "261533405#16", "261533405#
                        ":1561879534_0", ":1561879534_2", ":3391594556_0", ":3391594556_2"})
 APPROVED_PROGRAMS.add("FAM_MARANHAO_MONSENHOR_EDUARDO")
 
-PROTECTED_FINGERPRINT = "239a244b7e5446b4f7f9de0b5665a003ee235d767c66009dd2013ee9ddba87e9"
+PROTECTED_FINGERPRINT = "bc051c95e3d7776feaf7d3760a932ee78a548a6137ed188cb7d1884273ab1b7f"
 
 
 def connection_key(connection):
@@ -434,6 +435,16 @@ def connection_key(connection):
 
 def approved_internal(identifier):
     return any(identifier.startswith(f":{node}_") for node in APPROVED_NODES)
+
+
+REGULATED_WAY_IDS = {
+    way_id for _, _, way_ids in infrastructure.REGULATED_SPEED_LIMITS for way_id in way_ids
+}
+
+
+def regulated_edge(identifier):
+    match = re.fullmatch(r"-?(\d+)(?:#.*)?", identifier)
+    return match is not None and int(match.group(1)) in REGULATED_WAY_IDS
 
 
 class SignalInfrastructureTests(unittest.TestCase):
@@ -445,11 +456,31 @@ class SignalInfrastructureTests(unittest.TestCase):
         cls.nodes = {node.get("id"): node for node in cls.root.findall("junction")}
         cls.connections = {connection_key(c): c for c in cls.root.findall("connection")}
 
+    def test_regulated_corridors_apply_the_limit_to_every_lane_and_direction(self):
+        by_way = {}
+        for edge in self.edges.values():
+            match = re.fullmatch(r"-?(\d+)(?:#.*)?", edge.get("id", ""))
+            if match is not None:
+                by_way.setdefault(int(match.group(1)), []).append(edge)
+
+        for label, speed, way_ids in infrastructure.REGULATED_SPEED_LIMITS:
+            with self.subTest(road=label):
+                self.assertTrue(way_ids)
+                for way_id in way_ids:
+                    self.assertIn(way_id, by_way)
+                    for edge in by_way[way_id]:
+                        lanes = edge.findall("lane")
+                        self.assertTrue(lanes, edge.get("id"))
+                        self.assertEqual({lane.get("speed") for lane in lanes}, {speed},
+                                         edge.get("id"))
+                        self.assertNotIn("pedestrian", {lane.get("allow") for lane in lanes})
+
     def test_content_outside_the_approved_area_remains_unchanged(self):
         digest = hashlib.sha256()
         for element in ET.fromstring(self.text):
             key = element.get('id', '')
-            if element.tag == 'edge' and (key in APPROVED_EDGES or approved_internal(key)):
+            if element.tag == 'edge' and (key in APPROVED_EDGES or approved_internal(key)
+                                          or regulated_edge(key)):
                 continue
             if element.tag == 'junction' and (key in APPROVED_NODES or approved_internal(key)):
                 continue
@@ -663,19 +694,16 @@ class SignalInfrastructureTests(unittest.TestCase):
         for approach in main | side:
             self.assertEqual(self.edges[approach].get("to"), "FAM_RONDON_BENJAMIM_JUNCTION")
 
-    def test_benjamim_lane_expansion_preserves_documented_source_speeds(self):
-        source_speeds = {
-            "16.67": ("1156717163#2", "1156717163#3", "1156272391#0", "1156272391#1",
-                      "1156272391#2", "1156272391#3"),
-            "27.78": ("152937136#0", "152937136#1", "152937136#2", "152937136#3",
-                      "1156272393#0", "1156272393#1", "1156272393#2"),
-        }
-        # Não foi obtida fonte específica que autorize trocar o limite legado
-        # neste cruzamento. Expandir faixas não transfere o limite de Anselmo.
-        for speed, roads in source_speeds.items():
-            for road in roads:
-                self.assertEqual({lane.get("speed") for lane in self.edges[road].findall("lane")},
-                                 {speed}, road)
+    def test_rondon_limit_is_continuous_through_the_benjamim_expansion(self):
+        roads = (
+            "1156717163#2", "1156717163#3", "1156272391#0", "1156272391#1",
+            "1156272391#2", "1156272391#3", "152937136#0", "152937136#1",
+            "152937136#2", "152937136#3", "1156272393#0", "1156272393#1",
+            "1156272393#2",
+        )
+        for road in roads:
+            self.assertEqual({lane.get("speed") for lane in self.edges[road].findall("lane")},
+                             {"16.67"}, road)
 
     def test_benjamim_turns_use_the_corresponding_outer_lanes(self):
         for origin, destination, lane_from, lane_to in (

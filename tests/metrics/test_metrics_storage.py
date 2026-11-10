@@ -5,14 +5,19 @@ uso normal: make test, sem executar SUMO.
 """
 
 import gzip
+import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
+import subprocess
+import sys
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from SistemaDeSemaforos.metrics.metrics_storage import (
-    describe_metric, metric_records, presentation_sort_key, save_entities, save_episode, write_json,
+    compress_file, describe_metric, metric_records, presentation_sort_key, read_json,
+    result_sha256, save_entities, save_episode, verify_file, write_json,
 )
 from scripts.audit_results import episode_records_valid, records_valid
 
@@ -25,13 +30,13 @@ class StorageTests(unittest.TestCase):
                          "simulation": {"seed": 23423, "step_length": 1.0}}
             original = deepcopy(execution)
             save_episode(directory, {"vehicles_completed": 3}, execution, include_entities=False)
-            document = json.loads((directory / "metrics.json").read_text())
+            document = read_json(directory / "metrics.json.gz")
             self.assertEqual(document["schema_version"], 3)
             self.assertEqual(document["execution"], execution)
             self.assertEqual(execution, original)
             self.assertNotIn("batch_configuration_file", document)
             self.assertIsNone(document["entity_metrics_file"])
-            self.assertEqual([path.name for path in directory.iterdir()], ["metrics.json"])
+            self.assertEqual([path.name for path in directory.iterdir()], ["metrics.json.gz"])
 
     def test_types_are_preserved_and_invalid_values_rejected(self):
         records = metric_records({"enabled": True, "seed": 7, "speed": 2.5, "name": "random"})
@@ -50,7 +55,7 @@ class StorageTests(unittest.TestCase):
             with gzip.open(directory / "entities.json.gz", "rt", encoding="utf-8") as stream:
                 result = json.load(stream)
             self.assertEqual(result["entities"]["lanes"]["-via_ação_0"][0]["value"], 4.0)
-            summary = json.loads((directory / "metrics.json").read_text())
+            summary = read_json(directory / "metrics.json.gz")
             self.assertEqual(summary["entity_metrics_file"], "entities.json.gz")
             self.assertEqual(len(summary["metrics"]), 1)
             self.assertEqual(summary["schema_version"], 3)
@@ -74,7 +79,7 @@ class StorageTests(unittest.TestCase):
         with TemporaryDirectory() as temp:
             directory = Path(temp)
             save_episode(directory, values, {"status": "completed"})
-            document = json.loads((directory / "metrics.json").read_text())
+            document = read_json(directory / "metrics.json.gz")
         records = document["metrics"]
         projected = [{key: r[key] for key in ("metric_name", "data_type", "value")}
                      for r in records]
@@ -110,7 +115,7 @@ class StorageTests(unittest.TestCase):
                 if status != "running":
                     values["error"] = "RuntimeError: ferramenta indisponível"
                 save_episode(directory, values, {"status": status})
-                document = json.loads((directory / "metrics.json").read_text())
+                document = read_json(directory / "metrics.json.gz")
                 records = {r["metric_name"]: r for r in document["metrics"]}
                 self.assertEqual(set(records), set(values))
                 self.assertEqual(records["status"]["value"], status)
@@ -121,7 +126,7 @@ class StorageTests(unittest.TestCase):
         with TemporaryDirectory() as temp:
             directory = Path(temp)
             save_episode(directory, {"vehicles_completed": 5, "seed": 3}, {})
-            document = json.loads((directory / "metrics.json").read_text())
+            document = read_json(directory / "metrics.json.gz")
         for field, invalid in (("label_pt", ""), ("description_pt", None),
                                ("unit", []), ("kind", "unknown"),
                                ("priority", True), ("category", "unknown")):
@@ -142,6 +147,103 @@ class StorageTests(unittest.TestCase):
                 write_json(path, {"invalid": float("nan")})
             self.assertEqual(json.loads(path.read_text()), {"previous": True})
             self.assertEqual(list(Path(temp).iterdir()), [path])
+
+    def test_compressed_json_preserves_exact_plain_serialization_and_numbers(self):
+        value = {"ação": [None, True, {"seed": 2**63 - 1,
+                                      "tiny": 1.2345678901234567e-150,
+                                      "signed_zero": -0.0, "text": "a\n\\\"b"}]}
+        with TemporaryDirectory() as temp:
+            directory = Path(temp)
+            plain, compressed = directory / "metrics.json", directory / "metrics.json.gz"
+            write_json(plain, value)
+            write_json(compressed, value)
+            with gzip.open(compressed, "rb") as stream:
+                recovered = stream.read()
+            self.assertEqual(recovered, plain.read_bytes())
+            self.assertEqual(hashlib.sha256(recovered).hexdigest(), result_sha256(compressed))
+            plain.unlink()
+            self.assertEqual(read_json(plain), value)
+
+    def test_real_file_and_large_binary_round_trip_with_matching_sha256(self):
+        real = Path(__file__).resolve().parents[2] / "docs" / "settran_programs.json"
+        with TemporaryDirectory() as temp:
+            directory = Path(temp)
+            for name, content in (("real.json", real.read_bytes()),
+                                  ("large.xml", "<vehicle id='ação'/>\n".encode() * 150000)):
+                with self.subTest(name=name):
+                    source = directory / name
+                    source.write_bytes(content)
+                    compressed = compress_file(source)
+                    verify_file(source, compressed)
+                    self.assertEqual(result_sha256(compressed), hashlib.sha256(content).hexdigest())
+                    self.assertEqual(gzip.decompress(compressed.read_bytes()), content)
+                    self.assertEqual(source.read_bytes(), content)
+
+    def test_failed_compression_or_corruption_never_removes_original(self):
+        with TemporaryDirectory() as temp:
+            directory = Path(temp)
+            source = directory / "routes.xml"
+            original = b"<routes>teste</routes>" * 5000
+            source.write_bytes(original)
+            with patch("SistemaDeSemaforos.metrics.metrics_storage._verify_gzip",
+                       side_effect=ValueError("verificação falhou")):
+                with self.assertRaisesRegex(ValueError, "verificação falhou"):
+                    compress_file(source)
+            self.assertEqual(source.read_bytes(), original)
+            self.assertEqual(list(directory.iterdir()), [source])
+            compressed = compress_file(source)
+            compressed.write_bytes(compressed.read_bytes()[:-8])
+            with self.assertRaises((EOFError, OSError)):
+                verify_file(source, compressed)
+            self.assertEqual(source.read_bytes(), original)
+
+    def test_invalid_compressed_json_keeps_previous_publication(self):
+        with TemporaryDirectory() as temp:
+            path = Path(temp) / "metrics.json.gz"
+            write_json(path, {"previous": 1})
+            before = path.read_bytes()
+            for failure in (ValueError("digest mismatch"), OSError("disk error")):
+                with patch("SistemaDeSemaforos.metrics.metrics_storage._verify_gzip", side_effect=failure):
+                    with self.assertRaises(type(failure)):
+                        write_json(path, {"next": 2})
+                self.assertEqual(path.read_bytes(), before)
+                self.assertEqual(list(path.parent.iterdir()), [path])
+            with self.assertRaises(ValueError):
+                write_json(path, {"invalid": float("nan")})
+            self.assertEqual(path.read_bytes(), before)
+
+    def test_interrupted_process_preserves_original_and_previous_json(self):
+        code = """
+import sys
+from pathlib import Path
+from unittest.mock import patch
+from SistemaDeSemaforos.metrics.metrics_storage import compress_file, write_json
+def pause(*args):
+    print('ready', flush=True)
+    sys.stdin.readline()
+with patch('SistemaDeSemaforos.metrics.metrics_storage._verify_gzip', side_effect=pause):
+    if sys.argv[1] == 'file':
+        compress_file(Path(sys.argv[2]))
+    else:
+        write_json(Path(sys.argv[2]), {'new': 2})
+"""
+        with TemporaryDirectory() as temp:
+            source = Path(temp) / "route.xml"
+            source.write_bytes(b"original route\n" * 10000)
+            metrics = Path(temp) / "metrics.json.gz"
+            write_json(metrics, {"previous": 1})
+            original, previous = source.read_bytes(), metrics.read_bytes()
+            for operation, path in (("file", source), ("json", metrics)):
+                with self.subTest(operation=operation), subprocess.Popen(
+                        [sys.executable, "-B", "-c", code, operation, str(path)],
+                        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        text=True) as child:
+                    self.assertEqual(child.stdout.readline().strip(), "ready")
+                    child.kill()
+                    child.wait(timeout=10)
+                self.assertEqual(source.read_bytes(), original)
+                self.assertEqual(metrics.read_bytes(), previous)
+                self.assertFalse(source.with_name(source.name + ".gz").exists())
 
 
 class MetricPresentationTests(unittest.TestCase):

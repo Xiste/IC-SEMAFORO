@@ -112,6 +112,17 @@ class MetaSettranValidationTests(unittest.TestCase):
         return collect_metasettran_validation(self.directory, self.generation,
                                              summary_metrics=self.summary, **kwargs)
 
+    def test_reanalysis_accepts_compressed_route_and_log_without_changing_metrics(self):
+        expected = self.collect()
+        route_gz = self.routes_path.with_name(self.routes_path.name + ".gz")
+        route_gz.write_bytes(gzip.compress(self.routes_path.read_bytes()))
+        self.routes_path.unlink()
+        log = self.directory / "sumo.log"
+        (self.directory / "sumo.log.gz").write_bytes(gzip.compress(log.read_bytes()))
+        log.unlink()
+        self.generation["routes_file"] = str(route_gz)
+        self.assertEqual(self.collect(), expected)
+
     def test_teleport_arrival_never_becomes_natural_and_every_trip_is_accounted(self):
         vehicles = {"natural": {"legacy_duration": 100}}
         result = self.collect(vehicles=vehicles)

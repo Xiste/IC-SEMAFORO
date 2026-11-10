@@ -2,6 +2,7 @@
 
 from http.client import HTTPConnection
 from html import unescape
+import gzip
 import io
 import json
 import os
@@ -12,6 +13,7 @@ import sys
 from tempfile import TemporaryDirectory
 import threading
 import time
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from contextlib import redirect_stdout
@@ -36,7 +38,7 @@ class FormTests(unittest.TestCase):
         self.assertEqual(web.form_options(RANDOM | {"termination": "defined", "end": "60"})["end"], 60)
 
     def test_invalid_numbers_profiles_and_arbitrary_parameters(self):
-        cases = [dict(signal_profile="settran"), dict(metrics_profile="unknown"),
+        cases = [dict(signal_profile="settran"), dict(metrics_profile="unknown"), dict(metrics_profile="diagnostic"),
                  dict(demand_profile="other"), dict(episodes="0"), dict(episodes="1.5"),
                  dict(episodes="-1"), dict(termination="unknown"), dict(end="60"),
                  dict(termination="defined", end=""), dict(net_file="/tmp/network"),
@@ -125,6 +127,54 @@ class FormTests(unittest.TestCase):
         self.assertEqual(web.form_options(META | dict(selection_mode="consecutive")), web.form_options(META))
 
 
+class DisconnectedClientTests(unittest.TestCase):
+    def serve_request(self, url, *, failure=None, fail_at=2, method="GET"):
+        class Client:
+            def __init__(self):
+                self.sent = []
+
+            def makefile(self, *args):
+                return io.BytesIO(f"{method} {url} HTTP/1.1\r\nHost: 127.0.0.1:8000\r\n\r\n".encode())
+
+            def sendall(self, data):
+                self.sent.append(bytes(data))
+                if failure is not None and len(self.sent) == fail_at:
+                    raise failure("client disconnected")
+
+        client = Client()
+        server = SimpleNamespace(server_port=8000, batch=web.BatchState())
+        web.Handler(client, ("127.0.0.1", 12345), server)
+        return client.sent
+
+    def test_closed_connections_do_not_send_a_second_error_response(self):
+        for failure in (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            for method, url in (("GET", "/status"), ("GET", "/results/"), ("POST", "/unknown")):
+                for fail_at in (1, 2):
+                    with self.subTest(failure=failure, method=method, url=url, fail_at=fail_at):
+                        sent = self.serve_request(url, failure=failure, fail_at=fail_at, method=method)
+                        self.assertEqual(len(sent), fail_at)
+
+    def test_closed_streaming_connections_do_not_send_an_html_error(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            episode = root / "outputs-random" / "batch"
+            episode.mkdir(parents=True)
+            (episode / "metrics.json.gz").write_bytes(gzip.compress(b'{"complete": [1, 2, 3]}'))
+            with patch.object(web.runner, "OUTPUT_ROOT", root):
+                for query in ("", "?raw=1", "?unpacked=1"):
+                    for fail_at in ((1, 2, 3, 4) if not query else (1, 2)):
+                        with self.subTest(query=query, fail_at=fail_at):
+                            sent = self.serve_request("/results/outputs-random/batch/metrics.json.gz" + query,
+                                                      failure=BrokenPipeError, fail_at=fail_at)
+                            self.assertEqual(len(sent), fail_at)
+
+    def test_filesystem_errors_still_produce_an_error_response(self):
+        with patch.object(web, "browse_results", side_effect=PermissionError("access denied")):
+            sent = self.serve_request("/results/outputs-random/")
+        self.assertIn(b"404", sent[0])
+        self.assertIn(b"access denied", sent[1])
+
+
 class HTTPTests(unittest.TestCase):
     def setUp(self):
         temporary = TemporaryDirectory(prefix='EDI outputs espaços ação ')
@@ -193,6 +243,7 @@ class HTTPTests(unittest.TestCase):
         self.assertNotIn('name="master_seed"', html)
         self.assertIn('id="outputs-random"', html)
         self.assertIn('id="outputs-metasettran"', html)
+        self.assertNotIn('value="diagnostic"', html)
         self.assertEqual(json.loads(self.request("/status")[1])["status"], "idle")
         for path, expected in (("/results/", "outputs-random"),
                                ("/results/outputs-metasettran/", "Nenhum resultado"),
@@ -233,6 +284,87 @@ class HTTPTests(unittest.TestCase):
         code, raw, headers = self.request('/results/outputs-random/batch/episode/binary.dat', binary=True)
         self.assertEqual((code, raw), (200, b'\x00\x80binary'))
         self.assertEqual(headers['Content-Disposition'], 'attachment')
+
+    def test_gzip_view_and_both_downloads_preserve_original_json(self):
+        raw = ('{"seed":9223372036854775807,"decimal":1.234567890123456789012345,'
+               '"unicode":"ação <teste>","nested":[true,null]}').encode()
+        path = self.episode / "metrics.json.gz"
+        path.write_bytes(gzip.compress(raw))
+        url = "/results/outputs-random/batch/episode/metrics.json.gz"
+        self.assertIn("metrics.json.gz", self.request("/results/outputs-random/batch/episode")[1])
+        code, html, _ = self.request(url)
+        self.assertEqual(code, 200)
+        content = unescape(re.search(r'<pre>(.*?)</pre>', html, re.S)[1])
+        self.assertIn("1.234567890123456789012345", content)
+        self.assertIn('\n  "seed"', content)
+        self.assertEqual(json.loads(content), json.loads(raw))
+        self.assertIn("&lt;teste&gt;", html)
+        code, downloaded, _ = self.request(url + "?raw=1", binary=True)
+        self.assertEqual((code, downloaded), (200, path.read_bytes()))
+        code, unpacked, headers = self.request(url + "?unpacked=1", binary=True)
+        self.assertEqual((code, unpacked), (200, raw))
+        self.assertIn("metrics.json", headers["Content-Disposition"])
+
+    def test_large_compressed_json_requires_explicit_full_view_and_never_truncates(self):
+        value = {"text": "ação & <script>\\\"" * 12000, "last": 987654321}
+        raw = json.dumps(value, ensure_ascii=False).encode()
+        (self.episode / "entities.json.gz").write_bytes(gzip.compress(raw))
+        url = "/results/outputs-random/batch/episode/entities.json.gz"
+        with patch.object(web, "PREVIEW_LIMIT", 1024):
+            code, warning, _ = self.request(url)
+            self.assertEqual(code, 200)
+            self.assertIn("Abrir o conteúdo completo", warning)
+            self.assertNotIn("<pre>", warning)
+            code, html, _ = self.request(url + "?view=1")
+        self.assertEqual(code, 200)
+        content = unescape(re.search(r'<pre>(.*?)</pre>', html, re.S)[1])
+        self.assertEqual(json.loads(content), value)
+        self.assertIn('"last": 987654321', content)
+        self.assertEqual(self.request(url + "?unpacked=1", binary=True)[1], raw)
+
+    def test_compressed_xml_logs_and_corrupt_streams(self):
+        for name, raw in (("metasettran.rou.xml.gz", b"<routes>full content</routes>"),
+                          ("sumo.log.gz", b"complete log\n")):
+            (self.episode / name).write_bytes(gzip.compress(raw))
+            url = "/results/outputs-random/batch/episode/" + name
+            code, html, _ = self.request(url)
+            self.assertEqual(code, 200)
+            self.assertEqual(unescape(re.search(r'<pre>(.*?)</pre>', html, re.S)[1]), raw.decode())
+            self.assertEqual(self.request(url + "?unpacked=1", binary=True)[1], raw)
+        broken = self.episode / "broken.json.gz"
+        broken.write_bytes(gzip.compress(b'{"ok": true}')[:-5])
+        url = "/results/outputs-random/batch/episode/broken.json.gz"
+        self.assertEqual(self.request(url)[0], 404)
+        self.assertEqual(self.request(url + "?unpacked=1")[0], 404)
+        self.assertEqual(self.request(url + "?raw=1", binary=True)[1], broken.read_bytes())
+
+    @unittest.skipIf(os.name == "nt", "Windows pode impedir a substituição de arquivo aberto")
+    def test_unpacked_download_is_consistent_during_atomic_republication(self):
+        original = b'{"generation": "first"}'
+        updated = b'{"generation": "second, much longer"}'
+        path = self.episode / "metrics.json.gz"
+        replacement = self.episode / "replacement.gz"
+        path.write_bytes(gzip.compress(original))
+        replacement.write_bytes(gzip.compress(updated))
+        inspect = web.gzip_size
+
+        def publish_during_read(raw, **kwargs):
+            size = inspect(raw, **kwargs)
+            replacement.replace(path)
+            return size
+
+        url = "/results/outputs-random/batch/episode/metrics.json.gz?unpacked=1"
+        with patch.object(web, "gzip_size", side_effect=publish_during_read):
+            code, downloaded, headers = self.request(url, binary=True)
+        self.assertEqual((code, downloaded), (200, original))
+        self.assertEqual(int(headers['Content-Length']), len(original))
+        self.assertEqual(gzip.decompress(path.read_bytes()), updated)
+
+    def test_delete_removes_new_compressed_results_from_test_tree(self):
+        compressed = self.episode / "metrics.json.gz"
+        compressed.write_bytes(gzip.compress(b"{}"))
+        self.assertEqual(self.request('/delete-results', {'confirmation': 'delete'})[0], 200)
+        self.assertFalse(compressed.exists())
 
     def test_traversal_symlinks_foreign_origins_and_writes_are_rejected(self):
         secret = self.root.parent / "secret.txt"

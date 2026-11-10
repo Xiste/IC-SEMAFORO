@@ -17,12 +17,15 @@ de experimentos. A instalação e o uso cotidiano estão no [README](../README.m
 Interface web ou CLI → seleção e planejamento dos episódios
                     → geração Random ou MetaSettran
                     → execução SUMO com a programação selecionada
-                    → coleta core/full → publicação dos resultados
+                    → coleta core/full/diagnostic → publicação dos resultados
 ```
 
 O EDI usa processos nativos aguardados por `subprocess.run`, arquivos XML e coleta
 posterior à simulação. O servidor web executa o lote em uma thread e oferece consulta
 de estado e navegação pelos resultados.
+Trocar de página ou cancelar um download pode fechar a conexão HTTP antes do fim
+da resposta. A interface encerra essa requisição sem tentar enviar outra resposta;
+o lote continua na thread de execução.
 
 `make interface` mantém o servidor no terminal. `make kill-interface` solicita
 que somente a instância desta cópia do projeto pare de atender e aguarde o lote
@@ -64,6 +67,10 @@ SUMO/SUMO-GUI e caminhos Windows permanece pendente; mocks não substituem esse 
 Os caminhos da tabela são relativos a `SistemaDeSemaforos/`. A preparação espacial
 compartilha uma leitura da rede entre expansão dos acessos e validação das rotas.
 O cadastro espacial e a rede física têm hashes próprios registrados nos resultados.
+Na validação da versão da rede pelo cadastro MetaSettran, uma conversão de LF para
+CRLF no checkout Windows é aceita sem alterar o XML. Qualquer outra diferença
+continua sujeita à verificação do hash; `source_network_sha256` registra os bytes
+do arquivo efetivamente utilizado, inclusive seus finais de linha.
 
 ## Execuções e reprodutibilidade
 
@@ -121,7 +128,7 @@ para o escoamento. Ambos usam timestep nativo de 1 segundo nos ensaios de refer�
 | `--variations` | Ausente | Lista explícita com exatamente uma variação 1–25 por faixa; reproduz a demanda sem precisar da seed mestra. |
 | `--spatial-scenario` | `regional-integrated` em MetaSettran | Modelo regional compartilhado; `regional-midpoint` é alias, sem recriar os antigos orçamentos. |
 | `--drain-limit` | `2700` s em MetaSettran | Limite adicional após as partidas; inteiro não negativo, preservando timestep de 1 s. |
-| `--metrics-profile` | `core` | Seleciona observações `core` ou `full`. |
+| `--metrics-profile` | `core` | `core`, `full` ou `diagnostic`; o último é exclusivo do terminal/API Python. |
 | `--signal-profile` | `current` | Programas da rede ou `settran` validado. |
 | `--settran-plan` | Ausente | ID oficial escolhido explicitamente; exige `settran`. |
 | `--settran-intersection` | Todas do plano | Nome exato e repetível para selecionar interseções; exige `settran`. |
@@ -442,23 +449,89 @@ Cada chamada cria um lote exclusivo em `outputs/outputs-random/` ou
 identificadores exclusivos. Na seleção livre, cada execução também identifica
 seu episódio e grupo. A interface permite navegar pelas pastas e baixar arquivos.
 
-`metrics.json`, schema 3, reúne `execution` e uma lista `metrics`. Identifique
+`metrics.json.gz` nos novos episódios, ou `metrics.json` nos antigos, contém o
+mesmo JSON formatado, schema 3, com `execution` e uma lista `metrics`. Identifique
 cada indicador por `metric_name`. Os registros incluem tipo, valor, descrição,
 unidade, natureza e prioridade. `execution` registra fontes, hashes, comandos,
 seeds, variações, seleção e tempos. Os tempos de processamento usam relógio
 monotônico e diferem do tempo simulado.
+Para investigar uma execução demorada, consulte `execution.timings_seconds`:
+`generation_time_seconds` mede a preparação da demanda, `simulation_execution_time_seconds`
+mede o processo SUMO e `aggregation_time_seconds` inclui coleta e validação.
+Os tempos `collection_*`, publicados em `diagnostic`, já fazem parte da agregação;
+não devem ser somados outra vez. `core` e `full` guardam os tempos das etapas principais.
+MetaSettran prepara seu catálogo de percursos e simula três horas por faixa,
+mais o escoamento solicitado. Uma execução pode levar minutos mesmo em `core`;
+o número de linhas do JSON não mede o custo dessas etapas.
 
 | Perfil | Retenção após sucesso |
 | --- | --- |
 | `core` | Agregados e contexto. `entity_metrics_file` é `null`. Entradas temporárias e observações intermediárias são removidas. |
 | `full` | Agregados, `entities.json.gz` e observações nativas em `raw/`. |
+| `diagnostic` | Mesmas observações e entidades de `full`, mais contexto técnico completo e instrumentação. Somente terminal/API Python. |
+
+O número de registros de `core` depende das medições disponíveis e inclui contexto:
+as execuções de referência Random e MetaSettran têm 65 e 72, respectivamente.
+Não há preenchimento artificial nem corte por quantidade. As métricas científicas
+comuns usam os mesmos cálculos nos três perfis. `full` acrescenta medições de análise;
+`diagnostic` acrescenta informações para desenvolvimento, sem alterar a dinâmica.
+
+Nos novos episódios concluídos, detalhes MetaSettran por zona, acesso, movimento
+e corredor, catálogo de percursos, calibração completa e diagnósticos de sensores
+ficam em `diagnostic`. `core` e `full` preservam métricas, referências das fontes,
+seeds, variações, configuração, populações globais e verificações de integridade.
+Neles, a referência de calibração conserva somente os totais consolidados por
+sensor; curvas de 15 minutos e estatísticas de treinamento ficam em `diagnostic`.
+Random segue a mesma regra para instrumentação: os tempos individuais dos coletores
+e de persistência, relógios e desempenho computacional interno do SUMO ficam em
+`diagnostic`. Não há arquivo complementar nem mudança
+nos resultados históricos. Falhas continuam preservando os dados disponíveis
+para investigação, mesmo quando o perfil solicitado foi `core` ou `full`.
 
 As entidades full são organizadas por `vehicles`, `lanes`, `edges`, `traffic_lights`,
 `approaches` e `intersections`, com escopo, ID e chave. MetaSettran conserva a demanda
-planejada em `metasettran.rou.xml`. Falhas preservam os arquivos disponíveis e seus logs.
+planejada como `metasettran.rou.xml.gz` quando há ganho, ou `metasettran.rou.xml`.
+Após uma execução bem-sucedida, a rota e os logs `generation.log` e `sumo.log`
+de pelo menos 64 KiB são comprimidos individualmente quando o resultado é menor.
+As observações nativas e as entidades full/diagnostic já usam GZIP; não recebem uma segunda
+compressão. Falhas preservam as entradas, observações e logs disponíveis.
 
-No core, referências resumidas substituem o cadastro espacial completo e a calibração.
-O catálogo detalhado de rotas fica disponível em full. A API do gerador também permite
+GZIP não altera campos, precisão ou bytes do conteúdo recuperado. Os JSONs são
+gravados em arquivo temporário e sua descompressão é conferida por SHA-256 antes da
+publicação atômica. A rota e os logs só perdem a cópia original depois da validação
+da cópia comprimida e da publicação das métricas; uma falha de compressão preserva
+os originais e é informada. O tempo `execution_time_seconds` não inclui essa
+compressão final, a última escrita de métricas nem a limpeza de temporários.
+Uma interrupção abrupta pode deixar temporários `.json-` ou `.gzip-` no episódio;
+verifique que a execução terminou e que os resultados íntegros existem antes de
+remover somente esses temporários. Nenhuma limpeza automática altera episódios antigos.
+
+Em **Outputs**, JSON, XML e logs compactados abrem automaticamente; JSON aparece
+formatado em `<pre>`. É possível baixar tanto o GZIP quanto o conteúdo original.
+Acima de 16 MiB descomprimidos, o navegador pede a abertura explícita do conteúdo
+completo; a transmissão ocorre em blocos e não há corte silencioso. A auditoria
+aceita nomes antigos e novos, inclusive quando o nome antigo é fornecido para um
+resultado que existe somente em GZIP. `routes_sha256` continua sendo o hash dos
+bytes XML originais, e o mesmo vale para o hash da agenda pareada. A API
+`schedule_file` também aceita a rota comprimida. O comando SUMO registrado nas
+métricas mantém o caminho realmente usado na execução; para reutilizar a rota
+retida, use o caminho indicado em `generation.routes_file`.
+
+Para recuperar manualmente um arquivo em Linux,
+`(set -C; gzip -dc metrics.json.gz > metrics.recuperado.json)` grava o JSON original
+sem substituir um destino existente. Em Linux ou Windows, também é possível usar Python (no
+Windows, substitua `python3` por `py -3`):
+
+```text
+python3 -c "import gzip,shutil; s=gzip.open('metrics.json.gz','rb'); d=open('metrics.recuperado.json','xb'); shutil.copyfileobj(s,d); d.close(); s.close()"
+```
+
+O destino `metrics.recuperado.json` deve ser novo; adapte os nomes para rotas e
+logs. A descompressão confere o GZIP e recupera os bytes originais, sem exigir o
+EDI. A alteração não comprime nem substitui resultados históricos.
+
+Em core/full, referências resumidas substituem o cadastro espacial completo e a calibração.
+O catálogo detalhado de rotas fica disponível em diagnostic. A API do gerador também permite
 controlar sua publicação com `include_route_details`. Os perfis compartilham a semântica
 das métricas comuns e as condições de simulação.
 
@@ -570,8 +643,8 @@ Para investigar cobertura planejada, execute a auditoria com um arquivo de saíd
 
 ```bash
 python3 -B scripts/audit_results.py \
-  --routes-file outputs/outputs-metasettran/LOTE/EPISODIO/metasettran.rou.xml \
-  --metrics-file outputs/outputs-metasettran/LOTE/EPISODIO/metrics.json \
+  --routes-file outputs/outputs-metasettran/LOTE/EPISODIO/metasettran.rou.xml.gz \
+  --metrics-file outputs/outputs-metasettran/LOTE/EPISODIO/metrics.json.gz \
   --spatial-file SistemaDeSemaforos/demand/metasettran_spatial.json \
   --output outputs/auditoria-distribuicao.json
 ```

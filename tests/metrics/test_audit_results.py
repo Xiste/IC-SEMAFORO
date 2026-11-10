@@ -12,7 +12,7 @@ from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 from SistemaDeSemaforos.metrics.metrics_storage import (
-    metric_records, save_entities, save_episode, write_json,
+    metric_records, read_json, save_entities, save_episode, write_json,
 )
 from scripts.audit_results import audit, audit_distribution, episode_records_valid, main, records_valid
 
@@ -25,20 +25,45 @@ def episode_fixture(root, profile):
         "status": "completed", "metrics_profile": profile,
     }, {"status": "completed", "sumo_version": "SUMO fixture",
         "collection": {"profile": profile}},
-        include_entities=profile == "full")
-    if profile == "full":
+        include_entities=profile != "core")
+    if profile != "core":
         save_entities(directory, {"vehicles": {"car0": {"trip_duration": 12.0}}})
     return directory
 
 
 class AuditResultsTests(unittest.TestCase):
+    def test_diagnostic_profile_is_audited_with_entities(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            directory = episode_fixture(root, "diagnostic")
+            self.assertEqual(audit(root)["episodes_verified"], 1)
+            (directory / "entities.json.gz").unlink()
+            with self.assertRaisesRegex(ValueError, "diagnostic"):
+                audit(root)
+
+    def test_audit_reads_old_and_new_files_and_rejects_ambiguous_duplicates(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            old = episode_fixture(root, "core")
+            episode_fixture(root, "full")
+            compressed = old / "metrics.json.gz"
+            plain = old / "metrics.json"
+            plain.write_bytes(gzip.decompress(compressed.read_bytes()))
+            compressed.unlink()
+            self.assertEqual(audit(root)["episodes_verified"], 2)
+            compressed.write_bytes(gzip.compress(plain.read_bytes()))
+            self.assertEqual(audit(root)["episodes_verified"], 2)
+            compressed.write_bytes(gzip.compress(b"{}"))
+            with self.assertRaisesRegex(ValueError, "divergentes"):
+                audit(root)
+
     def test_core_and_full_validate_without_archived_inputs_or_terminal_report(self):
         with TemporaryDirectory() as temporary, redirect_stdout(io.StringIO()) as terminal:
             root = Path(temporary)
             core = episode_fixture(root, "core")
             full = episode_fixture(root, "full")
-            self.assertEqual({path.name for path in core.iterdir()}, {"metrics.json"})
-            self.assertEqual({path.name for path in full.iterdir()}, {"metrics.json", "entities.json.gz"})
+            self.assertEqual({path.name for path in core.iterdir()}, {"metrics.json.gz"})
+            self.assertEqual({path.name for path in full.iterdir()}, {"metrics.json.gz", "entities.json.gz"})
             result = audit(root)
         self.assertEqual(terminal.getvalue(), "")
         self.assertEqual(result["episodes_verified"], 2)
@@ -68,7 +93,7 @@ class AuditResultsTests(unittest.TestCase):
                 profile = "full" if variant.startswith("full") else "core"
                 root = Path(temporary)
                 directory = episode_fixture(root, profile)
-                document = json.loads((directory / "metrics.json").read_text())
+                document = read_json(directory / "metrics.json.gz")
                 if variant == "core_omitted":
                     document.pop("entity_metrics_file")
                 elif variant == "full_missing":
@@ -79,7 +104,7 @@ class AuditResultsTests(unittest.TestCase):
                     document["entity_metrics_file"] = None
                 if variant == "core_undeclared_file":
                     write_json(directory / "entities.json.gz", {"entities": {}})
-                write_json(directory / "metrics.json", document)
+                write_json(directory / "metrics.json.gz", document)
                 with self.assertRaises(ValueError):
                     audit(root)
 
@@ -88,7 +113,7 @@ class AuditResultsTests(unittest.TestCase):
             with self.subTest(variant=variant), TemporaryDirectory() as temporary:
                 root = Path(temporary)
                 directory = episode_fixture(root, "core")
-                document = json.loads((directory / "metrics.json").read_text())
+                document = read_json(directory / "metrics.json.gz")
                 if variant == "sumo_version":
                     document["execution"].pop("sumo_version")
                 elif variant == "execution_status":
@@ -99,7 +124,7 @@ class AuditResultsTests(unittest.TestCase):
                     document["execution"]["collection"]["profile"] = "full"
                 else:
                     document["schema_version"] = 2
-                write_json(directory / "metrics.json", document)
+                write_json(directory / "metrics.json.gz", document)
                 with self.assertRaises(ValueError):
                     audit(root)
 
@@ -107,9 +132,9 @@ class AuditResultsTests(unittest.TestCase):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
             directory = episode_fixture(root, "full")
-            document = json.loads((directory / "metrics.json").read_text())
+            document = read_json(directory / "metrics.json.gz")
             next(r for r in document["metrics"] if r["metric_name"] == "seed")["value"] = "7"
-            write_json(directory / "metrics.json", document)
+            write_json(directory / "metrics.json.gz", document)
             with self.assertRaisesRegex(ValueError, "Tipo/chave inválido"):
                 audit(root)
         with TemporaryDirectory() as temporary:
@@ -336,6 +361,22 @@ class DemandDistributionAuditTests(unittest.TestCase):
         self.assertEqual(matched['teleport_observation']['count_status'], 'matches_episode_event_total')
         unverifiable = audit_distribution(net_file=self.net, routes_file=self.routes, sumo_log=log)
         self.assertEqual(unverifiable['teleport_observation']['count_status'], 'not_verifiable_without_episode_total')
+
+    def test_audit_accepts_compressed_routes_and_log_using_original_hash(self):
+        original = self.routes.read_bytes()
+        log = self.directory / 'sumo.log'
+        log.write_text("Warning: Teleporting vehicle 'one'; waited too long (jam), lane='main_0', time=1.000.\n")
+        log_bytes = log.read_bytes()
+        route_gz = self.routes.with_name(self.routes.name + '.gz')
+        log_gz = log.with_name(log.name + '.gz')
+        route_gz.write_bytes(gzip.compress(original))
+        log_gz.write_bytes(gzip.compress(log_bytes))
+        self.routes.unlink()
+        log.unlink()
+        report = audit_distribution(net_file=self.net, routes_file=self.routes, sumo_log=log)
+        self.assertEqual(report['routes_sha256'], hashlib.sha256(original).hexdigest())
+        self.assertEqual(report['teleport_observation']['sha256'], hashlib.sha256(log_bytes).hexdigest())
+        self.assertEqual(report['teleport_observation']['reported_start_messages'], 1)
 
     def test_cli_observation_inputs_are_explicit_and_cannot_be_overwritten(self):
         edge_data, log, output = (self.directory / name for name in ('edges.xml', 'sumo.log', 'audit.json'))

@@ -19,6 +19,7 @@ from unittest.mock import Mock, patch
 import xml.etree.ElementTree as ET
 
 from SistemaDeSemaforos.simulation import episode_runner as simulation
+from SistemaDeSemaforos.metrics.metrics_storage import read_json
 
 
 def option_value(command, option):
@@ -406,16 +407,19 @@ class RandomEpisodeTests(unittest.TestCase):
         self.workflow.append("collect")
         return {
             "metrics": {"vehicles_completed": 2, "network_mean_speed_m_s_mean": 8.25,
+                        "collection_summary_time_seconds": 0.125,
+                        "sumo_performance_clock_duration": 0.25,
+                        "sumo_step_computation_ms_mean": 0.5,
                         "simulation_duration_seconds": 7462.0},
             "entities": {"lanes": {"via_ação_0": {"queue_length_max": 1}}}
-                        if profile == "full" else {},
+                        if profile != "core" else {},
         }
 
     def episode_directories(self):
-        return sorted(path.parent for path in self.output_dir.rglob("metrics.json"))
+        return sorted(path.parent for path in self.output_dir.rglob("metrics.json.gz"))
 
     def episode_results(self, directory):
-        document = json.loads((directory / "metrics.json").read_text(encoding="utf-8"))
+        document = read_json(directory / "metrics.json.gz")
         execution = document["execution"]
         records = {item["metric_name"]: item for item in document["metrics"]}
         return records, execution
@@ -502,7 +506,7 @@ class RandomEpisodeTests(unittest.TestCase):
     def test_core_removes_generated_inputs_and_observations_after_publishing_metrics(self):
         self.run_episodes()
         directory = self.episode_directories()[0]
-        document = json.loads((directory / "metrics.json").read_text())
+        document = read_json(directory / "metrics.json.gz")
         _, execution = self.episode_results(directory)
         self.assertIsNone(document["entity_metrics_file"])
         self.assertFalse((directory / "entities.json.gz").exists())
@@ -527,13 +531,29 @@ class RandomEpisodeTests(unittest.TestCase):
     def test_full_retains_entities_and_native_observations(self):
         self.run_episodes(metrics_profile="full")
         directory = self.episode_directories()[0]
-        document = json.loads((directory / "metrics.json").read_text())
+        document = read_json(directory / "metrics.json.gz")
         _, execution = self.episode_results(directory)
         self.assertEqual(document["entity_metrics_file"], "entities.json.gz")
         self.assertTrue((directory / "entities.json.gz").is_file())
         self.assertEqual(len(list((directory / "raw").iterdir())), 4)
         self.assertFalse((directory / "inputs").exists())
         self.assertFalse((directory / "manifest.json").exists())
+
+    def test_random_diagnostic_retains_instrumentation_without_changing_results(self):
+        for profile in ("core", "full", "diagnostic"):
+            with self.subTest(profile=profile):
+                self.run_episodes(metrics_profile=profile)
+                directory = self.run_mock.call_args.kwargs["recording_dir"]
+                records, execution = self.episode_results(directory)
+                self.assertEqual(records["vehicles_completed"]["value"], 2)
+                self.assertEqual(records["network_mean_speed_m_s_mean"]["value"], 8.25)
+                self.assertEqual((directory / "entities.json.gz").exists(), profile != "core")
+                self.assertEqual("collection_summary_time_seconds" in records, profile == "diagnostic")
+                self.assertEqual("sumo_performance_clock_duration" in records, profile == "diagnostic")
+                self.assertEqual("sumo_step_computation_ms_mean" in records, profile == "diagnostic")
+                self.assertEqual("collection_summary_time_seconds" in execution["timings_seconds"],
+                                 profile == "diagnostic")
+                self.assertIn("aggregation_time_seconds", execution["timings_seconds"])
 
     def test_core_collection_failure_preserves_native_observations(self):
         self.collector.collect_episode.side_effect = ValueError("observação incompleta")
@@ -612,11 +632,11 @@ class RandomEpisodeTests(unittest.TestCase):
                 ]):
                     self.run_episodes()
                     first = self.episode_directories()[0]
-                    previous_metrics = (first / "metrics.json").read_bytes()
+                    previous_metrics = (first / "metrics.json.gz").read_bytes()
                     self.run_episodes()
 
         self.assertEqual(len(list(self.output_dir.iterdir())), 2)
-        self.assertEqual((first / "metrics.json").read_bytes(), previous_metrics)
+        self.assertEqual((first / "metrics.json.gz").read_bytes(), previous_metrics)
 
     def test_invalid_batch_parameters_stop_before_generation(self):
         invalid_values = {
@@ -846,6 +866,11 @@ class RandomEpisodeTests(unittest.TestCase):
         self.assertEqual(options["signal_profile"], "current")
         self.assertIsNone(options["settran_plan"])
         self.assertIsNone(options["settran_intersections"])
+
+    @patch.object(simulation, "run_random_episodes")
+    def test_cli_accepts_diagnostic_for_developers(self, run_random_episodes):
+        self.assertEqual(simulation.main(["--metrics-profile", "diagnostic"]), 0)
+        self.assertEqual(run_random_episodes.call_args.kwargs["metrics_profile"], "diagnostic")
 
     @patch.object(simulation, "run_random_episodes")
     def test_cli_forwards_signal_profile_separately(self, run_random_episodes):

@@ -1,6 +1,7 @@
 """Integração do contexto MetaSettran ao executor e à retenção existentes."""
 
 from contextlib import redirect_stderr
+import gzip
 import hashlib
 import io
 import json
@@ -11,6 +12,7 @@ from unittest.mock import patch
 
 from SistemaDeSemaforos.demand import metasettran_demand_generator as demand
 from SistemaDeSemaforos.metrics import episode_metrics_collector as collector
+from SistemaDeSemaforos.metrics.metrics_storage import read_json
 from SistemaDeSemaforos.simulation import episode_runner as runner
 
 
@@ -83,6 +85,8 @@ class MetaSettranRunnerTests(unittest.TestCase):
             groups=[{"id": "regional", "generated_departures": 2}],
             spatial_distribution={"expected_network_departures": 2.0,
                                   "trip_populations": {"boundary_to_boundary": 2},
+                                  "activity_locations": [{"zone_id": "local", "origins": [{"edge": "a"}]}],
+                                  "corridors": [{"id": "corridor", "generated_departures": 2}],
                                   "catalog": {"accepted_pairs": 1,
                                       "alternative_routing_command": ["duarouter", "alternative"],
                                       "diversity_routing_commands": [["duarouter", "diversity"]],
@@ -113,7 +117,7 @@ class MetaSettranRunnerTests(unittest.TestCase):
     def fake_collect(self, raw, net, profile="core"):
         return {"metrics": {"vehicles_completed": 2, "simulation_duration_seconds": 13500.0,
                             "vehicles_inserted": 2, "teleports": 0},
-                "entities": {"vehicles": {"a": {}, "b": {}}} if profile == "full" else {}}
+                "entities": {"vehicles": {"a": {}, "b": {}}} if profile != "core" else {}}
 
     def fake_validation(self, directory, generation, *, summary_metrics, vehicles=None):
         if vehicles is not None:
@@ -121,7 +125,10 @@ class MetaSettranRunnerTests(unittest.TestCase):
         self.validation_result = {
             "metrics": {"vehicles_completed_without_teleport": 2, "vehicles_with_teleport": 0},
             "status": "conditional_on_unconfirmed_sensor_mapping", "ready_for_weekly_expansion": False,
-            "spatial_observation": {"portal_trip_accounting": {
+            "spatial_observation": {"endpoint_totals": {"programmed_by_origin_kind": {"boundary": 2}},
+                "activity_locations": [{"zone_id": "local", "origins": [{"edge": "a"}]}],
+                "corridor_probes": [{"id": "corridor", "probes": [1, 2]}],
+                "portal_trip_accounting": {
                 "bin_seconds": 900,
                 "entries": [{"edge": "entry", "programmed": 2,
                              "intervals": [{"begin": 0, "programmed": 2}]}],
@@ -136,10 +143,15 @@ class MetaSettranRunnerTests(unittest.TestCase):
         options.update(kwargs)
         return runner.run_episodes(**options)
 
+    def test_cli_exposes_diagnostic_for_metasettran(self):
+        with patch.object(runner, "run_episodes") as run:
+            self.assertEqual(runner.main(["--demand-profile", "metasettran", "--metrics-profile", "diagnostic"]), 0)
+        self.assertEqual(run.call_args.kwargs["metrics_profile"], "diagnostic")
+
     def results(self, batch):
         results = []
-        for path in sorted(batch.glob("*/metrics.json")):
-            document = json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(batch.glob("*/metrics.json.gz")):
+            document = read_json(path)
             metrics = {item["metric_name"]: item["value"] for item in document["metrics"]}
             results.append((path.parent, metrics, document["execution"]))
         return results
@@ -199,7 +211,7 @@ class MetaSettranRunnerTests(unittest.TestCase):
         selection = {"plan_id": "explicit-test-plan", "intersections": ["synthetic intersection"],
                      "tls_ids": ["synthetic_tls"], "current_tls_ids": [], "document_snapshot": {}}
         hashes = []
-        for signal, profile in (("current", "core"), ("settran", "full")):
+        for signal, profile in (("current", "core"), ("settran", "full"), ("current", "diagnostic")):
             with self.subTest(signal=signal, profile=profile):
                 with patch.object(runner, "_validate_signal_profile",
                                   return_value=selection if signal == "settran" else None):
@@ -218,10 +230,10 @@ class MetaSettranRunnerTests(unittest.TestCase):
                                  {"day": "tuesday", "start": "15:00", "sections": 1, "variation": 7})
                 self.assertNotIn("signal_profile", generated)
                 self.assertNotIn("metrics_profile", generated)
-                self.assertEqual(generated["include_route_details"], profile == "full")
+                self.assertEqual(generated["include_route_details"], profile == "diagnostic")
                 _, _, execution = self.results(batch)[0]
                 hashes.append(execution["generation"]["routes_sha256"])
-        self.assertEqual(hashes[0], hashes[1])
+        self.assertEqual(len(set(hashes)), 1)
 
     def test_current_does_not_require_settran_evidence_or_select_an_automatic_plan(self):
         with patch.object(runner, "SETTRAN_PROGRAMS_FILE", self.directory / "missing_settran.json"):
@@ -230,9 +242,10 @@ class MetaSettranRunnerTests(unittest.TestCase):
                 self.run_batch(signal_profile="settran")
         self.assertEqual(self.generate.call_count, 1)
 
-    def test_core_and_full_retain_reusable_route_and_log_but_apply_existing_raw_policy(self):
-        for profile in ("core", "full"):
+    def test_profiles_retain_analysis_results_and_reserve_technical_details_for_diagnostic(self):
+        for profile in ("core", "full", "diagnostic"):
             with self.subTest(profile=profile):
+                diagnostic = profile == "diagnostic"
                 batch = self.run_batch(metrics_profile=profile)
                 directory, metrics, execution = self.results(batch)[0]
                 retained = directory / "metasettran.rou.xml"
@@ -241,43 +254,36 @@ class MetaSettranRunnerTests(unittest.TestCase):
                 self.assertEqual(self.simulate.call_args.kwargs["demand_file"], retained)
                 self.assertTrue((directory / "sumo.log").is_file())
                 self.assertFalse((directory / "inputs").exists())
-                self.assertEqual((directory / "raw" / "metasettran_counts.xml.gz").is_file(), profile == "full")
-                self.assertEqual((directory / "entities.json.gz").is_file(), profile == "full")
+                self.assertEqual((directory / "raw" / "metasettran_counts.xml.gz").is_file(), profile != "core")
+                self.assertEqual((directory / "entities.json.gz").is_file(), profile != "core")
                 self.assertEqual(metrics["vehicles_completed_without_teleport"], 2)
                 self.assertFalse(execution["demand_validation"]["ready_for_weekly_expansion"])
-                self.assertEqual(self.validate.call_args.kwargs["vehicles"] is not None, profile == "full")
+                self.assertEqual(self.validate.call_args.kwargs["vehicles"] is not None, profile != "core")
+                self.assertEqual(self.generate.call_args.kwargs["include_route_details"], diagnostic)
                 generation = execution["generation"]
                 self.assertEqual(generation["groups"], [{"id": "regional", "generated_departures": 2}])
                 spatial = generation["spatial_distribution"]
                 self.assertEqual(spatial["expected_network_departures"], 2.0)
                 self.assertEqual(spatial["trip_populations"], {"boundary_to_boundary": 2})
-                self.assertEqual("routes" in spatial, profile == "full")
-                self.assertEqual("groups" in spatial, profile == "full")
-                self.assertEqual("spatial_model" in generation, profile == "full")
-                self.assertEqual("calibration" in generation, profile == "full")
-                self.assertEqual("spatial_model_reference" in generation, profile == "core")
-                self.assertEqual("calibration_reference" in generation, profile == "core")
-                self.assertEqual("limitations" in spatial, profile == "full")
-                self.assertEqual("qualification" in spatial["portals"]["entries"][0], profile == "full")
-                self.assertEqual(spatial["catalog"]["accepted_pairs"], 1)
-                completion = spatial["catalog"]["coverage_completion"]
-                self.assertEqual(completion["candidate_routes"], 1)
-                self.assertEqual(completion["missing_after"], 0)
-                self.assertEqual("edges" in completion, profile == "full")
-                self.assertEqual("command" in completion, profile == "full")
-                for key in ("alternative_routing_command", "diversity_routing_commands"):
-                    self.assertEqual(key in spatial["catalog"], profile == "full")
-                if profile == "core":
+                for key in ("routes", "groups", "limitations", "portals", "catalog", "activity_locations", "corridors"):
+                    self.assertEqual(key in spatial, diagnostic)
+                self.assertEqual("spatial_model" in generation, diagnostic)
+                self.assertEqual("calibration" in generation, diagnostic)
+                self.assertEqual("spatial_model_reference" in generation, not diagnostic)
+                self.assertEqual("calibration_reference" in generation, not diagnostic)
+                if not diagnostic:
                     self.assertEqual(generation["spatial_model_reference"]["network_sha256"], "network-hash")
                     calibration = generation["calibration_reference"]
                     self.assertEqual(calibration["source"]["sha256"], "counts-hash")
                     self.assertEqual(calibration["training_date_count"], 1)
-                    self.assertEqual(calibration["sensors"]["5"]["target_counts"], [1.0, 2.0])
-                    self.assertNotIn("knots", calibration["sensors"]["5"])
+                    self.assertEqual(calibration["sensors"]["5"]["expected_cars"], 3.0)
+                    for key in ("target_counts", "realized_target_counts", "training_support", "knots"):
+                        self.assertNotIn(key, calibration["sensors"]["5"])
                     self.assertEqual(generation["variability"]["sampled_days"][0]["date"], "2026-07-21")
-                accounting = execution["demand_validation"]["spatial_observation"]["portal_trip_accounting"]
-                self.assertEqual("intervals" in accounting["entries"][0], profile == "full")
-                self.assertEqual("intervals" in accounting["activity_origins"][0], profile == "full")
+                observation = execution["demand_validation"]["spatial_observation"]
+                for key in ("portal_trip_accounting", "activity_locations", "corridor_probes"):
+                    self.assertEqual(key in observation, diagnostic)
+                self.assertEqual(observation["endpoint_totals"], {"programmed_by_origin_kind": {"boundary": 2}})
                 # A coleta recebe e conserva os dados completos; só a visão publicada é compactada.
                 collected_generation = self.validate.call_args.args[1]
                 self.assertIn("spatial_model", collected_generation)
@@ -288,25 +294,98 @@ class MetaSettranRunnerTests(unittest.TestCase):
                 self.assertIn("diversity_routing_commands", original_catalog)
                 self.assertIn("intervals", self.validation_result["spatial_observation"]
                               ["portal_trip_accounting"]["entries"][0])
-                if profile == "full":
+                if diagnostic:
                     self.assertEqual(spatial["routes"], [{"id": "route_a", "generated_departures": 2}])
                     self.assertEqual(spatial["groups"], generation["groups"])
+                    self.assertEqual(generation["calibration"], collected_generation["calibration"])
+                    self.assertEqual(execution["demand_validation"], self.validation_result)
+                    self.assertIn("intervals", observation["portal_trip_accounting"]["entries"][0])
 
     def test_validation_failure_retains_route_raw_and_inputs_for_investigation(self):
         self.validate.side_effect = ValueError("teleport log incomplete")
         with self.assertRaisesRegex(ValueError, "teleport log incomplete"):
             self.run_batch()
-        paths = list(self.output_dir.glob("*/*/metrics.json"))
+        paths = list(self.output_dir.glob("*/*/metrics.json.gz"))
         self.assertEqual(len(paths), 1)
         directory = paths[0].parent
         self.assertTrue((directory / "metasettran.rou.xml").is_file())
         self.assertTrue((directory / "inputs" / "metasettran.trips.xml").is_file())
         self.assertTrue((directory / "raw" / "metasettran_counts.xml.gz").is_file())
-        document = json.loads(paths[0].read_text())
+        document = read_json(paths[0])
         self.assertEqual(document["execution"]["status"], "failed")
         self.assertIn("spatial_model", document["execution"]["generation"])
         self.assertIn("calibration", document["execution"]["generation"])
         self.assertNotIn("spatial_model_reference", document["execution"]["generation"])
+
+    def test_large_routes_and_logs_are_validated_before_originals_are_removed(self):
+        originals = {}
+
+        def generate_large(**kwargs):
+            route = self.fake_generate(**kwargs)
+            data = route.read_bytes() + b"\n" + b" " * 100000
+            route.write_bytes(data)
+            kwargs["metadata"]["routes_sha256"] = hashlib.sha256(data).hexdigest()
+            Path(kwargs["log_file"]).write_bytes(b"generation detail\n" * 10000)
+            originals["route"] = data
+            return route
+
+        def simulate_large(**kwargs):
+            self.fake_simulate(**kwargs)
+            (kwargs["recording_dir"] / "sumo.log").write_bytes(b"diagnostic warning\n" * 10000)
+
+        self.generate.side_effect = generate_large
+        self.simulate.side_effect = simulate_large
+        for profile in ("core", "full"):
+            with self.subTest(profile=profile):
+                directory, _, execution = self.results(self.run_batch(metrics_profile=profile))[0]
+                for name, expected in (("metasettran.rou.xml", originals["route"]),
+                                       ("sumo.log", b"diagnostic warning\n" * 10000),
+                                       ("generation.log", b"generation detail\n" * 10000)):
+                    self.assertFalse((directory / name).exists())
+                    self.assertEqual(gzip.decompress((directory / (name + ".gz")).read_bytes()), expected)
+                self.assertEqual(execution["generation"]["routes_file"],
+                                 str(directory / "metasettran.rou.xml.gz"))
+                self.assertEqual(execution["generation"]["routes_sha256"],
+                                 hashlib.sha256(originals["route"]).hexdigest())
+
+    def test_compression_failure_keeps_original_route_and_publishes_diagnostics(self):
+        def generate_large(**kwargs):
+            route = self.fake_generate(**kwargs)
+            route.write_bytes(route.read_bytes() + b" " * 100000)
+            return route
+
+        self.generate.side_effect = generate_large
+        with patch.object(runner, "verify_file", side_effect=ValueError("integrity failure")):
+            with self.assertRaisesRegex(ValueError, "integrity failure"):
+                self.run_batch()
+        path, = self.output_dir.glob("*/*/metrics.json.gz")
+        route = path.parent / "metasettran.rou.xml"
+        self.assertTrue(route.is_file())
+        self.assertTrue((path.parent / "inputs").is_dir())
+        self.assertEqual(read_json(path)["execution"]["generation"]["routes_file"], str(route))
+
+    def test_final_metrics_write_failure_does_not_remove_original_route(self):
+        def generate_large(**kwargs):
+            route = self.fake_generate(**kwargs)
+            route.write_bytes(route.read_bytes() + b" " * 100000)
+            return route
+
+        self.generate.side_effect = generate_large
+        publish = runner.save_episode
+        with patch.object(runner, "save_episode") as mocked:
+            def fail_final(*args, **kwargs):
+                if mocked.call_count == 2:
+                    raise OSError("final publication failed")
+                return publish(*args, **kwargs)
+            mocked.side_effect = fail_final
+            with self.assertRaisesRegex(OSError, "final publication failed"):
+                self.run_batch()
+        path, = self.output_dir.glob("*/*/metrics.json.gz")
+        route = path.parent / "metasettran.rou.xml"
+        archive = path.parent / "metasettran.rou.xml.gz"
+        self.assertTrue(route.is_file())
+        self.assertEqual(gzip.decompress(archive.read_bytes()), route.read_bytes())
+        self.assertTrue((path.parent / "inputs").is_dir())
 
     def test_cli_rejects_ambiguous_contexts_and_conflicting_window_flags(self):
         base = ["--demand-profile", "metasettran", "--net-file", str(self.net),
@@ -600,8 +679,8 @@ class MetaSettranRunnerTests(unittest.TestCase):
         self.generate.side_effect = ValueError("native routing unavailable")
         with self.assertRaisesRegex(ValueError, "native routing unavailable"):
             self.run_batch(sections=2, master_seed=123)
-        path, = self.output_dir.glob("*/*/metrics.json")
-        document = json.loads(path.read_text())
+        path, = self.output_dir.glob("*/*/metrics.json.gz")
+        document = read_json(path)
         selection = document["execution"]["context_selection"]
         self.assertEqual(selection["master_seed"], 123)
         self.assertEqual(len(selection["contexts"]), 2)

@@ -31,7 +31,7 @@ from ..demand.random_demand_generator import (
     generate_random_demand,
     sumo_process_options,
 )
-from ..metrics.metrics_storage import save_entities, save_episode
+from ..metrics.metrics_storage import compress_file, save_entities, save_episode, verify_file
 from ..metrics.sumo_output_configuration import prepare_outputs
 
 
@@ -45,35 +45,19 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _compact_metasettran_core(execution: dict) -> dict:
-    """Prepara a visão core sem alterar os dados usados pela coleta ou pelo full."""
+def _analysis_metasettran_execution(execution: dict) -> dict:
+    """Mantém contexto e integridade globais; auditoria técnica fica em diagnostic."""
     generation = execution["generation"]
     spatial_model = generation["spatial_model"]
     calibration = generation["calibration"]
     compact_generation = generation.copy()
     compact_generation.pop("spatial_model")
     compact_generation.pop("calibration")
-    distribution = generation["spatial_distribution"].copy()
-    distribution.pop("limitations", None)
-    if "catalog" in distribution:
-        catalog = distribution["catalog"].copy()
-        for key in ("alternative_routing_command", "diversity_routing_commands"):
-            catalog.pop(key, None)
-        if "coverage_completion" in catalog:
-            catalog["coverage_completion"] = {
-                key: value for key, value in catalog["coverage_completion"].items()
-                if key not in {"edges", "command"}
-            }
-        catalog["detailed_review"] = "full_or_offline_demand_audit"
-        distribution["catalog"] = catalog
-    distribution["portals"] = {
-        role: [
-            {key: value for key, value in record.items() if key != "qualification"}
-            for record in records
-        ]
-        for role, records in generation["spatial_distribution"].get("portals", {}).items()
+    compact_generation["spatial_distribution"] = {
+        key: value for key, value in generation["spatial_distribution"].items()
+        if key in {"scenario", "method", "total_equation", "expected_network_departures",
+                   "trip_populations", "observation_incidence_generated", "coverage", "distance_distribution"}
     }
-    compact_generation["spatial_distribution"] = distribution
     compact_generation["spatial_model_reference"] = {
         key: spatial_model[key] for key in (
             "schema_version", "version", "status", "network_sha256", "vehicle_class",
@@ -82,7 +66,6 @@ def _compact_metasettran_core(execution: dict) -> dict:
     }
     sensor_fields = (
         "baseline_reference_cars_15_18", "expected_cars", "realized_expected_cars",
-        "target_counts", "realized_target_counts", "training_support",
     )
     compact_generation["calibration_reference"] = {
         "version": calibration["version"],
@@ -99,16 +82,15 @@ def _compact_metasettran_core(execution: dict) -> dict:
         },
     }
 
-    validation = execution["demand_validation"].copy()
-    observation = validation["spatial_observation"].copy()
-    accounting = observation["portal_trip_accounting"].copy()
-    for role in ("entries", "activity_origins"):
-        accounting[role] = [
-            {key: value for key, value in record.items() if key != "intervals"}
-            for record in accounting.get(role, [])
-        ]
-    observation["portal_trip_accounting"] = accounting
-    validation["spatial_observation"] = observation
+    validation = {key: value for key, value in execution["demand_validation"].items()
+                  if key in {"status", "empirical_calibration_status", "temporal_scope", "trip_accounting",
+                             "boundary_integrity", "count_class", "simulation_class", "observation", "startup",
+                             "boundary_continuity", "limitations", "ready_for_weekly_expansion"}}
+    validation["spatial_observation"] = {
+        key: value for key, value in execution["demand_validation"]["spatial_observation"].items()
+        if key in {"bin_seconds", "departure_window_seconds", "clearance_window_seconds",
+                   "endpoint_reconciliation", "endpoint_totals", "trip_distance_m", "note"}
+    }
     return {**execution, "generation": compact_generation, "demand_validation": validation}
 
 
@@ -415,8 +397,8 @@ def run_episodes(
     first_variation = plans[0]["variation"] if demand_profile == "metasettran" else None
     if first_variation is not None and first_variation + episodes - 1 > 25:
         raise ValueError("O lote excede as 25 variações; não há retorno automático à variação 1.")
-    if metrics_profile not in {"core", "full"}:
-        raise ValueError("metrics_profile deve ser core ou full.")
+    if metrics_profile not in {"core", "full", "diagnostic"}:
+        raise ValueError("metrics_profile deve ser core, full ou diagnostic.")
     if end is not None and (not math.isfinite(end) or end <= 0):
         raise ValueError("end deve ser um número finito maior que zero.")
     for name, value in (("duration", duration), ("period", period)):
@@ -542,7 +524,7 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
             "intersections": selection["intersections"], "tls_ids": selection["tls_ids"],
             "current_tls_ids": selection["current_tls_ids"],
         }
-    save_episode(directory, metrics, execution, include_entities=metrics_profile == "full")
+    save_episode(directory, metrics, execution, include_entities=metrics_profile != "core")
     try:
         configuration_started = perf_counter()
         if "configuration" not in context:
@@ -565,7 +547,7 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
             demand_file = generate_metasettran_demand(
                 net_file=net_file, output_dir=inputs, metadata=generation,
                 log_file=directory / "generation.log",
-                include_route_details=metrics_profile == "full",
+                include_route_details=metrics_profile == "diagnostic",
                 **{key: value for key, value in demand_options.items() if not key.startswith("_")},
             )
             # Uma rota reutilizável é parte do experimento MetaSettran. As viagens
@@ -629,7 +611,7 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
             from ..metrics.episode_metrics_collector import collect_metasettran_validation
             validation = collect_metasettran_validation(
                 directory, generation, summary_metrics=collected["metrics"],
-                vehicles=entities.get("vehicles") if metrics_profile == "full" else None)
+                vehicles=entities.get("vehicles") if metrics_profile != "core" else None)
             metrics.update(validation.pop("metrics"))
             execution["demand_validation"] = validation
         metrics["aggregation_time_seconds"] = perf_counter() - aggregation_started
@@ -643,7 +625,7 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
     finally:
         # Resultados e diagnósticos são preservados também em uma falha parcial.
         persistence_started = perf_counter()
-        if metrics_profile == "full":
+        if metrics_profile != "core":
             save_entities(directory, entities)
         metrics["entity_persistence_time_seconds"] = perf_counter() - persistence_started
         execution["collection"]["native_outputs"] = sorted(
@@ -654,9 +636,18 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
             name: value for name, value in metrics.items()
             if name.endswith("_time_seconds") or name.startswith("collection_")
         })
-        if metrics_profile == "core":
+        if metrics_profile != "diagnostic":
             for name in execution["timings_seconds"]:
                 metrics.pop(name, None)
+            # Relógios internos e desempenho computacional do SUMO são
+            # instrumentação; resultados físicos e segurança permanecem.
+            for name in list(metrics):
+                if name.startswith(("sumo_performance_", "sumo_step_computation_")):
+                    metrics.pop(name)
+            execution["timings_seconds"] = {
+                name: value for name, value in execution["timings_seconds"].items()
+                if not name.startswith("collection_") and name != "entity_persistence_time_seconds"
+            }
         metrics["finished_at_utc"] = _utc_now()
         metrics["execution_time_seconds"] = perf_counter() - started
         execution.update({name: metrics[name] for name in (
@@ -671,14 +662,43 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
         execution["collection"]["retention"] = (
             "aggregates" if metrics_profile == "core" and metrics["status"] == "completed"
             else "raw_and_aggregates")
-        # A medida vai do início do episódio até a publicação final; exclui apenas
-        # escrita de metrics.json e remoção de entradas/observações temporárias.
+        # A compressão ocorre depois da coleta: a simulação e os leitores internos
+        # continuam usando os arquivos originais. Não tocamos em falhas parciais.
+        compressed_files = []
+        compression_error = None
+        if metrics["status"] == "completed":
+            candidates = [directory / "generation.log", directory / "sumo.log"]
+            if demand_options is not None:
+                candidates.append(directory / "metasettran.rou.xml")
+            try:
+                for source in candidates:
+                    if source.is_file() and source.stat().st_size >= 64 * 1024:
+                        compressed = compress_file(source)
+                        if compressed.stat().st_size < source.stat().st_size:
+                            compressed_files.append((source, compressed))
+                        else:
+                            compressed.unlink()
+                for source, compressed in compressed_files:
+                    verify_file(source, compressed)
+            except BaseException as exc:
+                compression_error = exc
+            if compression_error is None:
+                for source, compressed in compressed_files:
+                    if source.name == "metasettran.rou.xml":
+                        execution["generation"]["routes_file"] = str(compressed)
+
+        # A medida foi encerrada antes da compressão final; também exclui a
+        # escrita final de métricas e a remoção de entradas temporárias.
         published_execution = (
-            _compact_metasettran_core(execution)
-            if demand_options is not None and metrics_profile == "core"
+            _analysis_metasettran_execution(execution)
+            if demand_options is not None and metrics_profile != "diagnostic"
             and metrics["status"] == "completed" else execution
         )
-        save_episode(directory, metrics, published_execution, include_entities=metrics_profile == "full")
+        save_episode(directory, metrics, published_execution, include_entities=metrics_profile != "core")
+        if compression_error is not None:
+            raise compression_error
+        for source, _ in compressed_files:
+            source.unlink()
         # Dados consolidados não dependem das entradas geradas. Falhas anteriores
         # preservam esses arquivos; full conserva somente suas observações úteis.
         if metrics["status"] == "completed":
@@ -719,8 +739,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--drain-limit", type=float, help="Escoamento após a janela de partidas; MetaSettran: 2700 s.")
     parser.add_argument("--spatial-scenario", choices=SPATIAL_SCENARIOS,
                         help="Modelo regional integrado; regional-midpoint é alias de compatibilidade, sem orçamento lateral independente.")
-    parser.add_argument("--metrics-profile", choices=("core", "full"), default="core",
-                        help="core: observações padrão; full: inclui séries por via/faixa/veículo.")
+    parser.add_argument("--metrics-profile", choices=("core", "full", "diagnostic"), default="core",
+                        help="core: indicadores globais; full: medições por entidade e observações nativas; "
+                             "diagnostic: full com auditoria técnica e instrumentação (somente terminal).")
     parser.add_argument("--signal-profile", choices=("current", "settran"), default="current",
                         help="current: programas do mapa; settran: plano fixo validado por interseção/TLS.")
     parser.add_argument("--settran-plan", type=str,

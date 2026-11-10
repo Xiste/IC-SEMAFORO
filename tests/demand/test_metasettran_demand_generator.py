@@ -2,6 +2,7 @@
 
 from collections import Counter
 from contextlib import nullcontext
+import gzip
 import hashlib
 import json
 import math
@@ -1345,6 +1346,31 @@ class MetaSettranTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outra versão"):
             self.generate()
 
+    def test_windows_crlf_keeps_demand_and_records_actual_network_hash(self):
+        lf = self.net.read_bytes().replace(b'\r\n', b'\n').replace(b'><', b'>\n<') + b'\n'
+        self.net.write_bytes(lf)
+        self.write_model()
+        baseline = {}
+        before = self.generate('lf', variation=7, metadata=baseline).read_bytes()
+        crlf = lf.replace(b'\n', b'\r\n')
+        self.net.write_bytes(crlf)
+        metadata = {}
+        after = self.generate('crlf', variation=7, metadata=metadata).read_bytes()
+        self.assertEqual(before, after)
+        self.assertEqual(metadata['source_network_sha256'], hashlib.sha256(crlf).hexdigest())
+        self.assertEqual(baseline['source_network_sha256'], hashlib.sha256(lf).hexdigest())
+        self.assertNotEqual(metadata['source_network_sha256'], baseline['source_network_sha256'])
+        self.assertEqual(self.net.read_bytes(), crlf)
+
+    def test_windows_crlf_does_not_hide_real_network_changes(self):
+        lf = self.net.read_bytes().replace(b'\r\n', b'\n').replace(b'><', b'>\n<') + b'\n'
+        self.net.write_bytes(lf)
+        self.write_model()
+        self.net.write_bytes(lf.replace(b'length="600"', b'length="700"').replace(b'\n', b'\r\n'))
+        with self.assertRaisesRegex(ValueError, 'outra versão'):
+            self.generate()
+        self.assertFalse((self.directory / 'demand').exists())
+
     def test_internal_origin_is_rejected(self):
         self.model["portals"]["entries"][0]["edge"] = "middle"
         self.write_model()
@@ -1620,6 +1646,20 @@ class MetaSettranTests(unittest.TestCase):
                             [vehicle.find("route").get("edges") for vehicle in changed.findall("vehicle")])
         self.assertEqual(metadata["paired_schedule"]["count"], len(original.findall("vehicle")))
         self.assertEqual(metadata["spatial_distribution"]["expected_network_departures"], len(original.findall("vehicle")))
+
+    def test_compressed_paired_schedule_keeps_generated_routes_and_original_hash(self):
+        baseline = self.generate(output="schedule-original", variation=7)
+        original = baseline.read_bytes()
+        plain_result = self.generate(output="schedule-plain", variation=7, schedule_file=baseline).read_bytes()
+        archive = baseline.with_name(baseline.name + ".gz")
+        archive.write_bytes(gzip.compress(original))
+        baseline.unlink()
+        metadata = {}
+        compressed_result = self.generate(output="schedule-compressed", variation=7,
+                                          schedule_file=baseline, metadata=metadata).read_bytes()
+        self.assertEqual(compressed_result, plain_result)
+        self.assertEqual(metadata["paired_schedule"]["sha256"], hashlib.sha256(original).hexdigest())
+        self.assertEqual(metadata["paired_schedule"]["file"], str(archive))
 
     def test_local_activity_weights_require_paired_schedule(self):
         with self.assertRaisesRegex(ValueError, "agenda pareada"):

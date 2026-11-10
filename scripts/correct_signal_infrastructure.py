@@ -1,9 +1,9 @@
-"""Corrige somente a infraestrutura comprovada da rede-base.
+"""Corrige a infraestrutura comprovada e os limites regulamentados da rede-base.
 
 Uso: python3 scripts/correct_signal_infrastructure.py [--check].
 Aproximações, faixas, retenções e conflitos são recalculados pelo netconvert 1.27.1.
-Somente o delta local é incorporado. Nenhum plano SETTRAN é criado aqui.
-Ajusta vínculos físicos de sinais e travessias com base nas evidências disponíveis.
+Somente os deltas explicitamente auditados são incorporados. Nenhum plano SETTRAN é criado aqui.
+Ajusta vínculos físicos, travessias e velocidades com base nas evidências disponíveis.
 Com --check, verifica a rede existente sem aplicar alterações ao arquivo.
 """
 
@@ -22,7 +22,47 @@ NETWORK = ROOT / "SistemaDeSemaforos/network/uberlandia.vehicular.families.16_2_
 SOURCE_SHA256 = "46e7c4a4627cd511d419c01f15d65f66724941ac83360c4fc424b86626a5c10b"
 LEGACY_SHA256 = "645b5fb5d8cf361d0345f2acf0d44e1c9c1f470caef49768e469e6faa6d81291"
 FOUNDATION_SHA256 = "2bf6f012fdf86ecd122be6601f1eae2bd0d3907526f4e5aff3bcd0f3f0eaeb2d"
-CORRECTED_SHA256 = "f30b0807fa46e3d4fb65c573be68f6544d75a64e44a2c32fee71389fd4106d56"
+PRE_SPEED_SHA256 = "f30b0807fa46e3d4fb65c573be68f6544d75a64e44a2c32fee71389fd4106d56"
+CORRECTED_SHA256 = "2e6212d6bd692bbf02b8778f1edaaf1ca31c5b9d2b7cf8dcd8277c9f3ced22fd"
+
+# Limites integrais por corredor, em m/s. Os estudos técnicos de 2020 e 2025
+# estão publicados pela SETTRAN em:
+# https://www.uberlandia.mg.gov.br/prefeitura/secretarias/transito-e-transportes/fiscalizacao-eletronica/
+# A aplicação abrange todos os edges OSM de cada via, sentidos e faixas. O
+# atributo de faixa do SUMO vale igualmente para todos os perfis de veículos.
+REGULATED_SPEED_LIMITS = (
+    ("Avenida Afonso Pena", "13.89", {
+        658279138, 665897559, 666324308,
+    }),
+    ("Avenida Anselmo Alves dos Santos", "11.11", {
+        82535967, 232642481, 232642485, 292932042, 307152127, 462991287,
+        462993226, 462993227, 462993228, 625668272, 625668273, 625668274,
+        625668275,
+    }),
+    ("Avenida Monsenhor Eduardo", "13.89", {
+        261533405, 307156125, 332052778, 332052779, 421573242,
+    }),
+    ("Avenida Floriano Peixoto", "13.89", {152937004}),
+    ("Avenida João Pinheiro", "11.11", {
+        261301880, 261301881, 665897565, 666324275,
+    }),
+    ("Avenida Governador Rondon Pacheco", "16.67", {
+        46711471, 152937136, 261432318, 299471494, 331577748, 331577749,
+        331577750, 331577751, 399250753, 462991286, 576014290, 576014295,
+        576014296, 576014298, 576014299, 576014300, 576014301, 576876311,
+        930831032, 930831033, 931572689, 965367672, 1156272391,
+        1156272393, 1156717163, 1156717170, 1156717173, 1156717175,
+        1156717176, 1171563461,
+    }),
+    ("Avenida João Naves de Ávila", "16.67", {
+        30621187, 82009802, 82009804, 82009805, 259739904, 259739911,
+        259739913, 462993308, 462993309, 462993804, 462993805, 462993806,
+        462993807, 576014292, 576014293, 577166561, 577488380, 602306707,
+        659117928, 669609230, 669609231, 669609232, 708111982, 708111983,
+        708111984, 708111985, 708111986, 708111987, 901329256, 901329257,
+        1171661493,
+    }),
+)
 
 # Controles da revisão intermediária auditada, antes de completar a geometria.
 # TLS, junctions, entradas externas, número de controlledLinks.
@@ -1464,35 +1504,80 @@ def _restore_isolated_crossing_envelopes(source):
 
 
 
+def _correct_regulated_speeds(text):
+    """Aplica cada limite a todas as faixas e sentidos dos corredores auditados."""
+    limits = {}
+    labels = {}
+    for label, speed, way_ids in REGULATED_SPEED_LIMITS:
+        overlap = set(limits).intersection(way_ids)
+        if overlap:
+            raise ValueError(f"Ways repetidos na regulamentação: {sorted(overlap)}.")
+        limits.update({way_id: speed for way_id in way_ids})
+        labels.update({way_id: label for way_id in way_ids})
+
+    seen = set()
+    for match in reversed(_blocks(text, "edge")):
+        edge = ET.fromstring(match.group())
+        identifier = re.fullmatch(r"-?(\d+)(?:#.*)?", edge.get("id", ""))
+        if identifier is None:
+            continue
+        way_id = int(identifier.group(1))
+        speed = limits.get(way_id)
+        if speed is None:
+            continue
+        if edge.get("function") is not None:
+            raise ValueError(f"Way regulamentado virou edge interno: {edge.get('id')}.")
+        lanes = edge.findall("lane")
+        if not lanes or any(lane.get("allow") == "pedestrian" for lane in lanes):
+            raise ValueError(f"Faixas inesperadas na via {labels[way_id]}: {edge.get('id')}.")
+
+        replacement, count = re.subn(
+            r'(<lane\b[^\n]*\bspeed=")[^"]+(")', rf'\g<1>{speed}\2', match.group()
+        )
+        if count != len(lanes):
+            raise ValueError(f"Não foi possível atualizar todas as faixas: {edge.get('id')}.")
+        text = text[:match.start()] + replacement + text[match.end():]
+        seen.add(way_id)
+
+    missing = set(limits).difference(seen)
+    if missing:
+        raise ValueError(f"Ways regulamentados ausentes da rede: {sorted(missing)}.")
+    return text
+
+
 def corrected_network_text(text):
     """Reproduz a correção física comum aos perfis, aceitando só revisões conhecidas."""
     if _digest(text) == CORRECTED_SHA256:
         return text
-    if _digest(text) != FOUNDATION_SHA256:
-        text = _control_infrastructure(_physical_delta(source_network_text(text)))
+    if _digest(text) == PRE_SPEED_SHA256:
+        text = _correct_regulated_speeds(text)
+    else:
         if _digest(text) != FOUNDATION_SHA256:
-            raise ValueError("Revisão intermediária diverge; usar netconvert 1.27.1.")
-    for correction in (
-        _restore_cross_streets,
-        _correct_benjamim,
-        _join_fragmented_junctions,
-        _restore_maria_segismundo,
-        _complete_rondon_widths,
-        _complete_rio_and_loop,
-        _collapse_short_signal_approaches,
-        _complete_documented_crossings,
-        _align_connector_priorities,
-        _restore_europa_benjamim,
-        _complete_suica_junctions,
-        _join_rotary,
-        _join_cesario_parana,
-        _join_viena_suica,
-        _join_niteroi,
-        _align_connector_priorities,
-        _complete_maranhao_crossings,
-        _restore_isolated_crossing_envelopes,
-    ):
-        text = correction(text)
+            text = _control_infrastructure(_physical_delta(source_network_text(text)))
+            if _digest(text) != FOUNDATION_SHA256:
+                raise ValueError("Revisão intermediária diverge; usar netconvert 1.27.1.")
+        for correction in (
+            _restore_cross_streets,
+            _correct_benjamim,
+            _join_fragmented_junctions,
+            _restore_maria_segismundo,
+            _complete_rondon_widths,
+            _complete_rio_and_loop,
+            _collapse_short_signal_approaches,
+            _complete_documented_crossings,
+            _align_connector_priorities,
+            _restore_europa_benjamim,
+            _complete_suica_junctions,
+            _join_rotary,
+            _join_cesario_parana,
+            _join_viena_suica,
+            _join_niteroi,
+            _align_connector_priorities,
+            _complete_maranhao_crossings,
+            _restore_isolated_crossing_envelopes,
+        ):
+            text = correction(text)
+        text = _correct_regulated_speeds(text)
     if _digest(text) != CORRECTED_SHA256:
         raise ValueError("Resultado difere da revisão comprovada; usar netconvert 1.27.1.")
     return text

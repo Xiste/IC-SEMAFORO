@@ -17,6 +17,8 @@ import re
 import time
 import xml.etree.ElementTree as ET
 
+from .metrics_storage import open_result
+
 
 # O core seleciona resultados do mesmo cálculo usado pelo full. As séries e
 # os registros individuais nunca são retidos nesse perfil.
@@ -452,7 +454,7 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
                     for lane in edge.findall("lane")}
     teleported = set()
     events = 0
-    with (directory / "sumo.log").open(encoding="utf-8") as stream:
+    with open_result(directory / "sumo.log", "rt", encoding="utf-8") as stream:
         for line in stream:
             if "Teleporting vehicle" in line:
                 match = re.search(r"Teleporting vehicle '([^']+)'", line)
@@ -1356,11 +1358,12 @@ def collect_episode(raw_dir: Path, net_file: Path, profile: str = "core") -> dic
     ``metrics`` contém escalares globais. ``entities`` organiza escalares por
     escopo e ID; nomes e tipos são normalizados pela camada de persistência.
     Core exige resumo/viagens/estatísticas/filas e mantém entidades vazias.
-    Full conserva detalhes e fontes para reanálise. Timers de coleta retornam
+    Full e diagnostic conservam detalhes e fontes para reanálise. Timers de coleta retornam
     com os resultados para o runner registrar o custo separado das medições.
     """
-    if profile not in {"core", "full"}:
-        raise ValueError("O perfil de métricas deve ser core ou full.")
+    if profile not in {"core", "full", "diagnostic"}:
+        raise ValueError("O perfil de métricas deve ser core, full ou diagnostic.")
+    detailed = profile != "core"
     raw_dir, net_file = Path(raw_dir), Path(net_file)
     started = time.perf_counter()
     metrics = _summary(raw_dir / "summary.xml.gz")
@@ -1368,18 +1371,18 @@ def collect_episode(raw_dir: Path, net_file: Path, profile: str = "core") -> dic
     metrics["metrics_profile"] = profile
     entities = {scope: {} for scope in ("vehicles", "lanes", "edges", "traffic_lights", "approaches", "intersections")}
     lanes, groups, membership = set(), {}, {}
-    if profile == "full":
+    if detailed:
         started = time.perf_counter()
         lanes, edges, _, groups, membership = _network(net_file)
         metrics["collection_network_time_seconds"] = time.perf_counter() - started
     parsers = [
         # Os agregados comuns usam os mesmos parsers em core/full; o parâmetro
         # de entidades controla retenção individual, sem redefinir a população.
-        ("trips", _trips, (raw_dir / "trips.xml.gz", metrics, entities["vehicles"] if profile == "full" else None)),
+        ("trips", _trips, (raw_dir / "trips.xml.gz", metrics, entities["vehicles"] if detailed else None)),
         ("statistics", _statistics, (raw_dir / "statistics.xml", metrics)),
-        ("queues", _queues, (raw_dir / "queues.xml.gz", lanes, groups, membership, entities if profile == "full" else None, metrics)),
+        ("queues", _queues, (raw_dir / "queues.xml.gz", lanes, groups, membership, entities if detailed else None, metrics)),
     ]
-    if profile == "full":
+    if detailed:
         parsers.extend([
             ("tls", _tls, (raw_dir / "tls.xml.gz", metrics["simulation_begin_seconds"], metrics["simulation_end_seconds"], entities["traffic_lights"])),
             ("lanechanges", _events, (raw_dir / "lanechanges.xml.gz", "change", "lane_change", entities, metrics)),

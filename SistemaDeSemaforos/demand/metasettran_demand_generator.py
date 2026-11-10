@@ -1341,7 +1341,11 @@ def generate_metasettran_demand(
     model = json.loads(spatial_bytes)
     network_sha256 = _sha256(net_file)
     if model.get("network_sha256") != network_sha256:
-        raise ValueError("O cadastro de portais pertence a outra versão da rede.")
+        # O checkout Windows pode converter LF em CRLF sem mudar a rede XML.
+        # Tolerar só essa conversão; o hash bruto continua registrado no resultado.
+        lf_sha256 = hashlib.sha256(net_file.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+        if model.get("network_sha256") != lf_sha256:
+            raise ValueError("O cadastro de portais pertence a outra versão da rede.")
     network = read_network(net_file)
     model = expand_local_activity(model, network.edges, network.connections)
     weight_reference = None
@@ -1404,8 +1408,12 @@ def generate_metasettran_demand(
         del cache
     fixed_schedule, vehicle_types = None, None
     if schedule_file is not None:
-        schedule_file = Path(schedule_file).expanduser().resolve()
-        source = ET.parse(schedule_file).getroot()
+        # A agenda pode ser uma rota retida pelo executor em GZIP; a leitura
+        # muda apenas o acesso ao arquivo, não o planejamento da demanda.
+        from ..metrics.metrics_storage import open_result, result_path, result_sha256
+        schedule_file = result_path(Path(schedule_file).expanduser().resolve())
+        with open_result(schedule_file) as stream:
+            source = ET.parse(stream).getroot()
         vehicle_types = [deepcopy(item) for item in source.findall("vType")]
         fixed_schedule = [dict(vehicle.attrib) for vehicle in source.findall("vehicle")]
         departure_times = [float(attrs["depart"]) for attrs in fixed_schedule]
@@ -1443,7 +1451,7 @@ def generate_metasettran_demand(
     else:
         metadata["local_activity_weights"] = weight_reference
     if fixed_schedule is not None:
-        metadata["paired_schedule"] = {"file": str(schedule_file), "sha256": _sha256(schedule_file),
+        metadata["paired_schedule"] = {"file": str(schedule_file), "sha256": result_sha256(schedule_file),
             "preserved": ["vehicle_ids", "departure_times", "vehicle_attributes", "vehicle_types", "vehicle_count"],
             "changed": ["origin", "destination", "route"], "count": len(fixed_schedule)}
     try:

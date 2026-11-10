@@ -2,7 +2,7 @@
 
 Entrada: perfil de coleta e pasta exclusiva do episódio. Saída: additional.xml e opções
 de saída nativa; usado por run_simulation antes de iniciar o SUMO.
-core observa os indicadores essenciais; full acrescenta fontes detalhadas.
+core observa os indicadores essenciais; full/diagnostic acrescentam fontes detalhadas.
 A escolha do perfil muda a observação, mantendo o tempo e a dinâmica simulados.
 """
 
@@ -17,8 +17,11 @@ def prepare_outputs(directory: Path, profile: str = "core", *,
     Ambos observam a dinâmica existente. Nenhum perfil muda passos, sementes,
     controladores, veículos ou a frequência das fontes que mantém habilitadas.
     """
-    if profile not in {"core", "full"}:
-        raise ValueError("O perfil de métricas deve ser core ou full.")
+    if profile not in {"core", "full", "diagnostic"}:
+        raise ValueError("O perfil de métricas deve ser core, full ou diagnostic.")
+    # Diagnostic preserva as mesmas medições de full, com contexto técnico extra.
+    if profile == "diagnostic":
+        profile = "full"
     raw = directory / "raw"
     raw.mkdir(exist_ok=True)
     options = ["--precision", "8"]

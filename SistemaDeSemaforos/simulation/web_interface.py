@@ -5,10 +5,13 @@ O único lote ativo fica numa thread; os resultados continuam pertencendo ao run
 """
 
 import argparse
+import codecs
 from contextlib import contextmanager
 import errno
+import gzip
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import io
 import json
 import math
 import os
@@ -22,12 +25,16 @@ import subprocess
 import sys
 import threading
 from urllib.parse import parse_qs, quote, unquote, urlsplit
+import zlib
 
 from . import episode_runner as runner
 
 
 RESULT_PROFILES = ("outputs-random", "outputs-metasettran")
 STYLE = "body { background: white; color: black; font-family: 'Times New Roman', serif; } a { color: black; } pre { font-family: inherit; white-space: pre; overflow: auto; max-height: 75vh; }"
+PREVIEW_LIMIT = 16 * 1024 * 1024
+STREAM_LIMIT = 1024 * 1024
+READ_SIZE = 64 * 1024
 
 
 def parse_variations(text, sections):
@@ -355,6 +362,54 @@ def page(title, contents):
             f"{contents}</body></html>")
 
 
+def format_json(chunks):
+    """Formata em fluxo, preservando as letras dos números e das strings."""
+    depth = 0
+    quoted = escaped = False
+    for chunk in chunks:
+        result = []
+        for char in chunk:
+            if quoted:
+                result.append(char)
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    quoted = False
+            elif char == '"':
+                quoted = True
+                result.append(char)
+            elif char in "[{":
+                depth += 1
+                result.extend((char, "\n", " " * min(depth * 2, 128)))
+            elif char in "]}":
+                depth = max(depth - 1, 0)
+                result.extend(("\n", " " * min(depth * 2, 128), char))
+            elif char == ",":
+                result.extend((char, "\n", " " * min(depth * 2, 128)))
+            elif char == ":":
+                result.append(": ")
+            elif char not in " \t\r\n":
+                result.append(char)
+        yield "".join(result)
+
+
+def gzip_size(raw, *, text=False):
+    """Confere o GZIP até o fim antes de enviar cabeçalhos ou conteúdo."""
+    size = 0
+    decoder = codecs.getincrementaldecoder("utf-8")() if text else None
+    with gzip.GzipFile(fileobj=raw, mode="rb") as stream:
+        for chunk in iter(lambda: stream.read(READ_SIZE), b""):
+            size += len(chunk)
+            if decoder is not None:
+                decoder.decode(chunk)
+    if decoder is not None:
+        decoder.decode(b"", final=True)
+    raw.seek(0)
+    return size
+
+
 def browse_results(relative, raw=False):
     if not relative:
         return page("Outputs", "<ul>" + "".join(
@@ -364,9 +419,13 @@ def browse_results(relative, raw=False):
     if path.is_file():
         if raw:
             return path
+        if path.name.lower().endswith((".json.gz", ".xml.gz", ".log.gz", ".txt.gz")):
+            return ("preview", path)
         with path.open("rb") as stream:
             if b"\0" in stream.read(8192):
                 return path
+        if path.stat().st_size > STREAM_LIMIT:
+            return ("preview", path)
         try:
             contents = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
@@ -374,7 +433,8 @@ def browse_results(relative, raw=False):
         note = ""
         if path.suffix.lower() == ".json":
             try:
-                contents = json.dumps(json.loads(contents), ensure_ascii=False, indent=2)
+                json.loads(contents)
+                contents = "".join(format_json([contents]))
             except ValueError:
                 note = "<p>JSON inválido ou incompleto; mostrando o texto original.</p>"
         return page(path.name, f'<p><a href="{result_url(path.parent)}">Voltar à pasta</a> | '
@@ -397,6 +457,14 @@ def browse_results(relative, raw=False):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def handle(self):
+        try:
+            super().handle()
+        except ConnectionError:
+            # Trocar de página ou cancelar um download fecha a conexão do
+            # navegador. Não tentar enviar uma página de erro por esse socket.
+            self.close_connection = True
+
     def local_request(self):
         port = self.server.server_port
         allowed = {f"127.0.0.1:{port}", f"localhost:{port}"}
@@ -407,15 +475,22 @@ class Handler(BaseHTTPRequestHandler):
         return (host in allowed and (origin is None or origin == f"http://{host}")
                 and self.headers.get("Sec-Fetch-Site") != "cross-site")
 
-    def headers_for(self, code, content_type, length, download=False):
+    def headers_for(self, code, content_type, length, download=False, filename=None):
         self.send_response(code)
         self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(length))
+        if length is not None:
+            self.send_header("Content-Length", str(length))
+        else:
+            self.send_header("Connection", "close")
+            self.close_connection = True
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "SAMEORIGIN")
         if download:
-            self.send_header("Content-Disposition", "attachment")
+            disposition = "attachment"
+            if filename is not None:
+                disposition += "; filename*=UTF-8''" + quote(filename, safe="")
+            self.send_header("Content-Disposition", disposition)
         self.end_headers()
 
     def reply(self, contents, code=200, content_type="text/html; charset=utf-8"):
@@ -425,6 +500,51 @@ class Handler(BaseHTTPRequestHandler):
 
     def json_reply(self, data, code=200):
         self.reply(json.dumps(data, ensure_ascii=False), code, "application/json; charset=utf-8")
+
+    def stream_result(self, path, *, unpacked=False, show_large=False):
+        compressed = path.suffix.lower() == ".gz"
+        # A validação e a transmissão usam o mesmo arquivo aberto: uma nova
+        # publicação atômica de metrics.json.gz não troca o conteúdo no meio.
+        with path.open("rb") as raw:
+            size = gzip_size(raw, text=not unpacked) if compressed else os.fstat(raw.fileno()).st_size
+            if unpacked:
+                self.headers_for(200, "application/octet-stream", size, download=True,
+                                 filename=path.with_suffix("").name)
+                try:
+                    with gzip.GzipFile(fileobj=raw, mode="rb") as stream:
+                        shutil.copyfileobj(stream, self.wfile, READ_SIZE)
+                except (OSError, EOFError, zlib.error):
+                    self.close_connection = True
+                return
+            url = result_url(path)
+            links = (f'<p><a href="{result_url(path.parent)}">Voltar à pasta</a> | '
+                     f'<a href="{url}?raw=1">Baixar original</a>')
+            if compressed:
+                links += f' | <a href="{url}?unpacked=1">Baixar descomprimido</a>'
+            links += "</p>"
+            if size > PREVIEW_LIMIT and not show_large:
+                self.reply(page(path.name, links + f"<p>O conteúdo tem {size} bytes. "
+                                f'<a href="{url}?view=1">Abrir o conteúdo completo</a> '
+                                "pode exigir muita memória no navegador.</p>"))
+                return
+            opening = page(path.name, links + "<pre>")
+            self.headers_for(200, "text/html; charset=utf-8", None)
+            self.wfile.write(opening.removesuffix("</body></html>").encode("utf-8"))
+            try:
+                binary = gzip.GzipFile(fileobj=raw, mode="rb") if compressed else raw
+                with io.TextIOWrapper(binary, encoding="utf-8", newline="") as stream:
+                    chunks = iter(lambda: stream.read(READ_SIZE), "")
+                    if path.name.lower().endswith((".json", ".json.gz")):
+                        chunks = format_json(chunks)
+                    for chunk in chunks:
+                        self.wfile.write(escape(chunk).encode("utf-8"))
+            except ConnectionError:
+                raise
+            except (OSError, EOFError, UnicodeError, zlib.error) as exc:
+                self.wfile.write(("</pre><p>Falha ao ler o conteúdo completo: " +
+                                  escape(str(exc)) + "</p></body></html>").encode("utf-8"))
+                return
+            self.wfile.write(b"</pre></body></html>")
 
     def do_GET(self):
         if not self.local_request():
@@ -437,17 +557,31 @@ class Handler(BaseHTTPRequestHandler):
             elif url.path == "/status":
                 self.json_reply(self.server.batch.snapshot())
             elif url.path.startswith("/results/"):
-                result = browse_results(unquote(url.path[len("/results/"):]), raw=url.query == "raw=1")
-                if isinstance(result, Path):
+                query = parse_qs(url.query)
+                result = browse_results(unquote(url.path[len("/results/"):]), raw=query.get("raw") == ["1"])
+                if query.get("unpacked") == ["1"]:
+                    path = result[1] if isinstance(result, tuple) else result
+                    if not isinstance(path, Path) or path.suffix.lower() != ".gz":
+                        raise ValueError("O arquivo solicitado não é GZIP.")
+                    self.stream_result(path, unpacked=True)
+                elif isinstance(result, tuple):
+                    self.stream_result(result[1], show_large=query.get("view") == ["1"])
+                elif isinstance(result, Path):
                     # Downloads são transmitidos em blocos e nunca executados como HTML.
                     with result.open("rb") as stream:
-                        self.headers_for(200, "application/octet-stream", result.stat().st_size, download=True)
-                        shutil.copyfileobj(stream, self.wfile)
+                        self.headers_for(200, "application/octet-stream", os.fstat(stream.fileno()).st_size,
+                                         download=True)
+                        try:
+                            shutil.copyfileobj(stream, self.wfile)
+                        except OSError:
+                            self.close_connection = True
                 else:
                     self.reply(result)
             else:
                 self.reply("Página não encontrada.", 404)
-        except (OSError, ValueError) as exc:
+        except ConnectionError:
+            raise
+        except (OSError, ValueError, EOFError, UnicodeError, zlib.error) as exc:
             self.reply(page("Erro ao ler resultados", f"<p>{escape(str(exc))}</p>"), 404)
 
     def do_POST(self):
@@ -477,6 +611,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.json_reply(self.server.batch.delete_results())
             else:
                 self.json_reply(self.server.batch.start(form_options(fields)), 202)
+        except ConnectionError:
+            raise
         except (ValueError, OSError) as exc:
             self.json_reply({"error": str(exc)}, 400)
         except RuntimeError as exc:

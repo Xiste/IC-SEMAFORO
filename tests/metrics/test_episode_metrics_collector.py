@@ -205,6 +205,12 @@ class CollectorTests(unittest.TestCase):
         result = c.collect_episode(self.directory, net, profile="full")
         self.assertEqual(result["metrics"]["metrics_profile"], "full")
         self.assertEqual(result["metrics"]["fcd_observation_steps"], 0)
+        diagnostic = c.collect_episode(self.directory, net, profile="diagnostic")
+        self.assertEqual(diagnostic["metrics"]["metrics_profile"], "diagnostic")
+        for name, value in result["metrics"].items():
+            if name != "metrics_profile" and not name.startswith("collection_"):
+                self.assertEqual(diagnostic["metrics"][name], value)
+        self.assertEqual(diagnostic["entities"], result["entities"])
 
     def test_profiles_only_change_observation_and_core_requests_four_sources(self):
         (self.directory / "inputs").mkdir()
@@ -216,6 +222,7 @@ class CollectorTests(unittest.TestCase):
         self.assertNotIn("--additional-files", core)
         self.assertFalse((self.directory / "inputs/observations.add.xml").exists())
         full = prepare_outputs(self.directory, "full")
+        self.assertEqual(prepare_outputs(self.directory, "diagnostic"), full)
         self.assertEqual({option for option in full if option.endswith("-output")}, {
             "--summary-output", "--tripinfo-output", "--statistic-output", "--queue-output",
             "--lanechange-output", "--collision-output", "--vehroute-output",

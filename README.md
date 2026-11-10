@@ -294,10 +294,29 @@ Cada lote tem uma pasta exclusiva em `outputs/outputs-random/` ou
 | `core`, padrão | Métricas globais, configurações, seeds e diagnósticos consolidados. |
 | `full` | Métricas comuns, entidades em `entities.json.gz` e observações nativas em `raw/`. |
 
-O arquivo `metrics.json` contém os indicadores com descrição e unidade. O bloco
-`execution` registra condições, versão SUMO, comandos e seeds. MetaSettran conserva
-`metasettran.rou.xml`. Os logs disponíveis ajudam a investigar erros. Os outputs
-são locais e ficam fora do versionamento Git.
+O perfil `diagnostic` é reservado ao terminal: acrescenta ao `full` os detalhes
+técnicos de geração, calibração, zonas, acessos, corredores e tempos de cada coletor.
+Esses blocos não fazem parte dos novos resultados `core` e `full`. O formulário
+continua oferecendo somente `core` e `full`. Para uma execução de diagnóstico:
+
+```bash
+make run-random RUN_ARGS="--demand-profile metasettran --metrics-profile diagnostic --variation 7"
+```
+
+Sem `--demand-profile metasettran`, o mesmo comando usa a demanda Random.
+
+Os novos episódios guardam os indicadores em `metrics.json.gz`; o bloco `execution`
+registra condições, versão SUMO, comandos e seeds. MetaSettran conserva a rota
+planejada, que pode aparecer como `metasettran.rou.xml.gz`. Logs grandes também
+podem ser comprimidos. Rotas e logs pequenos, sem economia ou de uma execução que
+falhou permanecem no formato original. Os outputs antigos não são alterados.
+
+Em **Outputs**, abra JSON, XML ou logs normalmente e baixe o arquivo comprimido
+ou seu conteúdo descomprimido. JSON é apresentado formatado; para arquivos com
+mais de 16 MiB descomprimidos, confirme a abertura completa para não sobrecarregar
+o navegador. A leitura não corta o conteúdo. Todos os arquivos são locais e ficam
+fora do versionamento Git. O [guia técnico](docs/GUIA_DE_FUNCIONAMENTO.md#arquivos-e-perfis)
+explica a recuperação manual e a compatibilidade com os resultados antigos.
 
 ## Verificação e solução de problemas
 
@@ -308,7 +327,7 @@ estão descritas no guia. [Verificações técnicas](docs/GUIA_DE_FUNCIONAMENTO.
 | --- | --- |
 | Ferramenta SUMO ausente | Confira `sumo` e `duarouter` no `PATH`, além de `$SUMO_HOME/tools/randomTrips.py`. |
 | Porta 8000 ocupada | Inicie `make interface INTERFACE_ARGS="--port 8001"`. |
-| Falha em uma execução | Abra o lote em **Outputs** e consulte `metrics.json`, `generation.log` e `sumo.log`. |
+| Falha em uma execução | Abra o lote em **Outputs** e consulte `metrics.json.gz` ou o antigo `metrics.json`, além de `generation.log` e `sumo.log`. |
 | Janela SUMO indisponível | Confira a instalação de `sumo-gui` e a sessão gráfica. A interface web também executa com a opção gráfica desativada. |
 
 ## Escopo científico

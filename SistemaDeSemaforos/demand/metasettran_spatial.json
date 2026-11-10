@@ -2,7 +2,7 @@
   "schema_version": 4,
   "version": "boundary-and-local-coverage-v4.8-directional-local-access",
   "status": "experimental_distributed_local_protected_activities_calibration_pending",
-  "network_sha256": "f30b0807fa46e3d4fb65c573be68f6544d75a64e44a2c32fee71389fd4106d56",
+  "network_sha256": "2e6212d6bd692bbf02b8778f1edaaf1ca31c5b9d2b7cf8dcd8277c9f3ced22fd",
   "vehicle_class": "passenger",
   "count_column": "car",
   "scope": "População regional única repartida entre portais cartograficamente qualificados, três polos internos e zonas distribuídas de atividade residencial/mista no viário local. Curvas car de dois sensores definem o índice temporal; extensão local e perfis de atividade são hipóteses espaciais, não contagens de lotes ou população.",

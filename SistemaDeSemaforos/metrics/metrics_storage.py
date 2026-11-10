@@ -1,15 +1,110 @@
 """Contrato dos resultados, significado das métricas e publicação em JSON.
 
 Converte os escalares do coletor em registros tipados com legenda, unidade e
-prioridade. Publica metrics.json e entidades full com substituição atômica.
+prioridade. Publica métricas e entidades full com substituição atômica.
 """
 
 import gzip
+import hashlib
+import io
 import json
 import math
+import os
 from pathlib import Path
 import re
 from tempfile import NamedTemporaryFile
+
+
+_CHUNK_SIZE = 1024 * 1024
+
+
+def result_path(path: Path) -> Path:
+    """Aceita o nome antigo ou o novo quando apenas a outra forma existe."""
+    path = Path(path)
+    if path.exists():
+        return path
+    alternative = (path.with_suffix("") if path.suffix == ".gz"
+                   else path.with_name(path.name + ".gz"))
+    return alternative if alternative.exists() else path
+
+
+def open_result(path: Path, mode="rb", **kwargs):
+    """Abre resultados comuns ou GZIP sem mudar seu conteúdo."""
+    path = result_path(path)
+    return (gzip.open if path.suffix == ".gz" else open)(path, mode, **kwargs)
+
+
+def read_json(path: Path):
+    with open_result(path, "rt", encoding="utf-8") as stream:
+        return json.load(stream)
+
+
+def _verify_gzip(path: Path, expected: bytes) -> None:
+    digest = hashlib.sha256()
+    with gzip.open(path, "rb") as stream:
+        for chunk in iter(lambda: stream.read(_CHUNK_SIZE), b""):
+            digest.update(chunk)
+    if digest.digest() != expected:
+        raise ValueError("Conteúdo GZIP diverge dos bytes originais.")
+
+
+class _HashingWriter(io.BufferedIOBase):
+    """Calcula o hash dos bytes efetivamente entregues ao compressor."""
+    def __init__(self, stream, digest):
+        self.stream = stream
+        self.digest = digest
+
+    def writable(self):
+        return True
+
+    def write(self, data):
+        written = self.stream.write(data)
+        self.digest.update(data[:written])
+        return written
+
+
+def compress_file(path: Path) -> Path:
+    """Publica uma cópia GZIP validada, conservando o original para o chamador."""
+    path = Path(path)
+    destination = path.with_name(path.name + ".gz")
+    if destination.exists():
+        raise FileExistsError(f"Resultado comprimido já existe: {destination}")
+    temporary = None
+    digest = hashlib.sha256()
+    try:
+        with NamedTemporaryFile(dir=path.parent, prefix=".gzip-", delete=False) as raw:
+            temporary = Path(raw.name)
+            with path.open("rb") as source, gzip.GzipFile(
+                    filename="", fileobj=raw, mode="wb", compresslevel=6) as compressed:
+                for chunk in iter(lambda: source.read(_CHUNK_SIZE), b""):
+                    digest.update(chunk)
+                    compressed.write(chunk)
+            raw.flush()
+            os.fsync(raw.fileno())
+        _verify_gzip(temporary, digest.digest())
+        temporary.replace(destination)
+        return destination
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def verify_file(path: Path, compressed: Path) -> None:
+    """Confere novamente as duas cópias antes de remover a descomprimida."""
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(_CHUNK_SIZE), b""):
+            digest.update(chunk)
+    _verify_gzip(compressed, digest.digest())
+
+
+def result_sha256(path: Path) -> str:
+    """Hash dos bytes originais, também quando armazenados em GZIP."""
+    digest = hashlib.sha256()
+    with open_result(path) as stream:
+        for chunk in iter(lambda: stream.read(_CHUNK_SIZE), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def write_json(path: Path, contents: dict) -> None:
@@ -19,13 +114,24 @@ def write_json(path: Path, contents: dict) -> None:
         with NamedTemporaryFile(dir=path.parent, prefix=".json-", delete=False) as temporary_file:
             temporary = Path(temporary_file.name)
         compressed = path.suffix == ".gz"
-        opener = gzip.open if compressed else open
-        with opener(temporary, "wt", encoding="utf-8") as stream:
-            # NaN/inf não representam ausência de medição. Rejeitá-los aqui
-            # preserva o JSON anterior em vez de publicar um resultado ambíguo.
-            json.dump(contents, stream, ensure_ascii=False, allow_nan=False,
-                      indent=None if compressed else 2)
-            stream.write("\n")
+        indent = None if compressed and path.name != "metrics.json.gz" else 2
+        if compressed:
+            digest = hashlib.sha256()
+            with temporary.open("wb") as raw:
+                with gzip.GzipFile(filename="", fileobj=raw, mode="wb",
+                                   compresslevel=6 if indent == 2 else 9) as archive:
+                    with io.TextIOWrapper(_HashingWriter(archive, digest), encoding="utf-8") as stream:
+                        json.dump(contents, stream, ensure_ascii=False, allow_nan=False, indent=indent)
+                        stream.write("\n")
+                raw.flush()
+                os.fsync(raw.fileno())
+            _verify_gzip(temporary, digest.digest())
+        else:
+            with temporary.open("w", encoding="utf-8") as stream:
+                # Rejeitar NaN/inf preserva o resultado anterior em vez de
+                # publicar uma medição ambígua ou JSON incompleto.
+                json.dump(contents, stream, ensure_ascii=False, allow_nan=False, indent=indent)
+                stream.write("\n")
         # O temporário fica na mesma pasta para a publicação trocar o arquivo
         # completo sem expor conteúdo parcial à consulta pela interface.
         temporary.replace(path)
@@ -50,7 +156,7 @@ def metric_records(values: dict) -> list[dict]:
 
 
 def save_entities(directory: Path, entities: dict) -> None:
-    """Exporta o consolidado volumoso por entidade, separado do resumo global."""
+    """Exporta entidades de full/diagnostic, separadas do resumo global."""
     write_json(directory / "entities.json.gz", {
         "schema_version": 1,
         "entities": {
@@ -66,7 +172,7 @@ def save_episode(directory: Path, metrics: dict, execution: dict, *, include_ent
     records = [{**record, **describe_metric(record["metric_name"])}
                for record in metric_records(metrics)]
     records.sort(key=presentation_sort_key)
-    write_json(directory / "metrics.json", {
+    write_json(directory / "metrics.json.gz", {
         "schema_version": 3,
         "metrics": records,
         "execution": execution,
@@ -94,7 +200,7 @@ _CONTEXT = {
     "demand_model": ("Modelo de demanda", "Modelo usado para gerar as viagens deste episódio.", None),
     "seed": ("Semente da demanda", "Semente aleatória usada no sorteio das viagens deste episódio.", None),
     "simulation_seed": ("Semente do SUMO", "Semente aleatória efetivamente usada pelo SUMO, distinta da semente da demanda.", None),
-    "metrics_profile": ("Perfil de coleta", "Perfil core ou full que determina quais fontes de observação são coletadas.", None),
+    "metrics_profile": ("Perfil de coleta", "Perfil core, full ou diagnostic que determina as observações e o detalhamento técnico retidos.", None),
     "gui": ("Execução com interface gráfica", "Indica se a simulação foi executada com a interface gráfica do SUMO.", None),
     "started_at_utc": ("Início da execução em UTC", "Data e hora de início do episódio, no relógio civil em UTC.", None),
     "finished_at_utc": ("Fim da execução em UTC", "Data e hora de encerramento do episódio, no relógio civil em UTC.", None),
@@ -151,7 +257,7 @@ _DIRECT = {
 }
 
 _TIMERS = {
-    "execution": ("Tempo total de execução", "Tempo real de preparação, geração, simulação, coleta e exportação de entidades; exclui a escrita final de metrics.json e a limpeza de temporários."),
+    "execution": ("Tempo total de execução", "Tempo real de preparação, geração, simulação, coleta e exportação de entidades; exclui a escrita final de métricas, a compressão final de arquivos e a limpeza de temporários."),
     "generation": ("Tempo de geração da demanda", "Tempo real gasto na geração e validação da demanda."),
     "simulation_execution": ("Tempo de execução do processo SUMO", "Tempo real gasto executando o processo SUMO com as saídas de observação habilitadas."),
     "sumo_configuration": ("Tempo de preparação da configuração SUMO", "Tempo real gasto preparando e registrando a configuração efetiva do SUMO."),

@@ -5,6 +5,47 @@ from semaforos.cenario.rede import initial_signal_timings
 from semaforos.apresentacao.mapa_vias import short_path
 
 
+def signal_movement_timings(network, controller, details):
+    """Duracoes por entrada/movimento do programa inicial, sem amostrar o treino."""
+    root = ET.parse(network).getroot()
+    edges = {edge.get('id'): edge for edge in root.findall('edge')}
+    programs = {logic.get('id'): logic.findall('phase') for logic in root.findall('tlLogic')}
+    phases = programs.get(controller, [])
+    cycle = sum(float(phase.get('duration')) for phase in phases)
+    turns = {'s': 'Em frente', 'l': 'À esquerda', 'L': 'À esquerda',
+             'r': 'À direita', 'R': 'À direita', 't': 'Retorno'}
+    grouped = {}
+    for connection in root.findall('connection'):
+        if connection.get('tl') != controller:
+            continue
+        index = int(connection.get('linkIndex'))
+        sequence = tuple(phase.get('state')[index] for phase in phases)
+        source, destination = connection.get('from'), connection.get('to')
+        pedestrian = any(edges.get(edge) is not None and edges[edge].get('function') in ('crossing', 'walkingarea')
+                         for edge in (source, destination))
+        edge_id = next((edge for edge in (source, destination)
+                        if edges.get(edge) is not None and edges[edge].get('function') == 'crossing'), source)
+        # Protegido/permissivo (G/g) tem a mesma cor e duracao nesta tabela.
+        colors = tuple('g' if state in 'Gg' else 'y' if state in 'Yy' else 'r' if state in 'Rr' else state
+                       for state in sequence)
+        key = (edge_id, colors)
+        if key not in grouped:
+            info = details.get(edge_id, {})
+            times = {'green': 0., 'yellow': 0., 'red': 0., 'other': 0.}
+            for phase, state in zip(phases, sequence):
+                color = 'green' if state in 'Gg' else 'yellow' if state in 'Yy' else 'red' if state in 'Rr' else 'other'
+                times[color] += float(phase.get('duration'))
+            grouped[key] = {'edge_id': edge_id, 'tls_id': controller, 'movements': set(),
+                'Entrada': info.get('reference', 'Pedestres' if pedestrian else 'Entrada'),
+                'Via': info.get('street') or ('Travessia de pedestres' if pedestrian else 'Nome não cadastrado'),
+                'Sentido': info.get('approach', ''), 'Verde (s)': times['green'],
+                'Amarelo (s)': times['yellow'], 'Vermelho (s)': times['red'],
+                'Outros (s)': times['other'], 'Ciclo (s)': cycle}
+        grouped[key]['movements'].add('Atravessar' if pedestrian else turns.get(connection.get('dir'), 'Movimento'))
+    return [{**{k: v for k, v in row.items() if k != 'movements'},
+             'Movimento': ' / '.join(sorted(row['movements']))} for row in grouped.values()]
+
+
 def signal_presentation(config, labels):
     root = ET.parse(config['network']).getroot()
     edges = {e.get('id'): e for e in root.findall('edge')}

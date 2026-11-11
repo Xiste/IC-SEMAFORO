@@ -40,7 +40,9 @@ def flow_profile_editor(duration, saved=None, key='flow', planned_vehicles=0, en
     updated = [float(v) if pd.notna(v) else None for v in edited['share']]
     if updated != shares:
         st.session_state[values_key] = updated
-        st.rerun()
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        context = get_script_run_ctx()
+        st.rerun(scope='fragment' if context and context.fragment_ids_this_run else 'app')
     error = None
     if any(v is None or not math.isfinite(v) or v < 0 or v > 100 for v in shares):
         error = 'Preencha uma porcentagem entre 0 e 100 em cada período.'

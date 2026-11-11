@@ -42,34 +42,58 @@ def identify_roads(network, targets, osm_names=None):
     return details
 
 
-def edit_road_volumes(network, initial, details, incoming_ids, render_map):
+def edit_road_volumes(network, initial, details, incoming_ids, render_map, *, selected_crossing=None, selected_edge=None, show_map=True, map_only=False):
     """Edita um cruzamento mantendo volumes dos demais na mesma configuração."""
     import pandas as pd
     import streamlit as st
     from semaforos.apresentacao.estado import configuration_key
 
-    scope = configuration_key(f'{network}_{tuple(row["from_edge"] for row in initial)}')
+    signature = tuple(row['from_edge'] for row in initial)
+    if map_only:
+        from hashlib import sha256
+        signature = sha256(repr(signature).encode()).hexdigest()[:20]
+    scope = configuration_key(f'{network}_{signature}')
     state_key = f'road_volume_values_{scope}'
     if state_key not in st.session_state:
         st.session_state[state_key] = {row['from_edge']: float(row.get('vehicles_per_hour', 0)) for row in initial}
     values = st.session_state[state_key]
+    if map_only:
+        if selected_edge in values:
+            info = details[selected_edge]
+            st.markdown('**' + (info['street'] or 'Via sem nome cadastrado') + '**')
+            st.caption(info['reference'] + ' · ' + info['approach'])
+            input_key = f'road_rate_{scope}_{selected_edge}'
+            if input_key not in st.session_state:
+                st.session_state[input_key] = values[selected_edge]
+            values[selected_edge] = st.number_input('Veículos por hora', min_value=0., step=10.,
+                key=input_key, help='Quantidade de veículos inseridos por hora neste trecho e neste sentido. Zero não insere veículos.')
+            st.caption('A alteração é guardada ao confirmar o campo. Clique em outra via para continuar.')
+        result = pd.DataFrame([dict(row, vehicles_per_hour=values[row['from_edge']], to_edge='') for row in initial])
+        if any(v is None or not math.isfinite(v) or v < 0 for v in values.values()):
+            result.attrs['validation_error'] = 'Confira os volumes das vias: use números maiores ou iguais a zero.'
+        return result
     crossings = list(dict.fromkeys(details[row['from_edge']]['crossing'] or 'Outras entradas' for row in initial))
-    crossing = st.selectbox('Cruzamento para preencher os volumes', crossings, key=f'volume_crossing_{scope}')
+    crossing = selected_crossing if selected_crossing in crossings else st.selectbox('Cruzamento para preencher os volumes', crossings, key=f'volume_crossing_{scope}')
     visible = [row['from_edge'] for row in initial if (details[row['from_edge']]['crossing'] or 'Outras entradas') == crossing]
+    if selected_edge in visible:
+        visible = [selected_edge]
     st.caption('Preencha os veículos por hora deste cruzamento. Os valores dos outros cruzamentos são mantidos ao trocar a seleção. As saídas são escolhidas automaticamente.')
     records = [{'Entrada': details[edge]['reference'], 'Via': details[edge]['street'] or 'Nome não cadastrado',
                 'Sentido de chegada': details[edge]['approach'], 'vehicles_per_hour': values[edge]} for edge in visible]
     edited = st.data_editor(pd.DataFrame(records), hide_index=True, num_rows='fixed', width='stretch',
-        disabled=['Entrada', 'Via', 'Sentido de chegada'], key=f'volume_editor_{scope}_{crossing}',
+        disabled=['Entrada', 'Via', 'Sentido de chegada'], key=f'volume_editor_{scope}_{crossing}' + (f'_{selected_edge}' if selected_edge else ''),
         column_config={'vehicles_per_hour': st.column_config.NumberColumn('Veículos/h', min_value=0., step=10., required=True),
                        'Via': st.column_config.TextColumn(width='large'),
                        'Sentido de chegada': st.column_config.TextColumn(width='large')})
     for edge, value in zip(visible, edited['vehicles_per_hour']):
         values[edge] = float(value) if pd.notna(value) else None
-    selected = st.selectbox('Entrada a localizar', visible,
-        format_func=lambda edge: f"{details[edge]['reference']} · {details[edge]['street'] or 'Nome não cadastrado'} · {details[edge]['approach']}",
-        key=f'volume_map_entry_{scope}_{crossing}')
-    render_map(network, selected, {edge: info['label'] for edge, info in details.items()}, incoming_ids)
+    if selected_edge in visible:
+        st.info(f"{details[selected_edge]['reference']} · {details[selected_edge]['street'] or 'Nome não cadastrado'} · {details[selected_edge]['approach']}")
+    if show_map:
+        selected = st.selectbox('Entrada a localizar', visible,
+            format_func=lambda edge: f"{details[edge]['reference']} · {details[edge]['street'] or 'Nome não cadastrado'} · {details[edge]['approach']}",
+            key=f'volume_map_entry_{scope}_{crossing}')
+        render_map(network, selected, {edge: info['label'] for edge, info in details.items()}, incoming_ids)
     result = pd.DataFrame([dict(row, vehicles_per_hour=values[row['from_edge']], to_edge='') for row in initial])
     if any(v is None or not math.isfinite(v) or v < 0 for v in values.values()):
         result.attrs['validation_error'] = 'Preencha um volume válido, maior ou igual a zero, em todas as entradas. Use zero quando não houver veículos.'

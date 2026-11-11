@@ -15,6 +15,29 @@ from semaforos.relatorios.tabela_treino import training_metrics_table, metrics_e
 
 
 class TrainingMetricsExportTest(unittest.TestCase):
+    def test_streets_and_global_history_are_identified(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            self.fixture(output)
+            network = output / 'network.net.xml'
+            network.write_text('''<net>
+              <edge id="in" name="Rua A"><lane id="laneA" shape="0,0 0,10"/></edge>
+              <edge id="out" name="Rua B"><lane id="laneB" shape="0,10 10,10"/></edge>
+              <connection tl="tls" linkIndex="0" from="in" to="out" fromLane="0" toLane="0"/>
+            </net>''', encoding='utf-8')
+            write_json(output / 'manifest.json', {'network': str(network),
+                       'targets': [{'tls_id': 'tls', 'name': 'Rua A x Rua B'}]})
+            table = training_metrics_table(output)
+            lane = table[table['Escopo'] == 'Faixa'].iloc[0]
+            self.assertEqual(lane['Rua de entrada'], 'Rua A')
+            self.assertEqual(lane['Sentido'], 'Segue para norte')
+            action = table[table['Escopo'] == 'Ação do controle'].iloc[0]
+            self.assertEqual(action['Cruzamento'], 'Rua A x Rua B')
+            self.assertEqual(action['Identificação'], 'Rua A x Rua B')
+            self.assertEqual(set(table[table['Escopo'] == 'Histórico por decisão']['Identificação']), {'Toda a rede'})
+            sheet = load_workbook(io.BytesIO(metrics_excel(table))).active
+            self.assertIn('Rua de entrada', [cell.value for cell in sheet[1]])
+
     def fixture(self, output):
         episode = output / 'episodes/episode_1'
         episode.mkdir(parents=True)

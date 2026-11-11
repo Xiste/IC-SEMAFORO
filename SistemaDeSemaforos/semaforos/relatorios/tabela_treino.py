@@ -8,11 +8,13 @@ import pandas as pd
 
 from semaforos.arquivos import read_json
 from semaforos.relatorios.legendas import metric_legend
+from semaforos.relatorios.localizacao import MetricLocations
 
 
 COLUMNS = ['Métrica', 'Valor', 'Unidade', 'Escopo', 'Episódio', 'Semente',
            'Situação do episódio', 'Identificação', 'Tempo simulado (s)',
-           'Disponibilidade', 'Código', 'Descrição', 'Origem']
+           'Disponibilidade', 'Código', 'Descrição', 'Origem',
+           'Cruzamento', 'Rua de entrada', 'Rua de saída', 'Sentido']
 CONTEXT = {'episode', 'episode_number', 'seed', 'episode_complete', 'controller',
            'episode_output', 'demand_sha256', 'intersection', 'tls_id', 'lane_id',
            'edge_id', 'crossing_id', 'movement_id', 'vehicle_class', 'incoming_lanes',
@@ -43,8 +45,13 @@ OPTIMIZER = {
 def training_metrics_table(output):
     output = Path(output)
     rows, seen = [], set()
+    manifest = read_json(output / 'manifest.json') or {}
+    locations = MetricLocations(manifest, output)
 
     def append(values, context, scope, identity, source, prefix=''):
+        context = {**locations.resolve(values, scope), **context}
+        if scope in ('Rede', 'Histórico por decisão', 'Classe de veículo') and not identity:
+            identity = 'Toda a rede'
         for name, value in values.items():
             if name in CONTEXT or name in DETAILS or name == 'terminal_observation':
                 continue
@@ -126,7 +133,9 @@ def training_metrics_table(output):
             source = path.with_name(name)
             for index, record in enumerate(read_csv(source).to_dict('records'), 1):
                 record_context = {**context, 'Tempo simulado (s)': record.get('simulated_seconds', record.get('time_seconds'))}
-                append(record, record_context, scope, record.get('tls_id', f'Amostra {index}'), source.relative_to(output).as_posix())
+                tls = record.get('tls_id')
+                identity = locations.names.get(tls, tls) if isinstance(tls, str) and tls else 'Toda a rede'
+                append(record, record_context, scope, identity, source.relative_to(output).as_posix())
 
     # Os logs SB3 registram perdas, entropia, KL, atualização e demais diagnósticos.
     manifest = read_json(output / 'manifest.json') or {}
@@ -156,7 +165,7 @@ def metrics_excel(table):
     header_font = Font(name='Calibri', bold=True, color='FFFFFF', size=11)
     header_fill = PatternFill('solid', fgColor='15354B')
     wrap = Alignment(wrap_text=True, vertical='top')
-    widths = [48, 19, 19, 22, 12, 12, 23, 42, 23, 30, 44, 90, 65]
+    widths = [48, 19, 19, 22, 12, 12, 23, 42, 23, 30, 44, 90, 65, 45, 40, 40, 36]
     # Escrita incremental para exportar treinos longos sem criar todas as células em memória.
     for start in range(0, max(1, len(table)), 1_048_575):
         sheet = workbook.create_sheet('Métricas' if start == 0 else f'Métricas {start // 1_048_575 + 1}')

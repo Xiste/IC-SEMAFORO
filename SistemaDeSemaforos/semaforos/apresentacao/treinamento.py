@@ -5,15 +5,13 @@ import streamlit as st
 from hashlib import sha256
 
 
-def adaptive_limits_editor(config, specs, labels, key):
-    """Limites por entradas atendidas, sem navegação por etapas do programa."""
+@st.cache_data(show_spinner=False)
+def _adaptive_limit_rows(network, version, targets, specs, labels):
     import xml.etree.ElementTree as ET
-    from semaforos.apresentacao.estado import configuration_key
-    key = configuration_key(key)
-    root = ET.parse(config['network']).getroot()
-    names = {t['tls_id']: t['name'] for t in config['targets']}
+    root = ET.parse(network).getroot()
+    names = dict(targets)
     from semaforos.cenario.rede import network_programs
-    programs = network_programs(config['network'])
+    programs = network_programs(network)
     rows = []
     turns = {'s': 'seguir em frente', 'l': 'virar à esquerda', 'L': 'virar à esquerda',
              'r': 'virar à direita', 'R': 'virar à direita', 't': 'retornar'}
@@ -26,20 +24,51 @@ def adaptive_limits_editor(config, specs, labels, key):
                           for c in root.findall('connection') if c.get('tl') == tls and int(c.get('linkIndex')) in opened})
         rows.append({'key': f'{tls}:{index}', 'crossing': names[tls], 'entries': '; '.join(entries),
                      'minimum_seconds': spec['durations_seconds'][0], 'maximum_seconds': spec['durations_seconds'][2]})
+    return rows
+
+
+def adaptive_limits_editor(config, specs, labels, key, *, selected_crossing=None, selected_controller=None, map_only=False):
+    """Limites por entradas atendidas, sem navegação por etapas do programa."""
+    import xml.etree.ElementTree as ET
+    from semaforos.apresentacao.estado import configuration_key
+    key = configuration_key(key)
+    from pathlib import Path
+    rows = _adaptive_limit_rows(str(config['network']), Path(config['network']).stat().st_mtime_ns,
+        tuple((t['tls_id'], t['name']) for t in config['targets']), specs, labels)
     signature = sha256(repr(rows).encode()).hexdigest()[:16]
     namespace = f'{key}_{signature}'
     saved = st.session_state.setdefault(namespace + '_values', {})
-    crossing = st.selectbox('Cruzamento para ajustar', list(dict.fromkeys(r['crossing'] for r in rows)), key=namespace + '_crossing')
-    local = [{**r, **saved.get(r['key'], {})} for r in rows if r['crossing'] == crossing]
-    st.caption('O modelo escolhe quais entradas atender e por quanto tempo manter o verde, dentro destes limites. Entradas compatíveis podem ser atendidas juntas.')
-    edited = st.data_editor(pd.DataFrame(local), hide_index=True, width='stretch',
-        key=f'{namespace}_{crossing}_editor', disabled=['key', 'crossing', 'entries'],
-        column_config={'key': None, 'crossing': None,
-            'entries': st.column_config.TextColumn('Entradas atendidas'),
-            'minimum_seconds': st.column_config.NumberColumn('Verde mínimo (s)', min_value=.1),
-            'maximum_seconds': st.column_config.NumberColumn('Verde máximo (s)', min_value=.1)})
-    for row in edited.to_dict('records'):
-        saved[row['key']] = {k: row[k] for k in ('minimum_seconds', 'maximum_seconds')}
+    crossings = list(dict.fromkeys(r['crossing'] for r in rows))
+    crossing = selected_crossing if map_only or selected_crossing in crossings else st.selectbox('Cruzamento para ajustar', crossings, key=namespace + '_crossing')
+    local = [{**r, **saved.get(r['key'], {})} for r in rows if r['crossing'] == crossing
+             and (not selected_controller or r['key'].rsplit(':', 1)[0] == selected_controller)]
+    if local and map_only:
+        st.caption('Ajuste os limites de verde das entradas atendidas juntas.')
+        for row in local:
+            with st.container(border=True):
+                st.markdown('**Entradas atendidas**')
+                for entry in row['entries'].split('; '):
+                    st.write('Travessia de pedestres' if entry.startswith('Travessia de pedestres:') else entry)
+                minimum, maximum = st.columns(2)
+                settings = {}
+                for column, field, label in ((minimum, 'minimum_seconds', 'Verde mínimo (s)'),
+                                             (maximum, 'maximum_seconds', 'Verde máximo (s)')):
+                    widget_key = f'{namespace}_{row["key"]}_{field}'
+                    if widget_key not in st.session_state:
+                        st.session_state[widget_key] = float(row[field]) if row[field] is not None else None
+                    with column:
+                        settings[field] = st.number_input(label, min_value=.1, step=1., key=widget_key)
+                saved[row['key']] = settings
+    elif local:
+        st.caption('O modelo escolhe quais entradas atender e por quanto tempo manter o verde, dentro destes limites. Entradas compatíveis podem ser atendidas juntas.')
+        edited = st.data_editor(pd.DataFrame(local), hide_index=True, width='stretch',
+            key=f'{namespace}_{crossing}_{selected_controller or "all"}_editor', disabled=['key', 'crossing', 'entries'],
+            column_config={'key': None, 'crossing': None,
+                'entries': st.column_config.TextColumn('Entradas atendidas'),
+                'minimum_seconds': st.column_config.NumberColumn('Verde mínimo (s)', min_value=.1),
+                'maximum_seconds': st.column_config.NumberColumn('Verde máximo (s)', min_value=.1)})
+        for row in edited.to_dict('records'):
+            saved[row['key']] = {k: row[k] for k in ('minimum_seconds', 'maximum_seconds')}
     # Amarelo e limpeza são fixos neste modo e não são ações do modelo.
     return pd.DataFrame([{'key': f"{s['tls_id']}:{s['phase_index']}",
                           'type': {'green': 'Verde', 'yellow': 'Amarelo', 'all_red': 'Intervalo de segurança'}[s['kind']],

@@ -41,9 +41,8 @@ with tempfile.TemporaryDirectory(dir=ROOT / 'resultados', prefix='ui_test_interf
     from semaforos.cenario.importacao import parse_counts
     measured = parse_counts(b'edge_id,vehicles_per_hour\n1156717168,600\n', 'counts.csv')
     assert measured[0]['vehicles_per_hour'] == 600
-    next(w for w in app.radio if w.label == 'Como deseja informar o tr\u00e1fego?').set_value('Volume por via').run()
+    assert not any(w.label == 'Como deseja informar o tráfego?' for w in app.radio)
     assert not app.exception, str(app.exception)
     assert not list(app.get('file_uploader'))
-    assert len(next(w for w in app.radio if w.label == 'Como deseja informar o tr\u00e1fego?').options) == 2
     assert not any('OD' in w.label for w in app.get('download_button'))
 print('AppTest: acompanhamento, cancelamento, leitura de contagens preservada e configuracao simplificada aprovados.')

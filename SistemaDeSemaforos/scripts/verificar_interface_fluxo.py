@@ -17,29 +17,35 @@ with tempfile.TemporaryDirectory(dir=ROOT / 'resultados', prefix='ui_fluxo_') as
         app = AppTest.from_file(str(ROOT / 'interface.py'), default_timeout=90).run()
         assert not app.exception, str(app.exception)
         assert not any(w.label == 'Rede' for w in app.selectbox)
-        assert next(w for w in app.radio if w.label == 'Cruzamentos controlados').value == 'Um cruzamento'
-        intersections = next(w for w in app.selectbox if w.label == 'Qual cruzamento?')
-        assert len(intersections.options) == 9
-        assert intersections.value == 'Av. Rondon Pacheco x Rua Paraná'
+        assert not any(w.label == 'Cruzamentos controlados' for w in app.radio)
+        assert not any(w.label == 'Qual cruzamento?' for w in app.selectbox)
+        assert app.session_state['ui_default_tab'] == '2 · Tráfego'
+        assert len(app.session_state['experimental_config']['targets']) == 17
+        assert not any(w.label == 'Cruzamento no mapa' for w in app.selectbox)
         labels = next(w for w in app.radio if w.label == 'Etapas do estudo').options
         assert labels[:5] == ['1 · Cenário', '2 · Tráfego', '3 · Treinamento', '4 · Resultados', 'Referência técnica'], labels
         assert any(w.label == 'Configurações avançadas' for w in app.get('expander'))
         assert not any(w.label == 'Etapa para ajustar' for w in app.selectbox)
         assert next(w for w in app.button if w.label == 'Comparar PPO com os tempos iniciais').disabled
         launch.assert_not_called()
-        demand = next(w for w in app.radio if w.label == 'Como deseja informar o tráfego?')
-        original_demand = demand.value
-        demand.set_value('Volume por via').run()
+        assert not any(w.label == 'Como deseja informar o tráfego?' for w in app.radio)
         assert not app.exception, str(app.exception)
         assert not any(w.label == 'Volume total (veículos/h)' for w in app.number_input)
         assert not any(w.label == 'Usar contagens reais para calibrar o tráfego' for w in app.toggle)
         assert not list(app.get('file_uploader'))
-        assert len(next(w for w in app.radio if w.label == 'Como deseja informar o tr\u00e1fego?').options) == 2
         assert not any('OD' in w.label for w in app.get('download_button'))
-        volumes = next(item.value for item in app.dataframe if 'vehicles_per_hour' in item.value.columns)
-        assert 'Entrada' in volumes.columns
-        assert 'Sentido de chegada' in volumes.columns
-        next(w for w in app.radio if w.label == 'Como deseja informar o tráfego?').set_value(original_demand).run()
+        import json
+        layers = json.loads(app.get('deck_gl_json_chart')[0].proto.json)['layers']
+        assert len(next(l for l in layers if l['id'] == 'configuration-roads')['data']) > 34
+        assert not any(w.label == 'Cruzamento para preencher os volumes' for w in app.selectbox)
+        from semaforos.apresentacao.mapa_configuracao import apply_map_selection
+        geometry = {key: next(l for l in layers if l['id'] == layer)['data'] for key, layer in (
+            ('roads','configuration-roads'), ('signals','configuration-signals'), ('pedestrians','configuration-pedestrians'))}
+        entry = next(r['edge_id'] for r in geometry['roads'] if r['controllers'])
+        namespace = next(k.rsplit('_chart_',1)[0] for k in app.session_state.filtered_state if '_chart_' in k)
+        apply_map_selection(app.session_state,namespace,geometry,{'selection':{'objects':{'configuration-roads':[{'edge_id':entry}]}}})
+        app.run()
+        next(w for w in app.number_input if w.label == 'Veículos por hora').set_value(600.).run()
         next(w for w in app.button if w.label == 'Continuar: configurar o tráfego').click().run()
         assert app.session_state['ui_default_tab'] == '2 · Tráfego'
         next(w for w in app.number_input if w.label == 'Aquecimento sem atuação do algoritmo (s)').set_value(600.0).run()
@@ -54,7 +60,10 @@ with tempfile.TemporaryDirectory(dir=ROOT / 'resultados', prefix='ui_fluxo_') as
         launch.assert_called_once()
         config, command = launch.call_args.args[:2]
         assert command == 'rl-train'
-        assert Path(config['network']).name == 'uberlandia.rondon_norte_corrigida.net.xml'
+        assert config['demand']['mode'] == 'edge_volumes'
+        assert next(r['vehicles_per_hour'] for r in config['demand']['edge_volumes'] if r['from_edge'] == entry) == 600.
+        assert config['experimental']['method'] == 'compatible_groups_v2'
+        assert len(config['targets']) == 17
         assert config['ppo']['total_timesteps'] == 4096
         assert config['measurement']['warmup_seconds'] == 60
         assert config['control']['action_mode'] == 'adaptive_signals'

@@ -14,7 +14,7 @@ def workflow_navigation():
     if pending in options:
         st.session_state.ui_workflow_selection = pending
     if st.session_state.get('ui_workflow_selection') not in options:
-        st.session_state.ui_workflow_selection = st.session_state.get('ui_default_tab', options[0])
+        st.session_state.ui_workflow_selection = st.session_state.get('ui_default_tab', options[1])
     selected = st.radio('Etapas do estudo', options, horizontal=True,
                         key='ui_workflow_selection', label_visibility='collapsed')
     st.session_state.ui_default_tab = selected
@@ -60,12 +60,12 @@ def page_header():
     with st.sidebar:
         st.markdown('<div class="lab-section">Seu percurso</div>', unsafe_allow_html=True)
         st.subheader('Seu estudo de trânsito')
-        st.markdown('''<div class="guide-item"><span class="guide-number">01</span><div><strong>Escolha o lugar</strong><small>Um cruzamento ou toda a rede.</small></div></div>
-        <div class="guide-item"><span class="guide-number">02</span><div><strong>Defina o tráfego</strong><small>Veículos, duração e pedestres.</small></div></div>
+        st.markdown('''<div class="guide-item"><span class="guide-number">01</span><div><strong>Conheça a rede</strong><small>Nove cruzamentos controlados em conjunto.</small></div></div>
+        <div class="guide-item"><span class="guide-number">02</span><div><strong>Configure pelo mapa</strong><small>Semáforos, vias e travessias.</small></div></div>
         <div class="guide-item"><span class="guide-number">03</span><div><strong>Treine os semáforos</strong><small>Escolha um objetivo e inicie.</small></div></div>
         <div class="guide-item"><span class="guide-number">04</span><div><strong>Compare o resultado</strong><small>Confira espera, viagens e atendimento.</small></div></div>''', unsafe_allow_html=True)
         with st.expander('Primeira vez por aqui?'):
-            st.markdown('1. Escolha um cruzamento.\n\n2. Informe os veículos por hora e os segundos de simulação.\n\n3. Use **Teste de funcionamento** no primeiro treino.\n\n4. Ao terminar, clique em **Comparar este modelo com os tempos iniciais**.')
+            st.markdown('1. Localize as vias no mapa da rede.\n\n2. Informe os veículos por hora e os segundos de simulação.\n\n3. Use **Teste de funcionamento** no primeiro treino.\n\n4. Ao terminar, clique em **Comparar este modelo com os tempos iniciais**.')
             st.caption('Tempo simulado é o tempo de trânsito representado. O tempo no computador depende da execução.')
         st.divider()
 
@@ -85,11 +85,13 @@ def configuration_guidance(error):
     """Liga a validação técnica a uma ação e uma etapa compreensíveis."""
     text = (error or '').casefold()
     if any(term in text for term in ('prepare', 'rede válida', 'travessias')):
-        return '1 · Cenário', 'Escolha os cruzamentos e clique em Preparar simulação, se esse botão aparecer.'
+        return '1 · Cenário', 'Confira a rede dos nove cruzamentos e clique em Preparar simulação se for necessário carregá-la novamente.'
     if any(term in text for term in ('medição', 'measurement', 'aquecimento', 'warmup', 'janela', 'start_seconds', 'end_seconds')):
         return '2 · Tráfego', 'Confira a duração e o aquecimento na aba Tráfego. O aquecimento precisa terminar antes do fim da simulação.'
     if any(term in text for term in ('veículo', 'entrada', 'pessoas', 'pedestre', 'fluxo', 'intervalo temporal', 'perfil', 'porcentag', 'volume', 'tráfego')):
         return '2 · Tráfego', 'Confira os volumes, a duração e os percursos ativados. Preencha uma quantidade suficiente para gerar participantes na simulação.'
+    if any(term in text for term in ('limites', 'mínimo', 'maximum_cycle', 'phase_duration')):
+        return '2 · Tráfego', 'No mapa, selecione Semáforos e confira os limites de verde do cruzamento.'
     return '3 · Treinamento', 'Confira os ajustes avançados e os limites dos semáforos. Os limites precisam incluir o tempo inicial e respeitar os mínimos do cenário.'
 
 
@@ -108,7 +110,7 @@ def friendly_configuration_error(error):
     if any(t in lowered for t in ('measurement', 'warmup', 'medição', 'aquecimento', '0 ≤')):
         return 'O aquecimento precisa terminar antes do fim da simulação. Ajuste a duração ou reduza o aquecimento na aba Tráfego.'
     if any(t in lowered for t in ('limites ppo', 'mínimo', 'máximo de ciclo', 'phase_duration', 'maximum_cycle')):
-        return 'Em Treinamento → Ajustar limites dos tempos, confira os verdes: o mínimo não pode superar o máximo, os limites devem incluir o tempo inicial e respeitar os tempos de segurança.'
+        return 'Em Tráfego → mapa → Semáforos, confira os verdes: o mínimo não pode superar o máximo, os limites devem incluir o tempo inicial e respeitar os tempos de segurança.'
     if any(t in lowered for t in ('n_steps', 'batch_size', 'minibatch', 'parâmetros ppo')):
         return 'Nos ajustes avançados do treinamento, a coleta precisa ser múltipla do tamanho do lote, e o lote não pode ser maior que a coleta.'
     if 'semente' in lowered:
@@ -118,7 +120,7 @@ def friendly_configuration_error(error):
     if isinstance(error, (ValueError, TypeError)) and ('invalid literal' in lowered or 'could not convert' in lowered):
         return 'Confira os campos numéricos: preencha somente números válidos, sem letras ou campos vazios.'
     if 'prepare' in lowered or 'rede válida' in lowered:
-        return 'Na aba Cenário, escolha os cruzamentos e clique em Preparar simulação antes de continuar.'
+        return 'Na aba Cenário, confira a rede dos nove cruzamentos e clique em Preparar simulação antes de continuar.'
     if any(t in lowered for t in ('zero veículos', 'gerar tráfego', 'veículos por hora')):
         return 'Em Tráfego, preencha o volume de pelo menos uma entrada. Se os valores forem baixos, aumente o volume ou a duração para gerar veículos.'
     return text or 'Confira os valores preenchidos antes de iniciar.'
@@ -127,7 +129,9 @@ def friendly_configuration_error(error):
 def readiness_panel(config, error, busy=False):
     with st.sidebar:
         section_label('Antes de executar')
-        if config is None:
+        if st.session_state.get('ui_default_tab') == '2 · Tráfego':
+            st.caption('Configure as vias no mapa. Os ajustes são conferidos ao avançar para o treinamento ou executar uma simulação.')
+        elif config is None:
             destination, instruction = configuration_guidance(error)
             st.warning(f'Falta um ajuste em {destination}.')
             st.caption(instruction)

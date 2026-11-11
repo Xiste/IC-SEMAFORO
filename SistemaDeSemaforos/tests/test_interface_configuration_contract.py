@@ -30,8 +30,25 @@ def edit_table(app, token, edits):
     assert not app.exception, app.exception
 
 
+def pick_map(app, layer, field, value):
+    from semaforos.apresentacao.mapa_configuracao import apply_map_selection
+    chart = app.get('deck_gl_json_chart')[0]
+    layers = {row['id']: row['data'] for row in json.loads(chart.proto.json)['layers']}
+    geometry = {key: layers[layer_id] for key, layer_id in (
+        ('signals', 'configuration-signals'), ('roads', 'configuration-roads'), ('pedestrians', 'configuration-pedestrians'))}
+    namespace = next(k.rsplit('_chart_', 1)[0] for k in app.session_state.filtered_state if '_chart_' in k)
+    revision = app.session_state.filtered_state.get('configuration_revision', 0)
+    apply_map_selection(app.session_state, namespace, geometry, {'selection': {'objects': {layer: [{field: value}]}}},
+                        demand_mode_key=f'configuration_{revision}_Como deseja informar o tráfego?')
+    app.run()
+    assert not app.exception, app.exception
+
+
 def test_form_payload_persistence_errors_and_reload():
     config = read_config(PROJECT_ROOT / 'config/cenario_rede_corrigida.json')
+    from semaforos.cenario.experimental import prepare_or_reuse
+    config, _, _ = prepare_or_reuse(config, PROJECT_ROOT / 'resultados')
+    config['targets'].sort(key=lambda t: t['tls_id'] != 'FAM_RONDON_PARANA')
     net = sumolib.net.readNet(str(config['network']))
     entries = sorted({a.getEdge().getID() for a, _, _ in net.getTLS(config['targets'][0]['tls_id']).getConnections()
                       if a.getEdge().allows('passenger')})
@@ -54,12 +71,13 @@ def test_form_payload_persistence_errors_and_reload():
             app.session_state['job'] = paths
             app.run()
             assert not app.exception, app.exception
-            edit_table(app, 'volume_editor_', {0: {'vehicles_per_hour': 650.}})
+            pick_map(app, 'configuration-roads', 'edge_id', entries[0])
+            widget(app, 'number_input', 'Veículos por hora').set_value(650.).run()
+            pick_map(app, 'configuration-pedestrians', 'crossing_id', routes[0]['crossing_id'])
             edit_table(app, '_values_', {0: {'persons_per_hour': 120.}})
-            limit_key = next(k for k, v in app.session_state.filtered_state.items()
-                             if 'adaptive_limits' in k and k.endswith('_editor') and isinstance(v, dict))
-            app.session_state[limit_key] = {'edited_rows': {0: {'minimum_seconds': 30., 'maximum_seconds': 60.}}, 'added_rows': [], 'deleted_rows': []}
-            app.run()
+            pick_map(app, 'configuration-signals', 'tls_id', config['targets'][0]['tls_id'])
+            widget(app, 'number_input', 'Verde mínimo (s)').set_value(20.).run()
+            widget(app, 'number_input', 'Verde máximo (s)').set_value(60.).run()
             # Invalid draft must not stop rendering or clear other edits.
             edit_table(app, '_table_', {0: {'share': 40.}})
             assert widget(app, 'button', 'Iniciar treinamento').disabled
@@ -67,8 +85,10 @@ def test_form_payload_persistence_errors_and_reload():
             assert any(w.label == 'Objetivo do treinamento' for w in app.selectbox)
             edit_table(app, '_table_', {0: {'share': 40.}, 1: {'share': 10.}, 2: {'share': 20.}, 3: {'share': 30.}})
             # Switch input and visible section without losing values.
-            widget(app, 'selectbox', 'Entrada a localizar').select(entries[1]).run()
-            widget(app, 'selectbox', 'Entrada de pedestres a localizar').select_index(1).run()
+            pick_map(app, 'configuration-roads', 'edge_id', entries[1])
+            assert widget(app, 'number_input', 'Veículos por hora').value == 360.
+            pick_map(app, 'configuration-roads', 'edge_id', entries[0])
+            assert widget(app, 'number_input', 'Veículos por hora').value == 650.
             widget(app, 'radio', 'Etapas do estudo').set_value('3 · Treinamento').run()
             widget(app, 'number_input', 'Quantidade de decisões para treinar').set_value(4096).run()
             widget(app, 'button', 'Iniciar treinamento').click().run()
@@ -76,15 +96,19 @@ def test_form_payload_persistence_errors_and_reload():
             launch.assert_called_once()
             payload, command = launch.call_args.args[:2]
             assert command == 'rl-train'
-            assert payload['demand']['edge_volumes'][0]['vehicles_per_hour'] == 650.
-            assert all(r['vehicles_per_hour'] == 360. for r in payload['demand']['edge_volumes'][1:])
+            assert len({t['name'] for t in payload['targets']}) == 9
+            assert len(payload['targets']) == 17
+            rates = {r['from_edge']: r['vehicles_per_hour'] for r in payload['demand']['edge_volumes']}
+            assert rates[entries[0]] == 650.
+            assert all(rates[e] == 360. for e in entries[1:])
+            assert all(v == 0 for e, v in rates.items() if e not in entries)
             profile = payload['demand']['time_profile']
             mass = [(r['end'] - r['begin']) * r['multiplier'] for r in profile]
             assert mass == [40., 10., 20., 30.]
             assert payload['pedestrians']['flows'][0]['persons_per_hour'] == 120.
             assert all(r['persons_per_hour'] == 60. for r in payload['pedestrians']['flows'][1:])
             first = f"{config['targets'][0]['tls_id']}:0"
-            assert payload['control']['phase_duration_bounds'][first] == {'minimum_seconds': 30., 'maximum_seconds': 60.}
+            assert payload['control']['phase_duration_bounds'][first] == {'minimum_seconds': 20., 'maximum_seconds': 60.}
             assert payload['ppo']['total_timesteps'] == 4096
             # Verify the preview against actual generated trips, not only a copied formula.
             demand_output = folder / 'demand'
@@ -104,16 +128,17 @@ def test_form_payload_persistence_errors_and_reload():
             app.session_state['experimental_rows'] = []
             widget(app, 'button', 'Carregar configurações desta execução').click().run()
             assert not app.exception, app.exception
-            assert 'experimental_config' not in app.session_state.filtered_state
+            assert len(app.session_state['experimental_config']['targets']) == 17
             assert widget(app, 'number_input', 'Quantidade de decisões para treinar').value == config['ppo']['total_timesteps']
-            volumes = next(w.value for w in app.dataframe if 'vehicles_per_hour' in w.value.columns)
-            assert volumes.iloc[0]['vehicles_per_hour'] == 360.
+            pick_map(app, 'configuration-roads', 'edge_id', entries[0])
+            assert widget(app, 'number_input', 'Veículos por hora').value == 360.
+            pick_map(app, 'configuration-pedestrians', 'crossing_id', routes[0]['crossing_id'])
             pedestrians = next(w.value for w in app.dataframe if 'persons_per_hour' in w.value.columns)
             assert pedestrians.iloc[0]['persons_per_hour'] == 60.
             periods = next(w.value for w in app.dataframe if 'share' in w.value.columns)
             assert periods['share'].tolist() == [25., 25., 25., 25.]
-            limits = next(w.value for w in app.dataframe if 'entries' in w.value.columns)
-            assert limits.iloc[0]['minimum_seconds'] == 24.
+            pick_map(app, 'configuration-signals', 'tls_id', config['targets'][0]['tls_id'])
+            assert widget(app, 'number_input', 'Verde mínimo (s)').value == config['control']['phase_duration_bounds'][first]['minimum_seconds']
             assert not any(w.label == 'Arquivo para baixar' for w in app.selectbox)
 
 
@@ -126,6 +151,25 @@ st.session_state.profile = table.to_dict('records')
 ''').run()
     assert not app.exception
     assert app.dataframe[0].value['vehicles'].tolist() == [0, 4, 0, 0]
+
+
+def test_loaded_individual_scenario_is_expanded_without_changing_original():
+    config = read_config(PROJECT_ROOT / 'config/cenario_rede_corrigida.json')
+    with patch('semaforos.experimentos.tarefas.start_job') as launch:
+        app = AppTest.from_file(str(PROJECT_ROOT / 'interface.py'), default_timeout=90)
+        app.session_state['loaded_config'] = config
+        app.run()
+        assert not app.exception, app.exception
+        assert all('veículo' in w.value.casefold() or 'volume' in w.value.casefold() or 'entrada' in w.value.casefold()
+                   for w in app.error), app.error
+        assert not any(w.label == 'Como deseja informar o tráfego?' for w in app.radio)
+        assert not any(w.label == 'Volume total (veículos/h)' for w in app.number_input)
+        assert not any(w.label == 'Cruzamentos controlados' for w in app.radio)
+        assert not any(w.label == 'Qual cruzamento?' for w in app.selectbox)
+        assert len({t['name'] for t in app.session_state['experimental_config']['targets']}) == 9
+        assert len(app.session_state['experimental_config']['targets']) == 17
+        assert len(config['targets']) == 1
+        launch.assert_not_called()
 
 
 def test_errors_explain_action_without_technical_keys():

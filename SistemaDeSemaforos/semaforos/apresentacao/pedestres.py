@@ -1,5 +1,6 @@
 """Identificação dos lados da travessia pela geometria e pelas conexões da rede."""
 import math
+from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from matplotlib.figure import Figure
@@ -8,6 +9,11 @@ import streamlit as st
 
 
 def pedestrian_route_details(network, routes):
+    return _pedestrian_route_details(str(network), Path(network).stat().st_mtime_ns, routes)
+
+
+@st.cache_data(show_spinner=False)
+def _pedestrian_route_details(network, version, routes):
     root = ET.parse(network).getroot()
     edges = {e.get('id'): e for e in root.findall('edge')}
     connections = root.findall('connection')
@@ -101,7 +107,7 @@ def pedestrian_street_map(network, route):
                       get_background_color=[255, 255, 255, 240], character_set="'auto'")])
 
 
-def pedestrian_editor(network, defaults, key):
+def pedestrian_editor(network, defaults, key, *, selected_crossing=None, selected_route=None, show_map=True, map_only=False):
     from semaforos.apresentacao.estado import configuration_key
     key = configuration_key(key)
     details = pedestrian_route_details(network, defaults)
@@ -115,31 +121,42 @@ def pedestrian_editor(network, defaults, key):
     for number, row in enumerate(details, 1):
         row['entry_reference'] = f'Entrada {number}'
     crossings = list(dict.fromkeys(row['intersection'] for row in details))
-    crossing = st.selectbox('Cruzamento para preencher os pedestres', crossings,
+    if (selected_crossing is not None or map_only) and selected_crossing not in crossings:
+        result = pd.DataFrame([{**row, 'persons_per_hour': values[identity(row)]} for row in defaults])[
+            ['intersection', 'crossing_id', 'from_edge', 'to_edge', 'persons_per_hour']]
+        if any(v is None or not math.isfinite(v) or v < 0 for v in values.values()):
+            result.attrs['validation_error'] = 'Confira os valores de pessoas por hora nas travessias dos outros cruzamentos.'
+        return result
+    crossing = selected_crossing if selected_crossing in crossings else st.selectbox('Cruzamento para preencher os pedestres', crossings,
                             key=f'{key}_crossing_{tuple(crossings)}')
     local = [row for row in details if row['intersection'] == crossing]
+    if selected_route and any(r['crossing_id'] == selected_route for r in local):
+        local = [r for r in local if r['crossing_id'] == selected_route]
     st.caption('Preencha as pessoas por hora deste cruzamento. Os valores dos outros cruzamentos são mantidos ao trocar a seleção. Zero não gera pedestres nesta entrada.')
     records = [{'Entrada': row['entry_reference'], 'Travessia': row['reference'],
                 'Sai do lado': row['origin_side'], 'Chega ao lado': row['destination_side'],
                 'persons_per_hour': values[identity(row)]} for row in local]
     edited = st.data_editor(pd.DataFrame(records), hide_index=True, num_rows='fixed', width='stretch',
-        key=f'{state_key}_editor_{crossing}',
+        key=f'{state_key}_editor_{crossing}' + (f'_{selected_route}' if selected_route else ''),
         disabled=['Entrada', 'Travessia', 'Sai do lado', 'Chega ao lado'],
         column_config={'persons_per_hour': st.column_config.NumberColumn('Pessoas/h', min_value=0., step=10., required=True)})
     for row, value in zip(local, edited['persons_per_hour']):
         values[identity(row)] = float(value) if pd.notna(value) else None
     options = [f"{row['entry_reference']} - {row['reference']} - {row['origin_side']} -> {row['destination_side']}" for row in local]
     selected = st.selectbox('Entrada de pedestres a localizar', options,
-        key=f'{key}_entry_{crossing}')
+        key=f'{key}_entry_{crossing}') if show_map else options[0]
     route = local[options.index(selected)]
-    deck = pedestrian_street_map(network, route)
-    if deck is not None:
+    if selected_route:
+        route = next((r for r in local if r['crossing_id'] == selected_route), route)
+    deck = pedestrian_street_map(network, route) if show_map else None
+    if show_map and deck is not None:
         st.pydeck_chart(deck, height=480, key=f'{key}_map_{crossing}_{selected}')
         st.caption('Arraste para mover e use o zoom para aproximar. \u00a9 OpenStreetMap, \u00a9 CARTO.')
-    else:
+    elif show_map:
         st.caption('Mapa de ruas indispon\u00edvel: esta rede n\u00e3o tem refer\u00eancia geogr\u00e1fica.')
         st.pyplot(pedestrian_map(network, route, local))
-    st.caption('Verde: partida. Vermelho: chegada. Azul: travessia.')
+    if show_map:
+        st.caption('Verde: partida. Vermelho: chegada. Azul: travessia.')
     result = pd.DataFrame([{**row, 'persons_per_hour': values[identity(row)]} for row in defaults])[
         ['intersection', 'crossing_id', 'from_edge', 'to_edge', 'persons_per_hour']]
     if any(v is None or not math.isfinite(v) or v < 0 for v in values.values()):

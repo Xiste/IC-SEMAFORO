@@ -31,6 +31,12 @@ FREE = {key: value for key, value in META.items() if key not in {"day", "start",
 
 
 class FormTests(unittest.TestCase):
+    def test_gpt_preserves_random_and_metasettran_options(self):
+        for fields in (RANDOM, META, FREE):
+            with self.subTest(demand=fields["demand_profile"]):
+                self.assertEqual(web.form_options(fields | {"signal_profile": "gpt"}),
+                                 web.form_options(fields) | {"signal_profile": "gpt"})
+
     def test_random_defaults_natural_and_defined_end(self):
         options = web.form_options(RANDOM)
         self.assertEqual(options, dict(signal_profile="current", demand_profile="random",
@@ -240,6 +246,8 @@ class HTTPTests(unittest.TestCase):
         code, html, _ = self.request("/")
         self.assertEqual(code, 200)
         self.assertIn("EXECUTOR DE DEMANDAS INTEGRADO", html)
+        self.assertIn('<option value="current">current</option>', html)
+        self.assertIn('<option value="gpt">gpt</option>', html)
         self.assertNotIn('name="master_seed"', html)
         self.assertIn('id="outputs-random"', html)
         self.assertIn('id="outputs-metasettran"', html)

@@ -87,7 +87,7 @@ def form_options(fields):
         return value
 
     options = {
-        "signal_profile": choice("signal_profile", {"current"}),
+        "signal_profile": choice("signal_profile", {"current", "gpt"}),
         "demand_profile": choice("demand_profile", {"random", "metasettran"}),
         "metrics_profile": choice("metrics_profile", {"core", "full"}),
         "episodes": integer("episodes"),

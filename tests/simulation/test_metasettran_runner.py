@@ -249,6 +249,7 @@ class MetaSettranRunnerTests(unittest.TestCase):
                 batch = self.run_batch(metrics_profile=profile)
                 directory, metrics, execution = self.results(batch)[0]
                 retained = directory / "metasettran.rou.xml"
+                self.assertEqual(metrics["demand_model"], "metasettran")
                 self.assertTrue(retained.is_file())
                 self.assertEqual(execution["generation"]["routes_file"], str(retained))
                 self.assertEqual(self.simulate.call_args.kwargs["demand_file"], retained)

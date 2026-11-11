@@ -423,16 +423,25 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
         raise ValueError("Acesso MetaSettran não pode ser periférico e de atividade ao mesmo tempo.")
     origin_edges = entry_edges | activity_origins.keys()
     destination_edges = exit_edges | activity_destinations.keys()
+    lane_lengths, maximum_edge_lengths = {}, {}
+    for edge in ET.parse(generation["net_file"]).getroot().findall("edge"):
+        lengths = {lane.get("id"): float(lane.get("length")) for lane in edge.findall("lane")}
+        if lengths:
+            lane_lengths.update(lengths)
+            maximum_edge_lengths[edge.get("id")] = max(lengths.values())
     # A agenda é intenção de partida; somente Tripinfo confirma inserção e
     # chegada. Ausência de observação não deve virar fluxo ou atraso zero.
     planned, planned_routes, scheduled, departures, endings = {}, {}, {}, {}, {}
+    activity_departure_positions = {}
     route_cache = {}
     route_count = 0
     for item in _elements(Path(generation["routes_file"]), "vehicle"):
         route_count += 1
         route = item.find("route")
         edges = tuple(route.get("edges", "").split()) if route is not None else ()
-        if not edges or item.get("departPos") != "0" or item.get("arrivalPos") != "max":
+        position = _number(item.get("departPos"))
+        if (not edges or position is None or position < 0 or item.get("arrivalPos") != "max" or
+                (edges[0] not in activity_origins and position != 0)):
             raise ValueError("Demanda MetaSettran não declara extremos completos da viagem.")
         # Uma semana repete o catálogo finito de percursos; não é necessário
         # conservar outro tuple de strings por veículo nem a árvore XML inteira.
@@ -441,6 +450,10 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
         if ((origin_edges and edges[0] not in origin_edges) or
                 (destination_edges and edges[-1] not in destination_edges)):
             raise ValueError("Extremo MetaSettran não pertence aos portais ou atividades cadastrados.")
+        if position >= maximum_edge_lengths.get(edges[0], 0):
+            raise ValueError("Posição de partida MetaSettran fora do trecho de origem previsto.")
+        if position != 0:
+            activity_departure_positions[item.get("id")] = position
         planned_routes[item.get("id")] = edges
         scheduled[item.get("id")] = _number(item.get("depart"))
         if scheduled[item.get("id")] is None or not 0 <= scheduled[item.get("id")] < generation["duration"]:
@@ -449,9 +462,6 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
             len(planned) != route_count or len(planned) != generation["vehicles_generated"]):
         raise ValueError("Demanda MetaSettran com IDs repetidos ou contagem divergente.")
     del route_cache
-    lane_lengths = {lane.get("id"): float(lane.get("length"))
-                    for edge in ET.parse(generation["net_file"]).getroot().findall("edge")
-                    for lane in edge.findall("lane")}
     teleported = set()
     events = 0
     with open_result(directory / "sumo.log", "rt", encoding="utf-8") as stream:
@@ -492,11 +502,14 @@ def collect_metasettran_validation(directory, generation, *, summary_metrics=Non
             status = "not_inserted"
         else:
             origin, destination = planned[identifier]
+            depart_lane = item.get("departLane", "")
             depart_position = _number(item.get("departPos"))
-            if (item.get("departLane", "").rsplit("_", 1)[0] != origin or
-                    depart_position is None or abs(depart_position) > .001):
+            expected_position = activity_departure_positions.get(identifier, 0)
+            if (depart_lane.rsplit("_", 1)[0] != origin or depart_position is None or
+                    not 0 <= depart_position < lane_lengths.get(depart_lane, 0) or
+                    abs(depart_position - expected_position) > .001):
                 location = "acesso de atividade" if origin in activity_origins else "portal"
-                raise ValueError(f"Veículo MetaSettran inserido fora do início do {location} previsto.")
+                raise ValueError(f"Veículo MetaSettran inserido fora do ponto de partida do {location} previsto.")
             inserted += 1
             # SUMO representa tempo em milissegundos; o XML de demanda conserva
             # microssegundos. Até meio milissegundo é arredondamento, não antecipação.

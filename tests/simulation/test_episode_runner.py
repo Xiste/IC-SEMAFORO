@@ -105,6 +105,39 @@ class RunSimulationTests(unittest.TestCase):
         run.assert_not_called()
 
     @patch.object(simulation.subprocess, "run")
+    @patch.object(simulation.shutil, "which", return_value="sumo")
+    def test_gpt_uses_local_programs_with_or_without_gui_and_recording(self, which, run):
+        run.side_effect = lambda command, **kwargs: configuration_result(command)
+        for gui in (False, True):
+            for profile in (None, "core", "full", "diagnostic"):
+                with self.subTest(gui=gui, metrics_profile=profile):
+                    recording = self.directory / f"episode-{gui}-{profile}" if profile else None
+                    if recording:
+                        (recording / "inputs").mkdir(parents=True)
+                    metadata = {}
+                    simulation.run_simulation(
+                        net_file=simulation.DEFAULT_NET_FILE, demand_file=self.demand_file,
+                        gui=gui, end=60, recording_dir=recording, metadata=metadata,
+                        signal_profile="gpt", metrics_profile=profile or "core",
+                        sumo_defaults={"seed": "23423", "step-length": "1"})
+                    command = run.call_args.args[0]
+                    self.assertEqual(command.count("--additional-files"), 1)
+                    additions = option_value(command, "--additional-files").split(",")
+                    self.assertEqual(Path(additions[0]), simulation.GPT_PROGRAMS_FILE)
+                    self.assertEqual(len(additions), 2 if profile in {"full", "diagnostic"} else 1)
+                    self.assertEqual("--start" in command, gui)
+                    self.assertNotIn("--seed", command)
+                    self.assertNotIn("--time-to-teleport", command)
+                    if recording:
+                        config = metadata["signal_configuration"]
+                        self.assertEqual(config["mode"], "experimental_fixed_time")
+                        self.assertEqual("programs" in config, profile == "diagnostic")
+                        self.assertEqual(config["version"], "gpt-v1")
+                        self.assertIn("programs_sha256", config)
+                        if profile == "diagnostic":
+                            self.assertEqual(len(config["programs"]), 27)
+
+    @patch.object(simulation.subprocess, "run")
     @patch.object(simulation.shutil, "which", return_value="/usr/bin/sumo")
     def test_headless_command_uses_network_and_demand(self, which, run):
         simulation.run_simulation(
@@ -300,11 +333,32 @@ class RunSimulationTests(unittest.TestCase):
         self.assertEqual([logic.get("id") for logic in logics], ["FAM_CESARIO_PARANA"])
         self.assertEqual(logics[0].get("programID"), "settran_2")
         self.assertEqual(sum(float(p.get("duration")) for p in logics[0]), 70)
-        self.assertEqual(scope["programs"], [{
-            **logic.attrib, "phases": [phase.attrib for phase in logic.findall("phase")],
-            "parameters": [param.attrib for param in logic.findall("param")]} for logic in logics])
+        self.assertNotIn("programs", scope)
         self.assertNotIn("source", scope)
         self.assertNotIn("additional", scope)
+
+    def test_settran_diagnostic_preserves_complete_signal_programs(self):
+        document, intersection = synthetic_cesario_document()
+        recording = self.directory / "diagnostic"
+        recording.mkdir()
+        metadata = {}
+        source = Mock()
+        source.read_text.return_value = json.dumps(document)
+        with (
+            patch.object(simulation, "SETTRAN_PROGRAMS_FILE", source),
+            patch.object(simulation.shutil, "which", return_value="sumo"),
+            patch.object(simulation.subprocess, "run",
+                         side_effect=lambda command, **kwargs: configuration_result(command)),
+        ):
+            simulation.run_simulation(
+                net_file=simulation.DEFAULT_NET_FILE, demand_file=self.demand_file,
+                recording_dir=recording, metadata=metadata, signal_profile="settran",
+                settran_plan="2", settran_intersections=[intersection], metrics_profile="diagnostic",
+                sumo_defaults={"seed": "23423", "step-length": "1"})
+        programs = ET.parse(recording / "inputs/settran.add.xml").getroot().findall("tlLogic")
+        self.assertEqual(metadata["signal_configuration"]["programs"], [{
+            **logic.attrib, "phases": [phase.attrib for phase in logic.findall("phase")],
+            "parameters": [param.attrib for param in logic.findall("param")]} for logic in programs])
 
     def test_ready_local_core_fixture_adds_only_settran_programs(self):
         document, intersection = synthetic_cesario_document()
@@ -547,6 +601,7 @@ class RandomEpisodeTests(unittest.TestCase):
                 records, execution = self.episode_results(directory)
                 self.assertEqual(records["vehicles_completed"]["value"], 2)
                 self.assertEqual(records["network_mean_speed_m_s_mean"]["value"], 8.25)
+                self.assertEqual(records["demand_model"]["value"], "random")
                 self.assertEqual((directory / "entities.json.gz").exists(), profile != "core")
                 self.assertEqual("collection_summary_time_seconds" in records, profile == "diagnostic")
                 self.assertEqual("sumo_performance_clock_duration" in records, profile == "diagnostic")
@@ -779,6 +834,23 @@ class RandomEpisodeTests(unittest.TestCase):
         self.assertNotIn("settran_plan", calls[0])
         self.assertNotIn("settran_plan", calls[1])
 
+    def test_gpt_is_applied_to_every_episode_and_recorded_without_changing_demand(self):
+        with patch.object(simulation.random, "randint", return_value=42):
+            self.run_episodes(net_file=simulation.DEFAULT_NET_FILE, episodes=2,
+                              duration=30, period=5, end=60, signal_profile="gpt")
+        self.assertEqual(self.run_mock.call_count, 2)
+        for call in self.run_mock.call_args_list:
+            self.assertEqual(call.kwargs["signal_profile"], "gpt")
+            self.assertNotIn("_settran_document", call.kwargs)
+        for call in self.generate_mock.call_args_list:
+            self.assertNotIn("signal_profile", call.kwargs)
+            self.assertEqual(call.kwargs["seed"], 42)
+            self.assertEqual(call.kwargs["period"], 5)
+        for directory in self.episode_directories():
+            _, execution = self.episode_results(directory)
+            self.assertEqual(execution["signal_profile"], "gpt")
+            self.assertEqual(execution["signal_configuration"]["version"], "gpt-v1")
+
     def test_output_outside_random_results_is_rejected(self):
         for invalid in (self.directory / "elsewhere", self.output_root / "outputs-other"):
             with self.subTest(directory=invalid):
@@ -871,6 +943,18 @@ class RandomEpisodeTests(unittest.TestCase):
     def test_cli_accepts_diagnostic_for_developers(self, run_random_episodes):
         self.assertEqual(simulation.main(["--metrics-profile", "diagnostic"]), 0)
         self.assertEqual(run_random_episodes.call_args.kwargs["metrics_profile"], "diagnostic")
+
+    @patch.object(simulation, "run_random_episodes")
+    @patch.object(simulation, "run_episodes")
+    def test_cli_accepts_gpt_for_both_demand_profiles(self, run_episodes, run_random_episodes):
+        for demand in ("random", "metasettran"):
+            with self.subTest(demand=demand), redirect_stdout(io.StringIO()):
+                self.assertEqual(simulation.main(["--signal-profile", "gpt",
+                                                  "--demand-profile", demand]), 0)
+            execute = run_random_episodes if demand == "random" else run_episodes
+            options = execute.call_args.kwargs
+            self.assertEqual(options["signal_profile"], "gpt")
+            self.assertEqual(options.get("demand_profile", "random"), demand)
 
     @patch.object(simulation, "run_random_episodes")
     def test_cli_forwards_signal_profile_separately(self, run_random_episodes):

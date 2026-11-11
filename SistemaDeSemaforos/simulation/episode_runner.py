@@ -39,6 +39,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 DEFAULT_EPISODE_DIR = OUTPUT_ROOT / "outputs-random"
 SETTRAN_PROGRAMS_FILE = PROJECT_ROOT / "docs" / "settran_programs.json"
+GPT_PROGRAMS_FILE = DEFAULT_NET_FILE.parent / "gpt.add.xml"
+GPT_NETWORK_SHA256 = "2e6212d6bd692bbf02b8778f1edaaf1ca31c5b9d2b7cf8dcd8277c9f3ced22fd"
 
 
 def _utc_now() -> str:
@@ -108,16 +110,67 @@ def read_sumo_configuration(binary: str) -> dict:
     }
 
 
+def _prepare_gpt(net_file) -> dict:
+    """Confere o suplemento fixo com os mesmos vínculos/conflitos usados no SETTRAN."""
+    from .settran_configuration import _topology, _validate_green_conflicts
+
+    # Índices e tempos foram escolhidos para esta rede; aceita checkout CRLF.
+    network_hash = hashlib.sha256(Path(net_file).read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+    if network_hash != GPT_NETWORK_SHA256:
+        raise ValueError("gpt exige a rede Rondon Norte conferida; revise o perfil antes de usar outra rede.")
+    links, vehicles, existing = _topology(net_file)
+    programs = ET.parse(GPT_PROGRAMS_FILE).getroot().findall("tlLogic")
+    tls_ids = [logic.get("id") for logic in programs]
+    expected = {tls for tls, logic in existing.items() if len(logic.findall("phase")) > 1}
+    if len(set(tls_ids)) != len(tls_ids) or set(tls_ids) != expected:
+        raise ValueError("gpt: suplemento deve cobrir exatamente os controladores cíclicos da rede.")
+    for logic in programs:
+        tls = logic.get("id")
+        phases = logic.findall("phase")
+        if (logic.get("type") != "static" or logic.get("programID") != "gpt"
+                or logic.get("offset") != "0" or not phases or len(phases) % 3):
+            raise ValueError(f"gpt/TLS {tls}: programa fixo ou sequência inválida.")
+        for phase in phases:
+            state = phase.get("state", "")
+            duration = float(phase.get("duration", "nan"))
+            if (len(state) != len(links[tls]) or set(state) - set("rGgy")
+                    or not math.isfinite(duration) or duration <= 0
+                    or any(state[i] != "r" for i in links[tls] if i not in vehicles[tls])):
+                raise ValueError(f"gpt/TLS {tls}: estados, duração ou escopo veicular inválidos.")
+            _validate_green_conflicts({tls: state}, vehicles, {})
+        for green, yellow, red in zip(phases[::3], phases[1::3], phases[2::3]):
+            if (not set(green.get("state")) & set("Gg") or "y" in green.get("state")
+                    or yellow.get("state") != green.get("state").translate(str.maketrans("Gg", "yy"))
+                    or float(yellow.get("duration")) < 4
+                    or red.get("state") != "r" * len(links[tls])
+                    or float(red.get("duration")) < 2):
+                raise ValueError(f"gpt/TLS {tls}: exige verde, amarelo >= 4 s e limpeza >= 2 s.")
+        if any(not any(p.get("state")[i] in "Gg" for p in phases) for i in vehicles[tls]):
+            raise ValueError(f"gpt/TLS {tls}: movimento veicular sem atendimento.")
+    return {"mode": "experimental_fixed_time", "version": "gpt-v1",
+            "network_sha256": network_hash,
+            "programs_sha256": hashlib.sha256(GPT_PROGRAMS_FILE.read_bytes()).hexdigest(),
+            "tls_ids": sorted(tls_ids), "current_tls_ids": sorted(set(existing) - set(tls_ids))}
+
+
+def _signal_configuration(selection):
+    if selection.get("mode") == "experimental_fixed_time":
+        return selection.copy()
+    return {"mode": "explicit_fixed_plan", "plan_id": selection["plan_id"],
+            "intersections": selection["intersections"], "tls_ids": selection["tls_ids"],
+            "current_tls_ids": selection["current_tls_ids"]}
+
+
 def _validate_signal_profile(signal_profile: str, settran_plan: str | None = None,
                              net_file=DEFAULT_NET_FILE, settran_intersections=None,
                              document=None) -> dict | None:
     """Valida a seleção inteira antes da seed; current não lê dados SETTRAN."""
-    if signal_profile not in {"current", "settran"}:
-        raise ValueError("signal_profile deve ser current ou settran.")
-    if signal_profile == "current":
+    if signal_profile not in {"current", "gpt", "settran"}:
+        raise ValueError("signal_profile deve ser current, gpt ou settran.")
+    if signal_profile != "settran":
         if settran_plan is not None or settran_intersections is not None:
             raise ValueError("--settran-plan/--settran-intersection exige --signal-profile settran.")
-        return
+        return _prepare_gpt(net_file) if signal_profile == "gpt" else None
     if settran_plan is None:
         raise ValueError(
             "Escolha explicitamente --settran-plan para testar um plano SETTRAN fixo; "
@@ -182,7 +235,13 @@ def run_simulation(
     if gui:
         command.extend(["--start", "--quit-on-end"])
 
-    if selection is not None:
+    if signal_profile == "gpt":
+        additional = GPT_PROGRAMS_FILE
+        if recording_dir is None:
+            subprocess.run(command + ["--additional-files", str(additional)], check=True,
+                           **sumo_process_options())
+            return
+    elif selection is not None:
         from .settran_configuration import compile_selection
         if recording_dir is None:
             with tempfile.TemporaryDirectory(prefix="settran-fixed-") as temporary:
@@ -213,16 +272,14 @@ def run_simulation(
     if metadata is None:
         metadata = {}
     if selection is not None:
-        metadata["signal_configuration"] = {
-            "mode": "explicit_fixed_plan", "plan_id": selection["plan_id"],
-            "intersections": selection["intersections"], "tls_ids": selection["tls_ids"],
-            "current_tls_ids": selection["current_tls_ids"],
-            "programs": [
+        metadata["signal_configuration"] = _signal_configuration(selection)
+        # Estados/fases completos são auditoria técnica, não contexto core/full.
+        if metrics_profile == "diagnostic":
+            metadata["signal_configuration"]["programs"] = [
                 {**logic.attrib, "phases": [phase.attrib for phase in logic.findall("phase")],
                  "parameters": [param.attrib for param in logic.findall("param")]}
                 for logic in ET.parse(additional).getroot().findall("tlLogic")
-            ],
-        }
+            ]
     if sumo_defaults is None:
         sumo_defaults = read_sumo_configuration(binary)["sumo_defaults"]
     metadata["command"] = command
@@ -519,11 +576,7 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
         execution["context_selection"] = demand_options["_context_selection"]
         execution.update(demand_options.get("_execution_selection", {}))
     if selection is not None:
-        execution["signal_configuration"] = {
-            "mode": "explicit_fixed_plan", "plan_id": selection["plan_id"],
-            "intersections": selection["intersections"], "tls_ids": selection["tls_ids"],
-            "current_tls_ids": selection["current_tls_ids"],
-        }
+        execution["signal_configuration"] = _signal_configuration(selection)
     save_episode(directory, metrics, execution, include_entities=metrics_profile != "core")
     try:
         configuration_started = perf_counter()
@@ -581,7 +634,7 @@ def _run_episode(net_file, output_dir, episode, episodes, gui, duration, period,
             metrics["demand_last_departure_seconds"] = last_departure
             metrics["demand_departure_mean_seconds"] = departure_sum / departure_count
         metrics["generation_time_seconds"] = generation["duration_seconds"]
-        signal_options = {} if selection is None else {
+        signal_options = {} if signal_profile != "settran" else {
             "settran_plan": selection["plan_id"],
             "settran_intersections": selection["intersections"],
             "_settran_document": selection["document_snapshot"],
@@ -742,8 +795,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--metrics-profile", choices=("core", "full", "diagnostic"), default="core",
                         help="core: indicadores globais; full: medições por entidade e observações nativas; "
                              "diagnostic: full com auditoria técnica e instrumentação (somente terminal).")
-    parser.add_argument("--signal-profile", choices=("current", "settran"), default="current",
-                        help="current: programas do mapa; settran: plano fixo validado por interseção/TLS.")
+    parser.add_argument("--signal-profile", choices=("current", "gpt", "settran"), default="current",
+                        help="current: programas do mapa; gpt: referência experimental fixa; "
+                             "settran: plano fixo validado por interseção/TLS.")
     parser.add_argument("--settran-plan", type=str,
                         help="ID oficial para testar um plano SETTRAN fixo; sem escolha presumida.")
     parser.add_argument("--settran-intersection", dest="settran_intersections", action="append",

@@ -8,9 +8,11 @@ from pathlib import Path
 import re
 import tempfile
 import unittest
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 from scripts import correct_signal_infrastructure as infrastructure
+from SistemaDeSemaforos.simulation import episode_runner as simulation
 
 
 EXPECTED_CONTROLS = {
@@ -1207,6 +1209,45 @@ class SignalInfrastructureTests(unittest.TestCase):
             self.assertEqual(stopped.exception.code, 1)
             self.assertEqual(network.read_text(encoding="utf-8"), altered)
             self.assertEqual(network.stat().st_mtime_ns, stat.st_mtime_ns)
+
+
+class GPTProfileTests(unittest.TestCase):
+    def test_profile_validates_conflicts_transitions_and_every_vehicle_movement(self):
+        before = infrastructure.NETWORK.read_bytes()
+        selection = simulation._prepare_gpt(infrastructure.NETWORK)
+        self.assertEqual(len(selection["tls_ids"]), 27)
+        self.assertEqual(len(selection["current_tls_ids"]), 9)
+        self.assertEqual(infrastructure.NETWORK.read_bytes(), before)
+
+    def test_incompatible_network_is_rejected_but_crlf_checkout_is_supported(self):
+        original = infrastructure.NETWORK.read_bytes()
+        with tempfile.TemporaryDirectory() as directory:
+            network = Path(directory) / "map.net.xml"
+            network.write_bytes(original.replace(b"\n", b"\r\n"))
+            self.assertEqual(simulation._prepare_gpt(network)["network_sha256"],
+                             simulation.GPT_NETWORK_SHA256)
+            network.write_bytes(original.replace(b'speed="13.89"', b'speed="13.88"', 1))
+            with self.assertRaisesRegex(ValueError, "revise o perfil"):
+                simulation._prepare_gpt(network)
+
+    def test_conflicts_missing_service_and_short_yellow_are_rejected(self):
+        for defect in ("conflict", "unserved", "yellow", "missing_tls"):
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as directory:
+                root = ET.parse(simulation.GPT_PROGRAMS_FILE).getroot()
+                phases = root[0].findall("phase")
+                if defect == "conflict":
+                    phases[0].set("state", "GGGG")
+                elif defect == "unserved":
+                    phases[0].set("state", "Grrr")
+                    phases[1].set("state", "yrrr")
+                elif defect == "yellow":
+                    phases[1].set("duration", "1")
+                else:
+                    root.remove(root[0])
+                source = Path(directory) / "gpt.add.xml"
+                ET.ElementTree(root).write(source)
+                with patch.object(simulation, "GPT_PROGRAMS_FILE", source), self.assertRaises(ValueError):
+                    simulation._prepare_gpt(infrastructure.NETWORK)
 
 
 if __name__ == "__main__":

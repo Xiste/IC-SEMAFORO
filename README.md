@@ -337,7 +337,9 @@ escala regional, acessos e OD. A localização dos sensores e a interpretação 
 dos timestamps exigem confirmação externa. As 25 variações reamostram os dados
 disponíveis e têm dependência estatística.
 
-O perfil semafórico padrão `current` usa os programas da rede. A execução dos
+O perfil semafórico padrão `current` usa os programas da rede. A interface também
+oferece `gpt`, referência experimental de tempos fixos; pelo terminal, use
+`--signal-profile gpt`. Os critérios e limites estão no guia técnico. A execução dos
 planos reais `settran` depende de dados operacionais complementares.
 `status=completed` confirma que o processamento terminou. Para avaliar o tráfego,
 consulte também chegadas, teleportes, viagens incompletas e veículos sem inserção.

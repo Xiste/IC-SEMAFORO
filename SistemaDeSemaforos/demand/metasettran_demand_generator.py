@@ -46,6 +46,10 @@ DEFAULT_CSV_FILE = Path(__file__).resolve().parents[2] / "docs" / "Medicoes_5_6.
 DEFAULT_SPATIAL_FILE = Path(__file__).with_name("metasettran_spatial.json")
 WEEK_START_SECONDS = 86400 + 15 * 3600
 DAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+DEPARTURE_POLICY = "metasettran-origin-v1"
+_DEPARTURE_POLICY_PARAM = "edi.departurePolicy"
+_PORTAL_DEPARTURE = {"departPos": "0", "departLane": "best_prob", "departSpeed": "avg"}
+_ACTIVITY_DEPARTURE = {"departLane": "allowed", "departSpeed": "0"}
 
 
 def validate_selection(day="tuesday", start="15:00", sections=1, variation=1, seed=None):
@@ -133,11 +137,60 @@ def _write_xml(path, root):
     ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
 
 
-def _routes_root():
+def _routes_root(*, use_origin_policy=False):
     root = ET.Element("routes")
-    # Somente a classe é declarada; parâmetros físicos permanecem nos defaults SUMO.
-    ET.SubElement(root, "vType", id="metasettran_car", vClass="passenger")
+    # Parâmetros físicos permanecem nos defaults SUMO. A marca distingue uma
+    # agenda exportada com atributos de partida dependentes da origem.
+    vehicle_type = ET.SubElement(root, "vType", id="metasettran_car", vClass="passenger")
+    if use_origin_policy:
+        ET.SubElement(vehicle_type, "param", key=_DEPARTURE_POLICY_PARAM, value=DEPARTURE_POLICY)
     return root
+
+
+def _activity_position(access, edge):
+    """Projeta o acesso na polilinha passenger de referência."""
+    coordinates = access.get("position_xy_m")
+    if (not isinstance(coordinates, list) or len(coordinates) != 2 or
+            any(isinstance(value, bool) or not isinstance(value, (int, float)) or
+                not math.isfinite(value) for value in coordinates)):
+        raise ValueError("Acesso de atividade exige posição geográfica válida na rede.")
+    lane = edge["lanes"][min(edge["lanes"], key=int)]
+    shape = [tuple(map(float, point.split(","))) for point in lane.get("shape", "").split()]
+    shape = shape or [edge["from_xy"], edge["to_xy"]]
+    distance, offset, total = math.inf, 0.0, 0.0
+    for left, right in zip(shape, shape[1:]):
+        if left is None or right is None:
+            continue
+        dx, dy = right[0] - left[0], right[1] - left[1]
+        length = math.hypot(dx, dy)
+        if not length:
+            continue
+        fraction = max(0.0, min(1.0, ((coordinates[0] - left[0]) * dx +
+                                     (coordinates[1] - left[1]) * dy) / (length * length)))
+        separation = math.dist(coordinates, (left[0] + fraction * dx, left[1] + fraction * dy))
+        if separation < distance:
+            distance, offset = separation, total + fraction * length
+        total += length
+    if distance > 5:
+        raise ValueError("Posição do acesso de atividade diverge do trecho viário cadastrado.")
+    # Escalar pela menor faixa passenger mantém a posição válida em todas elas.
+    return offset / total * edge["length"]
+
+
+def _departure_attributes(model, edges):
+    """Uma política por origem física, comum a todas as seleções temporais."""
+    result = {}
+    for access in demand_endpoints(model, "entries"):
+        origin = access["edge"]
+        if access["endpoint_kind"] == "boundary":
+            result[origin] = _PORTAL_DEPARTURE
+        else:
+            edge = edges[origin]
+            position = f"{_activity_position(access, edge):.6f}"
+            if not 0 <= float(position) < edge["length"]:
+                raise ValueError(f"Posição de partida fora da faixa do acesso de atividade: {origin}.")
+            result[origin] = dict(_ACTIVITY_DEPARTURE, departPos=position)
+    return result
 
 
 def _run_router(command, log_file, *, append=False):
@@ -170,25 +223,9 @@ def _route_pairs(model, net_file, directory, log_file, *, network=None):
         if portal["passenger_lanes"] != len(edges[portal["edge"]]["lanes"]):
             raise ValueError("Faixas passenger do portal divergem da rede usada no prior.")
         if portal["endpoint_kind"] == "activity":
-            coordinates = portal.get("position_xy_m")
-            if (not isinstance(coordinates, list) or len(coordinates) != 2 or
-                    any(isinstance(value, bool) or not isinstance(value, (int, float)) or
-                        not math.isfinite(value) for value in coordinates)):
-                raise ValueError("Acesso de atividade exige posição geográfica válida na rede.")
             if portal["edge"] in boundary_entries | boundary_exits:
                 raise ValueError("Acesso interno de atividade não pode ser também portal periférico.")
-            edge = edges[portal["edge"]]
-            shape = edge["shape"] or [edge["from_xy"], edge["to_xy"]]
-            distances = []
-            for left, right in zip(shape, shape[1:]):
-                if left is None or right is None:
-                    continue
-                dx, dy = right[0] - left[0], right[1] - left[1]
-                fraction = max(0.0, min(1.0, ((coordinates[0] - left[0]) * dx +
-                    (coordinates[1] - left[1]) * dy) / max(dx * dx + dy * dy, 1e-12)))
-                distances.append(math.dist(coordinates, (left[0] + fraction * dx, left[1] + fraction * dy)))
-            if not distances or min(distances) > 5:
-                raise ValueError("Posição do acesso de atividade diverge do trecho viário cadastrado.")
+            _activity_position(portal, edges[portal["edge"]])
             continue
         if (portal.get("status") != "geographically_audited_boundary" or
                 not portal.get("references") or not portal.get("boundary_evidence")):
@@ -1222,7 +1259,7 @@ def _compose_sections(pairs, model, components, contexts, scale, retention):
         for original_index, timestamp in zip(kept, moved):
             relative = min(timestamp - starts[0], context["end"] - .000001)
             schedule.append({"id": f"ms_s{context['index']:03d}_{original_index:06d}", "type": "metasettran_car",
-                             "depart": f"{relative:.6f}", "departPos": "0", "arrivalPos": "max",
+                             "depart": f"{relative:.6f}", "arrivalPos": "max",
                              "_od_uniforms": marks[original_index]})
         context.update(reference_programmed=len(kept), programmed=len(kept), unreduced_programmed=unreduced)
         reference_count += unreduced
@@ -1299,6 +1336,32 @@ def _compose_sections(pairs, model, components, contexts, scale, retention):
                   "limits": ["Passage predictions below refer to individual contexts before boundary transport.",
                              "Combined physical passages are measured by the shared SUMO collector."]}
     return knots, weights, projection, schedule, reference_count, transition
+
+
+def _paired_schedule(source, duration):
+    vehicle_types = source.findall("vType")
+    automatic_types = {item.get("id") for item in vehicle_types
+                       if item.find(f"param[@key='{_DEPARTURE_POLICY_PARAM}'][@value='{DEPARTURE_POLICY}']") is not None}
+    schedule = [dict(vehicle.attrib) for vehicle in source.findall("vehicle")]
+    departure_times = [float(attrs["depart"]) for attrs in schedule]
+    if (not schedule or departure_times != sorted(departure_times) or
+            len({attrs.get("id") for attrs in schedule}) != len(schedule) or
+            any(not attrs.get("id") or attrs.get("arrivalPos") != "max" for attrs in schedule) or
+            any(not 0 <= timestamp < duration for timestamp in departure_times)):
+        raise ValueError("Agenda pareada requer IDs únicos, partidas ordenadas na janela e extremos completos.")
+    for attrs in schedule:
+        if attrs.get("type") not in automatic_types:
+            if attrs.get("departPos") != "0":
+                raise ValueError("Agenda pareada legada requer partida no início do trecho.")
+            continue
+        if not 0 <= float(attrs.pop("departPos", "nan")) < math.inf:
+            raise ValueError("Agenda pareada requer posição de partida válida.")
+        # A origem será sorteada novamente. As opções nativas da política são
+        # recalculadas para o novo acesso, preservando overrides fora da política.
+        for key in ("departLane", "departSpeed"):
+            if attrs.get(key) in {_PORTAL_DEPARTURE[key], _ACTIVITY_DEPARTURE[key]}:
+                del attrs[key]
+    return schedule, vehicle_types
 
 
 def generate_metasettran_demand(
@@ -1414,14 +1477,8 @@ def generate_metasettran_demand(
         schedule_file = result_path(Path(schedule_file).expanduser().resolve())
         with open_result(schedule_file) as stream:
             source = ET.parse(stream).getroot()
-        vehicle_types = [deepcopy(item) for item in source.findall("vType")]
-        fixed_schedule = [dict(vehicle.attrib) for vehicle in source.findall("vehicle")]
-        departure_times = [float(attrs["depart"]) for attrs in fixed_schedule]
-        if (not fixed_schedule or departure_times != sorted(departure_times) or
-                len({attrs["id"] for attrs in fixed_schedule}) != len(fixed_schedule) or
-                any(not 0 <= timestamp < duration for timestamp in departure_times) or
-                any(attrs.get("departPos") != "0" or attrs.get("arrivalPos") != "max" for attrs in fixed_schedule)):
-            raise ValueError("Agenda pareada requer IDs únicos, partidas ordenadas na janela e extremos completos.")
+        fixed_schedule, vehicle_types = _paired_schedule(source, duration)
+    use_origin_policy = fixed_schedule is None or any("departPos" not in attrs for attrs in fixed_schedule)
     output_dir = Path(output_dir).expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     trips_file, routes_file = output_dir / "metasettran.trips.xml", output_dir / "metasettran.rou.xml"
@@ -1452,13 +1509,19 @@ def generate_metasettran_demand(
         metadata["local_activity_weights"] = weight_reference
     if fixed_schedule is not None:
         metadata["paired_schedule"] = {"file": str(schedule_file), "sha256": result_sha256(schedule_file),
-            "preserved": ["vehicle_ids", "departure_times", "vehicle_attributes", "vehicle_types", "vehicle_count"],
-            "changed": ["origin", "destination", "route"], "count": len(fixed_schedule)}
+            "preserved": ["vehicle_ids", "departure_times", "vehicle_types", "vehicle_count",
+                          "vehicle_attributes_except_origin_defaults" if use_origin_policy else "vehicle_attributes"],
+            "changed": ["origin", "destination", "route"] + (["origin_insertion_defaults"] if use_origin_policy else []),
+            "count": len(fixed_schedule)}
+    metadata["departure_policy"] = ({"version": DEPARTURE_POLICY, "boundary": _PORTAL_DEPARTURE.copy(),
+        "activity": dict(_ACTIVITY_DEPARTURE, departPos="projected_access_position")}
+        if use_origin_policy else {"version": "paired_legacy"})
     try:
         with TemporaryDirectory(prefix=".metasettran-", dir=output_dir) as temporary:
             directory = Path(temporary)
             pairs, command, catalog, network_edges = _route_pairs(
                 model, net_file, directory, log_file, network=network)
+            departures_by_origin = _departure_attributes(model, network_edges) if use_origin_policy else {}
             metadata["command"] = command
             _regional_prior(pairs, model)
             if sections > 1:
@@ -1473,7 +1536,7 @@ def generate_metasettran_demand(
                 temporal_rng = random.Random(_stream_seed(seed, "regional", "departures"))
                 schedule = fixed_schedule if fixed_schedule is not None else [
                     {"id": f"ms_{index:06d}", "type": "metasettran_car",
-                     "depart": f"{min(timestamp, duration - .000001):.6f}", "departPos": "0", "arrivalPos": "max"}
+                     "depart": f"{min(timestamp, duration - .000001):.6f}", "arrivalPos": "max"}
                     for index, timestamp in enumerate(_departures(_linear_segments(knots, begin=begin, duration=duration), temporal_rng))]
                 reference_count = len(schedule)
                 retained_indices = _retained_indices(reference_count, retention, seed)
@@ -1482,7 +1545,7 @@ def generate_metasettran_demand(
             od_rng = random.Random(_stream_seed(seed, "regional", "od"))
             if not retained_indices:
                 raise ValueError("A redução não deixou viagens nesta realização; não forçar inserções.")
-            trips, routes = _routes_root(), _routes_root()
+            trips, routes = _routes_root(use_origin_policy=True), _routes_root(use_origin_policy=True)
             if vehicle_types is not None:
                 trips, routes = ET.Element("routes"), ET.Element("routes")
                 for item in vehicle_types:
@@ -1511,15 +1574,22 @@ def generate_metasettran_demand(
             with ExitStack() as stack:
                 streams = []
                 if sections > 1:
-                    for path in (new_trips, new_routes):
+                    for path, root in ((new_trips, trips), (new_routes, routes)):
                         stream = stack.enter_context(path.open("wb"))
-                        stream.write(b"<?xml version='1.0' encoding='utf-8'?>\n<routes>\n  <vType id=\"metasettran_car\" vClass=\"passenger\" />\n")
+                        stream.write(b"<?xml version='1.0' encoding='utf-8'?>\n<routes>\n")
+                        for vehicle_type in root:
+                            ET.indent(vehicle_type, space="  ", level=1)
+                            stream.write(b"  " + ET.tostring(vehicle_type, encoding="utf-8") + b"\n")
                         streams.append(stream)
                 for schedule_index, attributes in enumerate(schedule):
                     timestamp = float(attributes["depart"])
                     if schedule_index not in retained_indices:
                         continue
                     pair = route_list[route_indices[schedule_index]]
+                    if "departPos" not in attributes:
+                        attributes = attributes.copy()
+                        for key, value in departures_by_origin[pair["origin"]].items():
+                            attributes.setdefault(key, value)
                     bin_index = min(int(timestamp // 900), bins - 1)
                     pair["generated_departures"] += 1
                     pair["generated_departures_per_bin"][bin_index] += 1
@@ -1702,7 +1772,7 @@ def generate_metasettran_demand(
                     "entry_portals_used": used_entries, "exit_portals_used": used_exits,
                     "minimum_length_m": used_lengths[0], "maximum_length_m": used_lengths[-1],
                     "length_basis": "normal_edges_plus_minimum_passenger_internal_connections",
-                    "depart_pos": "0", "arrival_pos": "max"},
+                    "depart_pos": "per_origin" if use_origin_policy else "0", "arrival_pos": "max"},
             )
             new_trips.replace(trips_file)
             new_routes.replace(routes_file)

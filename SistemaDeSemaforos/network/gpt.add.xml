@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GPT v1: referência experimental veicular, sem calibração oficial.
+     Tempos em segundos; cada estágio tem verde, amarelo e limpeza em vermelho.
+     Os links pedestres permanecem inativos: não há demanda/tempos pedestres validados.
+     Controladores por prioridade ou sem movimento concorrente conservam a rede-base.
+     Sem defasagem: não se presume uma velocidade de progressão medida. -->
+<additional>
+    <!-- Malha local: ciclo 60 s; duas faixas recebem 28 s, uma faixa recebe 20 s. -->
+    <tlLogic id="1561879771" type="static" programID="gpt" offset="0">
+        <phase duration="20" state="GGrr"/>
+        <phase duration="4" state="yyrr"/>
+        <phase duration="2" state="rrrr"/>
+        <phase duration="28" state="rrGG"/>
+        <phase duration="4" state="rryy"/>
+        <phase duration="2" state="rrrr"/>
+    </tlLogic>
+    <!-- Hierarquia funcional já cadastrada no projeto: Brasil é estrutural,
+         apesar do tipo residencial OSM. Principal 30 s, local 18 s. -->
+    <tlLogic id="1561879807" type="static" programID="gpt" offset="0">
+        <phase duration="18" state="GGGrr"/>
+        <phase duration="4" state="yyyrr"/>
+        <phase duration="2" state="rrrrr"/>
+        <phase duration="30" state="rrrGG"/>
+        <phase duration="4" state="rrryy"/>
+        <phase duration="2" state="rrrrr"/>
+    </tlLogic>
+    <!-- Vias estruturais no cadastro funcional recebem 28 s; local 18 s.
+         Conserva o amarelo de 5 s existente nestes dois controladores. -->
+    <tlLogic id="1561879940" type="static" programID="gpt" offset="0">
+        <phase duration="18" state="GGrr"/>
+        <phase duration="5" state="yyrr"/>
+        <phase duration="2" state="rrrr"/>
+        <phase duration="28" state="rrGG"/>
+        <phase duration="5" state="rryy"/>
+        <phase duration="2" state="rrrr"/>
+    </tlLogic>
+    <tlLogic id="1561879989" type="static" programID="gpt" offset="0">
+        <phase duration="28" state="GGrr"/>
+        <phase duration="5" state="yyrr"/>
+        <phase duration="2" state="rrrr"/>
+        <phase duration="18" state="rrGG"/>
+        <phase duration="5" state="rryy"/>
+        <phase duration="2" state="rrrr"/>
+    </tlLogic>
+    <tlLogic id="1561880076" type="static" programID="gpt" offset="0">
+        <!-- Cesário Alvim estrutural prevalece sobre as duas faixas do acesso local. -->
+        <phase duration="18" state="GGrr"/>
+        <phase duration="4" state="yyrr"/>
+        <phase duration="2" state="rrrr"/>
+        <phase duration="30" state="rrGG"/>
+        <phase duration="4" state="rryy"/>
+        <phase duration="2" state="rrrr"/>
+    </tlLogic>
+    <!-- Maria das Dores, coletora cadastrada, 30 s; transversal local 18 s.
+         Mantém as conversões permissivas e sua prioridade existente. -->
+    <tlLogic id="2042692453" type="static" programID="gpt" offset="0">
+        <phase duration="30" state="GGggrrrrGGggrrrr"/>
+        <phase duration="4" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="2" state="rrrrrrrrrrrrrrrr"/>
+        <phase duration="18" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="4" state="rrrryyyyrrrryyyy"/>
+        <phase duration="2" state="rrrrrrrrrrrrrrrr"/>
+    </tlLogic>
+    <!-- Três estágios: secundária de três faixas 34 s; acessos locais 12/16 s.
+         A conversão compartilhada recebe limpeza explícita entre os estágios. -->
+    <tlLogic id="2042692877" type="static" programID="gpt" offset="0">
+        <phase duration="12" state="rrrGGrr"/>
+        <phase duration="4" state="rrryyrr"/>
+        <phase duration="2" state="rrrrrrr"/>
+        <phase duration="34" state="GGGrGrr"/>
+        <phase duration="4" state="yyyryrr"/>
+        <phase duration="2" state="rrrrrrr"/>
+        <phase duration="16" state="rrrrrGG"/>
+        <phase duration="4" state="rrrrryy"/>
+        <phase duration="2" state="rrrrrrr"/>
+    </tlLogic>
+    <!-- Duas coletoras comparáveis: 24 s por eixo, ciclo 60 s. -->
+    <tlLogic id="2042692883" type="static" programID="gpt" offset="0">
+        <phase duration="24" state="GGggrrrrGGggrrrr"/>
+        <phase duration="4" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="2" state="rrrrrrrrrrrrrrrr"/>
+        <phase duration="24" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="4" state="rrrryyyyrrrryyyy"/>
+        <phase duration="2" state="rrrrrrrrrrrrrrrr"/>
+    </tlLogic>
+    <!-- Secundária de uma faixa 30 s; dois acessos locais 16 s cada, ciclo 80 s. -->
+    <tlLogic id="2042692896" type="static" programID="gpt" offset="0">
+        <phase duration="16" state="GGrrr"/>
+        <phase duration="4" state="yyrrr"/>
+        <phase duration="2" state="rrrrr"/>
+        <phase duration="30" state="rrGrG"/>
+        <phase duration="4" state="rryry"/>
+        <phase duration="2" state="rrrrr"/>
+        <phase duration="16" state="rrrGG"/>
+        <phase duration="4" state="rrryy"/>
+        <phase duration="2" state="rrrrr"/>
+    </tlLogic>
+    <!-- Quatro aproximações coletoras com esquerdas: separação conservadora, ciclo 80 s.
+         Percursos internos de até 1,8 s em velocidade livre: limpeza de 3 s. -->
+    <tlLogic id="2042693016" type="static" programID="gpt" offset="0">
+        <phase duration="13" state="GGGrrrrrrrrr"/>
+        <phase duration="4" state="yyyrrrrrrrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+        <phase duration="13" state="rrrGGGrrrrrr"/>
+        <phase duration="4" state="rrryyyrrrrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+        <phase duration="13" state="rrrrrrGGGrrr"/>
+        <phase duration="4" state="rrrrrryyyrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+        <phase duration="13" state="rrrrrrrrrGGG"/>
+        <phase duration="4" state="rrrrrrrrryyy"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+    </tlLogic>
+    <tlLogic id="2042693107" type="static" programID="gpt" offset="0">
+        <phase duration="13" state="GGGrrrrrrrrr"/>
+        <phase duration="4" state="yyyrrrrrrrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+        <phase duration="13" state="rrrGGGrrrrrr"/>
+        <phase duration="4" state="rrryyyrrrrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+        <phase duration="13" state="rrrrrrGGGrrr"/>
+        <phase duration="4" state="rrrrrryyyrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+        <phase duration="13" state="rrrrrrrrrGGG"/>
+        <phase duration="4" state="rrrrrrrrryyy"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+    </tlLogic>
+    <!-- Segismundo não permite esquerdas: seus dois sentidos são compatíveis.
+         Um estágio de 27 s atende ambos; Maria mantém dois estágios de 16 s. -->
+    <tlLogic id="2042693363" type="static" programID="gpt" offset="0">
+        <phase duration="16" state="GGGGGrrrrrrrrrrrrrrr"/>
+        <phase duration="4" state="yyyyyrrrrrrrrrrrrrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrrrrrrrrrr"/>
+        <phase duration="27" state="rrrrrGGGrrrrrGGGrrrr"/>
+        <phase duration="4" state="rrrrryyyrrrrryyyrrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrrrrrrrrrr"/>
+        <phase duration="16" state="rrrrrrrrGGGGGrrrrrrr"/>
+        <phase duration="4" state="rrrrrrrryyyyyrrrrrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrrrrrrrrrr"/>
+    </tlLogic>
+    <!-- Nordau, coletora, 16 s por sentido; transversais locais 10 s cada. -->
+    <tlLogic id="2963614071" type="static" programID="gpt" offset="0">
+        <phase duration="16" state="GGGrrrrrrrrr"/>
+        <phase duration="4" state="yyyrrrrrrrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+        <phase duration="10" state="rrrGGGrrrrrr"/>
+        <phase duration="4" state="rrryyyrrrrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+        <phase duration="16" state="rrrrrrGGGrrr"/>
+        <phase duration="4" state="rrrrrryyyrrr"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+        <phase duration="10" state="rrrrrrrrrGGG"/>
+        <phase duration="4" state="rrrrrrrrryyy"/>
+        <phase duration="3" state="rrrrrrrrrrrr"/>
+    </tlLogic>
+    <!-- Retenção isolada: 45 s de vermelho sem serviço ativo não se justificam.
+         Mantém reserva de 5 s e amarelo existente; não elimina a retenção física. -->
+    <tlLogic id="338654991" type="static" programID="gpt" offset="0">
+        <phase duration="81" state="GGr"/>
+        <phase duration="4" state="yyr"/>
+        <phase duration="5" state="rrr"/>
+    </tlLogic>
+    <!-- Rondon x Paraná: eixo principal 52 s; transversal 26 s, ciclo 90 s.
+         A prioridade do eixo de oito faixas não suprime a janela transversal. -->
+    <tlLogic id="FAM_RONDON_PARANA" type="static" programID="gpt" offset="0">
+        <phase duration="52" state="GGGGrrrGGGGrrrr"/>
+        <phase duration="4" state="yyyyrrryyyyrrrr"/>
+        <phase duration="2" state="rrrrrrrrrrrrrrr"/>
+        <phase duration="26" state="rrrrGGGrrrrrrrr"/>
+        <phase duration="4" state="rrrryyyrrrrrrrr"/>
+        <phase duration="2" state="rrrrrrrrrrrrrrr"/>
+    </tlLogic>
+    <!-- Retenções isoladas da Rondon: conserva ciclo 90 s e reserva de 5 s.
+         Amarelos existentes de 4/6 s são mantidos; sem inventar coordenação. -->
+    <tlLogic id="3386573305" type="static" programID="gpt" offset="0">
+        <phase duration="81" state="GGGGr"/>
+        <phase duration="4" state="yyyyr"/>
+        <phase duration="5" state="rrrrr"/>
+    </tlLogic>
+    <tlLogic id="3386573306" type="static" programID="gpt" offset="0">
+        <phase duration="81" state="GGr"/>
+        <phase duration="4" state="yyr"/>
+        <phase duration="5" state="rrr"/>
+    </tlLogic>
+    <!-- Monsenhor Eduardo, coletora com duas faixas, recebe 30 s; local 18 s. -->
+    <tlLogic id="FAM_MARANHAO_MONSENHOR_EDUARDO" type="static" programID="gpt" offset="0">
+        <phase duration="18" state="Grrrr"/>
+        <phase duration="4" state="yrrrr"/>
+        <phase duration="2" state="rrrrr"/>
+        <phase duration="30" state="rGGrr"/>
+        <phase duration="4" state="ryyrr"/>
+        <phase duration="2" state="rrrrr"/>
+    </tlLogic>
+    <tlLogic id="5494111589" type="static" programID="gpt" offset="0">
+        <phase duration="79" state="GGGGr"/>
+        <phase duration="6" state="yyyyr"/>
+        <phase duration="5" state="rrrrr"/>
+    </tlLogic>
+    <tlLogic id="5494111590" type="static" programID="gpt" offset="0">
+        <phase duration="81" state="GGGGGr"/>
+        <phase duration="4" state="yyyyyr"/>
+        <phase duration="5" state="rrrrrr"/>
+    </tlLogic>
+    <tlLogic id="5494111593" type="static" programID="gpt" offset="0">
+        <phase duration="79" state="GGr"/>
+        <phase duration="6" state="yyr"/>
+        <phase duration="5" state="rrr"/>
+    </tlLogic>
+    <tlLogic id="5494111594" type="static" programID="gpt" offset="0">
+        <phase duration="79" state="GGGGr"/>
+        <phase duration="6" state="yyyyr"/>
+        <phase duration="5" state="rrrrr"/>
+    </tlLogic>
+    <tlLogic id="5494111596" type="static" programID="gpt" offset="0">
+        <phase duration="81" state="GGGGr"/>
+        <phase duration="4" state="yyyyr"/>
+        <phase duration="5" state="rrrrr"/>
+    </tlLogic>
+    <tlLogic id="5494111597" type="static" programID="gpt" offset="0">
+        <phase duration="79" state="GGGGr"/>
+        <phase duration="6" state="yyyyr"/>
+        <phase duration="5" state="rrrrr"/>
+    </tlLogic>
+    <tlLogic id="5494111603" type="static" programID="gpt" offset="0">
+        <phase duration="81" state="GGr"/>
+        <phase duration="4" state="yyr"/>
+        <phase duration="5" state="rrr"/>
+    </tlLogic>
+    <!-- Rotary: acesso secundário 22 s, Rondon 54 s; amarelo 6 s na via de 100 km/h. -->
+    <tlLogic id="FAM_RONDON_ROTARY_CLUB" type="static" programID="gpt" offset="0">
+        <phase duration="22" state="Grrrrrrrrrrr"/>
+        <phase duration="6" state="yrrrrrrrrrrr"/>
+        <phase duration="2" state="rrrrrrrrrrrr"/>
+        <phase duration="54" state="rGGGGGGGGrrr"/>
+        <phase duration="4" state="ryyyyyyyyrrr"/>
+        <phase duration="2" state="rrrrrrrrrrrr"/>
+    </tlLogic>
+    <!-- Europa x Benjamim: dois sentidos da avenida compatíveis em um estágio.
+         Praça compartilha apenas o sentido compatível. Quatro estágios, ciclo 90 s;
+         verde mínimo 10 s, amarelo 6 s nos acessos de 100 km/h, limpeza 4 s. -->
+    <tlLogic id="8947803947" type="static" programID="gpt" offset="0">
+        <phase duration="12" state="GGGGrrrrrrrrrrrrr"/>
+        <phase duration="6" state="yyyyrrrrrrrrrrrrr"/>
+        <phase duration="4" state="rrrrrrrrrrrrrrrrr"/>
+        <phase duration="10" state="rrrrGGrrrrrrrGGGG"/>
+        <phase duration="4" state="rrrryyrrrrrrryyyy"/>
+        <phase duration="4" state="rrrrrrrrrrrrrrrrr"/>
+        <phase duration="22" state="rrrrrrGGGrrrrGGGG"/>
+        <phase duration="4" state="rrrrrryyyrrrryyyy"/>
+        <phase duration="4" state="rrrrrrrrrrrrrrrrr"/>
+        <phase duration="10" state="rrrrrrrrrGGGGrrrr"/>
+        <phase duration="6" state="rrrrrrrrryyyyrrrr"/>
+        <phase duration="4" state="rrrrrrrrrrrrrrrrr"/>
+    </tlLogic>
+</additional>

@@ -129,7 +129,7 @@ para o escoamento. Ambos usam timestep nativo de 1 segundo nos ensaios de refer�
 | `--spatial-scenario` | `regional-integrated` em MetaSettran | Modelo regional compartilhado; `regional-midpoint` é alias, sem recriar os antigos orçamentos. |
 | `--drain-limit` | `2700` s em MetaSettran | Limite adicional após as partidas; inteiro não negativo, preservando timestep de 1 s. |
 | `--metrics-profile` | `core` | `core`, `full` ou `diagnostic`; o último é exclusivo do terminal/API Python. |
-| `--signal-profile` | `current` | Programas da rede ou `settran` validado. |
+| `--signal-profile` | `current` | Programas da rede, `gpt` experimental fixo ou `settran` validado. |
 | `--settran-plan` | Ausente | ID oficial escolhido explicitamente; exige `settran`. |
 | `--settran-intersection` | Todas do plano | Nome exato e repetível para selecionar interseções; exige `settran`. |
 | `--gui` | Desativado | Abre e fecha `sumo-gui` por episódio. |
@@ -137,6 +137,15 @@ para o escoamento. Ambos usam timestep nativo de 1 segundo nos ensaios de refer�
 | `--output-dir` | `outputs/outputs-<perfil de demanda>/` | Destino dos lotes dentro da árvore correspondente. |
 
 ## Modelo MetaSettran
+
+Neste projeto, revisões de pesos, inserções e distribuição de demanda dizem
+respeito ao **MetaSettran**, salvo indicação explícita. Random mantém seu papel
+de exploração aleatória e não participa da calibração espacial do MetaSettran.
+Nas revisões de distribuição, o GPT é a referência semafórica operacional
+parcial: fica fixo durante a comparação de origens, destinos e percursos.
+Essa referência permite comparar hipóteses sob os mesmos sinais; não substitui
+uma matriz OD ou contagens de campo. A população de referência, seus IDs e
+horários devem ser conservados, inclusive quando muda a origem e sua retenção.
 
 ### Fontes e interpretação temporal
 
@@ -339,6 +348,34 @@ oportunidades e perfis permanecem hipóteses até haver OD e contagens de acesso
 Os métodos anteriores continuam disponíveis no cadastro para comparação, e
 resultados históricos conservam a versão que os produziu.
 
+### Inserção por origem
+
+A política `metasettran-origin-v1` é comum às 1.400 combinações de faixa e
+variação, isoladas ou agrupadas. Depois de escolher o percurso, os dois XMLs
+gerados recebem os mesmos atributos de partida para cada veículo.
+
+| Origem | Posição de partida | Escolha de faixa | Velocidade inicial |
+| --- | --- | --- | --- |
+| Portal de borda | `departPos="0"`, no corte cadastrado | `departLane="best_prob"`, considerando a continuidade do percurso | `departSpeed="avg"`, condicionada ao tráfego da faixa |
+| Acesso de atividade | Coordenada cadastrada projetada ao longo do trecho | `departLane="allowed"`, com conexão para o próximo trecho | `departSpeed="0"`, início do deslocamento local |
+
+Na borda, `best_prob` e `avg` tornam explícitos os padrões efetivos do SUMO
+1.28.0 usados nos ensaios de referência. Para origens internas, a conexão
+imediata importa porque parte do trecho já ficou para trás. O SUMO mantém as
+verificações de distância e segurança e aguarda espaço no ponto de partida.
+A projeção interna usa a geometria da primeira faixa `passenger` e escala a
+distância pela menor extensão das faixas `passenger` do trecho. As coordenadas
+representam acessos aproximados do cadastro.
+[Inserção no SUMO](https://sumo.dlr.de/docs/Simulation/VehicleInsertion.html)
+
+O XML de rotas e `execution.generation.departure_policy` registram a política.
+Uma agenda pareada gerada sob essa política recalcula a posição e os valores
+automáticos de faixa e velocidade quando sorteia um novo OD. Valores explícitos
+fora da política e agendas legadas preservam seus atributos. Para repetir o
+mesmo OD e os mesmos pontos de partida, reutilize o XML de rotas completo.
+A projeção de demanda em tempo livre usa o comprimento dos trechos inteiros.
+O coletor confere no Tripinfo o ponto declarado e a faixa de origem efetiva.
+
 ### Decisão dos pesos padrão e comparação controlada
 
 **O padrão escolhido é v4.8, com oportunidade local por extensão viária.**
@@ -434,11 +471,68 @@ A refatoração reproduziu byte a byte a referência v4.8 terça V7
 (`b472bd92c8d1930053c00079b6aeeff46d725225f659492b41711511a2d875ef`) e
 a comparação 50/50 pelo contrato anterior `schedule_file`
 (`3294b0e9ea869e15aee478f75b60565f7722bd0d13485ac384df75abff7ac2d9`).
-O cadastro padrão conserva o hash
+Aquela comparação usou o cadastro de hash
 `f16df47ed054b08020e5c8776f29cab58c35f9ddb80562aa8f6715907a7df8bf`.
 A variante anterior pode ser refeita pela API com `schedule_file` e
 `local_activity_weights_file=DEFAULT_SPATIAL_FILE.with_name("metasettran_cnefe_weights.json")`.
 Cada geração deve usar uma pasta própria.
+
+**Reauditoria com GPT, 11/11/2026.** Somente MetaSettran foi comparado, com
+GPT, rede e parâmetros físicos fixos. Três sensibilidades foram definidas antes
+das simulações: CNEFE 50/50; hierarquia 3/2/1/1 em lugar de 4/3/2/1, mantendo
+faixas e VMD relativo; e repartição pelo prior de custo/sobreposição existente,
+preservando exatamente o OD de cada veículo nessa última hipótese.
+O catálogo comum contém 39.510 percursos, cobrindo 2.106/2.125 trechos passenger.
+
+Referências: segunda 03h V25 (534 veículos), terça 06h V8 (9.471), terça 15h V7
+(12.875) e domingo 12h V19 (8.135). Usaram-se as curvas **realizadas**, os
+uniformes OD de todas as partidas anteriores às retenções e os mesmos IDs e
+horários finais da referência em cada alternativa. A inserção acompanha a nova
+origem. Não se usou `schedule_file`, que recorreria às curvas medianas.
+Uma troca na geração normal exigiria conservar esse contrato de população:
+reaplicar a retenção lateral às novas origens pode alterar o total.
+
+Os 16 ensaios curtos usam as primeiras 3.600 s e 2.700 s de escoamento:
+54/1.629/3.801/2.874 veículos, respectivamente. A faixa completa da manhã
+também é verificada para incluir a saturação posterior. SUMO 1.28.0, seed
+23423, passo de 1 s e rede inicialmente vazia em todos os casos.
+Rotas, configurações, hashes, seeds e resultados ficam em
+`outputs/outputs-metasettran/distribution-review-gpt-20261111/comparison.json`
+e nos episódios `short/` e `full/`. As somas dos curtos não são réplicas
+independentes nem devem ser somadas à faixa completa, que repete parte dos veículos.
+
+| Hipótese | Curtos: chegadas sem teleporte / eventos TP | Manhã completa: chegadas sem teleporte | Não inseridos / incompletos na manhã | Eventos TP na manhã |
+| --- | ---: | ---: | ---: | ---: |
+| Referência atual | 7.560 / 460 | 5.770 | 533 / 2.318 | 2.210 |
+| CNEFE 50/50 | 7.650 / 418 | 5.482 | 679 / 2.479 | 2.329 |
+| Hierarquia 3/2/1/1 | 7.724 / 378 | 5.952 | 337 / 2.186 | 2.284 |
+| Custo/sobreposição por OD | 7.472 / 442 | 5.814 | 520 / 2.258 | 2.180 |
+
+**Decisão: manter a distribuição padrão.** CNEFE melhora parte dos curtos,
+mas piora a manhã completa. A hierarquia simplificada amplia o escoamento,
+mas a espera média das viagens concluídas na manhã aumenta de 723,48 para
+860,13 s, com mais teleportes e maior participação das vias locais. A alteração
+só dos percursos melhora ligeiramente a manhã completa, mas reduz as chegadas
+naturais nos curtos da tarde/domingo. Essas médias têm censura pelas viagens
+incompletas; não substituem a contabilidade de toda a população.
+Não há melhora conjunta consistente nem evidência OD independente que justifique
+substituir o prior geográfico. As alternativas ficam nos resultados, não no default.
+
+O mesmo OD já admite diferentes caminhos: 10.042 dos 26.294 ODs admissíveis
+têm alternativas no catálogo. A reauditoria conferiu 124.060 rotas planejadas,
+conexões passenger, pontos de inserção, IDs, horários, tipos e igualdade dos
+parâmetros SUMO pareados. Os 20 episódios tiveram zero colisões e métricas
+validadas; congestionamento e teleportes continuam presentes. A suíte de demanda
+passou 184 testes. Não houve alteração do gerador, do GPT, dos volumes ou das
+métricas nesta revisão. Os acessos/OD e o mapeamento dos sensores continuam
+dependentes das hipóteses documentadas.
+
+O comparativo CNEFE foi religado ao cadastro atual, hash
+`4a9a03653a461fb2b34eccc2ca7135e5a8a7625011ca4cba4e25c784260682c6`.
+Conferiu-se que a revisão anterior só mudou o vínculo da rede no cadastro
+espacial e velocidades nas faixas; geometria, comprimentos e oportunidades
+locais foram preservados. Nenhum peso CNEFE foi alterado. Um teste com os
+arquivos reais verifica vínculo, células, oportunidade total e acessos.
 
 ## Resultados e interpretação
 
@@ -487,6 +581,10 @@ e de persistência, relógios e desempenho computacional interno do SUMO ficam e
 `diagnostic`. Não há arquivo complementar nem mudança
 nos resultados históricos. Falhas continuam preservando os dados disponíveis
 para investigação, mesmo quando o perfil solicitado foi `core` ou `full`.
+As fases e os estados completos dos programas semafóricos também pertencem
+somente a `diagnostic`; `core`/`full` mantêm identificação, versão/hash quando
+disponíveis e escopo aplicado. Auditorias devem respeitar essa publicação pelo
+executor; gravar diretamente o contexto bruto com o rótulo `core` não é permitido.
 
 As entidades full são organizadas por `vehicles`, `lanes`, `edges`, `traffic_lights`,
 `approaches` e `intersections`, com escopo, ID e chave. MetaSettran conserva a demanda
@@ -554,8 +652,94 @@ A interpretação do tráfego exige os indicadores de integridade e suas popula�
 
 ## Programação semafórica
 
-`current` usa os programas incorporados à rede. `settran` aplica um plano fixo
-selecionado explicitamente pelo CLI. A interface oferece `current`.
+`current` usa os programas incorporados à rede, sem alterações. `gpt` oferece uma
+referência experimental veicular de tempos fixos. Ambos estão no seletor HTML.
+`settran` continua disponível pelo CLI, com plano fixo selecionado explicitamente.
+
+### Perfil GPT
+
+Todos os tempos e estados estão em
+[`network/gpt.add.xml`](../SistemaDeSemaforos/network/gpt.add.xml), com comentários
+por interseção. O SUMO carrega esse suplemento local pelo
+[mecanismo nativo de programas adicionais](https://sumo.dlr.de/docs/Simulation/Traffic_Lights.html#defining-new-tls-programs),
+já utilizado pelo executor. Não há detecção de tráfego, controle adaptativo, TraCI, serviço
+externo ou dependência nova. O perfil não representa os semáforos reais de
+Uberlândia nem uma calibração oficial.
+
+O `current` reúne ciclos genéricos de 90 s, repartições iguais entre vias de
+importância diferente, uma retenção isolada de 45 s sem atendimento pedestre
+ativo e cinco estágios de apenas 7 s em Europa × Benjamim. O GPT usa:
+
+- **60 s** nas interseções simples: menor espera cíclica, considerando faixas e
+  a hierarquia funcional já cadastrada no projeto. Brasil, Afonso Pena, João
+  Pinheiro e Cesário Alvim não são tratados como ruas locais só pelo tipo OSM.
+- **80 s** nas interseções com três/quatro estágios. Segismundo tem os sentidos
+  compatíveis reunidos; os acessos com esquerdas continuam separados.
+- **90 s** no corredor Rondon, nas retenções isoladas e em Europa × Benjamim.
+  Rondon × Paraná recebe 52/26 s de verde e Rotary 54/22 s, favorecendo o eixo
+  principal sem retirar a oportunidade transversal. Europa × Benjamim reúne
+  movimentos compatíveis e passa de cinco para quatro estágios, com verdes de
+  pelo menos 10 s. A retenção isolada `338654991` passa de 45 para 5 s de vermelho.
+
+Os amarelos são de 4 s, conservando 5/6 s onde apropriado e usando 6 s no acesso
+de Rotary cujo limite na rede é 100 km/h. A limpeza em vermelho é de 2 s nas
+interseções compactas, 3 s nas de quatro aproximações/Segismundo, 4 s em Europa
+e 5 s nas retenções isoladas. São hipóteses conservadoras para esta simulação,
+considerando os percursos internos, e não tempos certificados em campo.
+As defasagens ficam em zero: não há velocidade de progressão medida que sustente
+coordenação adicional entre interseções com ciclos diferentes.
+
+O suplemento cobre os 27 controladores cíclicos. Os nove controladores contínuos
+ou por prioridade preservam seus estados, evitando introduzir paradas sem motivo.
+Todos os movimentos **veiculares controlados** recebem atendimento; os `g`
+permissivos preservam as cessões da rede. Os links pedestres continuam inativos,
+como no `current`: os geradores não produzem pedestres e faltam tempos de travessia
+validados. Os avisos nativos de falta de verde nesses links permanecem esperados;
+o perfil não deve ser utilizado como programação pedestre.
+
+Selecione `gpt` no formulário ou execute
+`make run-random RUN_ARGS="--signal-profile gpt"`. A mesma opção aceita
+`--demand-profile metasettran`; todos os episódios/grupos recebem o perfil.
+O `metrics.json.gz` mantém `execution.signal_profile`, acrescentando ao contexto
+semafórico a versão `gpt-v1`, hashes e programas efetivamente aplicados.
+Antes de gerar demanda, o executor verifica rede, cobertura, estados, conflitos,
+atendimento e transições com as rotinas existentes. Outra revisão da rede exige
+revisar o suplemento; a conversão LF/CRLF do checkout Windows é aceita.
+
+**Verificação de 11/11/2026.** SUMO 1.28.0, seed de simulação 23423 e passo de
+1 s. Cada par reutilizou o mesmo XML de demanda, com hash conferido, sem alterar
+parâmetros físicos, seeds, variações ou métricas. Random: geração de 900 s,
+horizonte de 1.800 s, períodos/seeds 3 s/42 e 0,75 s/31415. MetaSettran: segunda
+03h V25 e terça 06h V8, geração de 10.800 s e horizonte de 13.500 s.
+Valores abaixo na ordem **current → gpt**; N/I significa não inseridos/incompletos.
+
+| Caso | Concluídas | N/I | Teleportes | Viagem média (s) | Espera média (s) | Fila média, soma por faixa (m) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Random, 300 veículos | 300 → 300 | 0/0 → 0/0 | 0 → 1 | 159,59 → 162,88 | 11,01 → 14,35 | 11,40 → 14,72 |
+| Random, 1.200 veículos | 1.200 → 1.164 | 0/0 → 1/35 | 4 → 16 | 206,42 → 264,85 | 40,20 → 95,41 | 199,85 → 606,68 |
+| MetaSettran, 534 veículos | 534 → 534 | 0/0 → 0/0 | 0 → 0 | 236,15 → 226,87 | 24,87 → 16,37 | 6,06 → 3,98 |
+| MetaSettran, 9.471 veículos | 5.620 → 6.620 | 1.287/2.564 → 533/2.318 | 2.663 → 2.210 | 1.139,64 → 1.051,61 | 801,10 → 723,48 | 9.522,08 → 8.513,31 |
+
+Houve zero colisões em todos os pares. As conclusões da tabela incluem chegadas
+após teleporte: no MetaSettran maior, as conclusões **sem teleporte** foram
+4.746 → 5.770, e as posteriores a teleporte, 874 → 850. Médias de viagem/espera
+consideram somente a população concluída, não as viagens ainda presas na rede.
+O GPT melhorou os dois casos MetaSettran, mas piorou os dois Random; não há
+evidência de superioridade geral. Permanecem congestionamento, cessões por
+prioridade e sensibilidade à distribuição da demanda. Não se ajustaram os tempos
+para eliminar os teleportes de uma realização específica.
+
+Os resultados, configurações efetivas e seeds estão em
+`outputs/outputs-{random,metasettran}/gpt-comparison-20261111/`. Os casos Random
+finais têm sufixo `-final`; no MetaSettran menor, o resultado final GPT está em
+`meta-low/gpt-final/`. Ensaios iniciais foram preservados com seus metadados.
+`make test`: 500 testes, sem falhas, com um teste de junction Windows pulado.
+Formulário HTTP e terminal executaram lotes GPT de dois episódios; SUMO-GUI
+também executou um episódio curto. A rede-base e SETTRAN não foram modificados.
+Windows foi analisado estaticamente e LF/CRLF foi testado; execução nativa nesse
+sistema continua pendente.
+
+### Fonte SETTRAN
 
 [RondonNorte.xlsx](RondonNorte.xlsx) é a fonte original e
 [settran_programs.json](settran_programs.json) contém a normalização e os suplementos.

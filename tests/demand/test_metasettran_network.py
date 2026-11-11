@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from SistemaDeSemaforos.demand.metasettran_network import (
-    _midpoint, apply_local_activity_weights, coverage_candidates, expand_local_activity, terminal_branches,
+    _midpoint, apply_local_activity_weights, coverage_candidates, expand_local_activity, read_network, terminal_branches,
 )
 
 
@@ -20,6 +20,20 @@ def edge(source, target, shape, length=100, hierarchy="highway.residential"):
 
 
 class LocalActivityTests(unittest.TestCase):
+    def test_repository_cnefe_weights_match_current_spatial_cells_and_total(self):
+        from SistemaDeSemaforos.demand.metasettran_demand_generator import DEFAULT_NET_FILE, DEFAULT_SPATIAL_FILE
+
+        spatial_bytes = DEFAULT_SPATIAL_FILE.read_bytes()
+        network = read_network(DEFAULT_NET_FILE)
+        model = expand_local_activity(json.loads(spatial_bytes), network.edges, network.connections)
+        original = deepcopy(model)
+        weights_file = DEFAULT_SPATIAL_FILE.with_name("metasettran_cnefe_weights.json")
+        apply_local_activity_weights(model, weights_file, hashlib.sha256(spatial_bytes).hexdigest())
+        self.assertEqual(model["activity_zones"], original["activity_zones"])
+        self.assertEqual(model["local_activity_expansion"]["total_opportunity"],
+                         original["local_activity_expansion"]["total_opportunity"])
+        self.assertEqual(len(model["local_activity_expansion"]["cells"]), 28)
+
     def setUp(self):
         profiles = {kind: {"hours": [0, 24], "origin": [1, 1], "destination": [1, 1]}
                     for kind in ("weekday", "saturday", "sunday")}

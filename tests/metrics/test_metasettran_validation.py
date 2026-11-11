@@ -715,6 +715,14 @@ class MetaSettranValidationTests(unittest.TestCase):
 
     def test_activity_endpoints_keep_full_position_checks_and_core_full_results(self):
         self.add_activity_trips()
+        routes = ET.parse(self.routes_path)
+        routes.find("vehicle[@id='home_to_shopping']").set("departPos", "30.25")
+        routes.write(self.routes_path, encoding="utf-8")
+        with gzip.open(self.directory / "raw" / "trips.xml.gz") as stream:
+            trips = ET.parse(stream).getroot()
+        local_trip = trips.find("tripinfo[@id='home_to_shopping']")
+        local_trip.set("departPos", "30.25")
+        self.write_gz("trips.xml.gz", trips)
         core = self.collect()
         vehicles = {}
         self.assertEqual(core, self.collect(vehicles=vehicles))
@@ -723,9 +731,12 @@ class MetaSettranValidationTests(unittest.TestCase):
         self.assertEqual(len(observed), 8)
         self.assertIn("activity_origin", observed)
         self.assertIn("activity_destination", observed)
-        with gzip.open(self.directory / "raw" / "trips.xml.gz") as stream:
-            trips = ET.parse(stream).getroot()
-        trips.find("tripinfo[@id='home_to_shopping']").set("arrivalPos", "50")
+        local_trip.set("departPos", "0")
+        self.write_gz("trips.xml.gz", trips)
+        with self.assertRaisesRegex(ValueError, "acesso de atividade previsto"):
+            self.collect()
+        local_trip.set("departPos", "30.25")
+        local_trip.set("arrivalPos", "50")
         self.write_gz("trips.xml.gz", trips)
         with self.assertRaisesRegex(ValueError, "acesso de atividade previsto"):
             self.collect()

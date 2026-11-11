@@ -158,6 +158,9 @@ class MetaSettranTests(unittest.TestCase):
             self.assertEqual(vehicle.get("id"), trip.get("id"))
             self.assertEqual(vehicle.get("departPos"), "0")
             self.assertEqual(vehicle.get("arrivalPos"), "max")
+            for item in (vehicle, trip):
+                self.assertEqual(item.get("departLane"), "best_prob")
+                self.assertEqual(item.get("departSpeed"), "avg")
             self.assertEqual(vehicle.find("route").get("edges"), PATHS[trip.get("from"), trip.get("to")])
             times.append(float(vehicle.get("depart")))
         self.assertEqual(times, sorted(times))
@@ -245,6 +248,48 @@ class MetaSettranTests(unittest.TestCase):
             observed = sum(p["generated_departures"] for p in spatial["portals"][role])
             observed += sum(p["generated_departures"] for z in spatial["activity_locations"] for p in z[activity_role])
             self.assertEqual(observed, metadata["vehicles_generated"])
+
+    def test_activity_departure_position_is_shared_by_single_and_grouped_outputs(self):
+        router = self.urban_activity_fixture()
+        network = ET.parse(self.net)
+        network.find("edge[@id='unseen']/lane").set("shape", "10,10 110,10 110,210")
+        network.write(self.net)
+        self.model["activity_zones"][0]["origins"][0]["position_xy_m"] = [110, 90]
+        self.write_model()
+        for sections in (1, 2):
+            with self.subTest(sections=sections), patch.object(demand.subprocess, "run", side_effect=router):
+                metadata = {}
+                route_file = self.generate(output=f"activity-{sections}", sections=sections,
+                                           variations=[7] * sections, metadata=metadata)
+                routes = ET.parse(route_file).getroot()
+                self.assertEqual(routes.find("vType/param").get("value"), demand.DEPARTURE_POLICY)
+                self.assertEqual(metadata["departure_policy"]["version"], demand.DEPARTURE_POLICY)
+                trips = ET.parse(metadata["trips_file"]).getroot().findall("trip")
+                self.assertTrue(any(trip.get("from") == "unseen" for trip in trips))
+                for trip, vehicle in zip(trips, routes.findall("vehicle"), strict=True):
+                    self.assertEqual(vehicle.get("id"), trip.get("id"))
+                    internal = trip.get("from") == "unseen"
+                    for item in (trip, vehicle):
+                        self.assertEqual(item.get("departLane"), "allowed" if internal else "best_prob")
+                        self.assertEqual(float(item.get("departPos")), 360 if internal else 0)
+                        self.assertEqual(item.get("departSpeed"), "0" if internal else "avg")
+
+    def test_paired_schedule_rebinds_insertion_to_the_resampled_origin(self):
+        router = self.urban_activity_fixture()
+        with patch.object(demand.subprocess, "run", side_effect=router):
+            original = self.generate(output="mixed-source")
+            with patch.object(demand, "_choose_route", return_value=0):
+                paired = self.generate(output="mixed-paired", schedule_file=original)
+        source = ET.parse(original).findall("vehicle")
+        replay = ET.parse(paired).findall("vehicle")
+        self.assertTrue(any(float(v.get("departPos")) > 0 for v in source))
+        for before, after in zip(source, replay, strict=True):
+            self.assertEqual((after.get("id"), after.get("depart")),
+                             (before.get("id"), before.get("depart")))
+            self.assertEqual(after.find("route").get("edges").split()[0], "entry_a")
+            self.assertEqual(after.get("departPos"), "0")
+            self.assertEqual(after.get("departLane"), "best_prob")
+            self.assertEqual(after.get("departSpeed"), "avg")
 
     def test_native_diversity_has_fixed_seeds_and_does_not_multiply_identical_routes(self):
         router = self.urban_activity_fixture()
@@ -1660,6 +1705,22 @@ class MetaSettranTests(unittest.TestCase):
         self.assertEqual(compressed_result, plain_result)
         self.assertEqual(metadata["paired_schedule"]["sha256"], hashlib.sha256(original).hexdigest())
         self.assertEqual(metadata["paired_schedule"]["file"], str(archive))
+
+    def test_legacy_paired_schedule_keeps_original_insertion_attributes(self):
+        source = ET.parse(self.generate(output="legacy-source"))
+        vtype = source.find("vType")
+        vtype.remove(vtype.find("param"))
+        for vehicle in source.findall("vehicle"):
+            vehicle.attrib.pop("departLane")
+            vehicle.attrib.pop("departSpeed")
+        source.find("vehicle").set("departSpeed", "3.5")
+        legacy = self.directory / "legacy.rou.xml"
+        source.write(legacy, encoding="utf-8", xml_declaration=True)
+        metadata = {}
+        paired = ET.parse(self.generate(output="paired-legacy", schedule_file=legacy, metadata=metadata))
+        self.assertEqual([v.attrib for v in paired.findall("vehicle")],
+                         [v.attrib for v in source.findall("vehicle")])
+        self.assertEqual(metadata["departure_policy"], {"version": "paired_legacy"})
 
     def test_local_activity_weights_require_paired_schedule(self):
         with self.assertRaisesRegex(ValueError, "agenda pareada"):

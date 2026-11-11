@@ -1,6 +1,6 @@
 {
   "version": "cnefe-2022-local-activity-half-v1",
-  "base_spatial_sha256": "f16df47ed054b08020e5c8776f29cab58c35f9ddb80562aa8f6715907a7df8bf",
+  "base_spatial_sha256": "4a9a03653a461fb2b34eccc2ca7135e5a8a7625011ca4cba4e25c784260682c6",
   "basis": "Hipótese experimental. Cada oportunidade combina 50% do peso por extensão viária do cadastro de referência e 50% da participação da célula nos endereços particulares, multiplicada pela oportunidade total de referência.",
   "source": {
     "dataset": "IBGE CNEFE Censo 2022, município 3170206",

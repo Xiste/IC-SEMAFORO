@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import json
+import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -13,17 +14,47 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def intersection_names():
+    mapping = json.loads((PROJECT_ROOT / 'config/mapeamento_associado.json').read_text(encoding='utf-8'))
+    return [entry['name'] for entry in mapping['intersections']]
+
+
+def select_intersection(config, name):
+    """Recorta o controle, preservando a rede preparada e os sinais de referência."""
+    validate_experimental(config)
+    if name not in intersection_names():
+        raise ValueError(f'Cruzamento desconhecido: {name}')
+    selected = copy.deepcopy(config)
+    selected['targets'] = [t for t in selected['targets'] if t['name'] == name]
+    if not selected['targets']:
+        raise ValueError('Prepare o cenário completo antes de selecionar outro cruzamento')
+    selected['experimental']['selected_intersections'] = [name]
+    ids = {t['tls_id'] for t in selected['targets']}
+    for key in ('minimum_durations', 'green_floors'):
+        selected['experimental'][key] = {k: v for k, v in selected['experimental'][key].items() if k.rsplit(':', 1)[0] in ids}
+    for key in ('ppo', 'control'):
+        selected[key]['phase_duration_bounds'] = {k: v for k, v in selected[key].get('phase_duration_bounds', {}).items() if k.rsplit(':', 1)[0] in ids}
+    validate_experimental(selected)
+    return selected
+
+
 def validate_experimental(config):
     metadata = config.get("experimental", {})
     from semaforos.cenario.configuracao import control_parameters
-    if control_parameters(config).get("action_mode") != "phase_durations":
+    if control_parameters(config).get("action_mode") not in ('phase_durations', 'adaptive_signals'):
         raise ValueError("O cenário conjunto experimental requer controle de duração das fases")
     if metadata.get("method") not in ("serial_links_v1", "compatible_groups_v2") or digest(config["network"]) != metadata.get("network_sha256"):
         raise ValueError("Rede experimental ausente ou modificada; prepare novamente pela interface")
     root = ET.parse(config["network"]).getroot()
     targets = config["targets"]
     ids = [item["tls_id"] for item in targets]
-    if len(ids) != 17 or len(set(ids)) != 17 or len({item["name"] for item in targets}) != 9:
+    selection = metadata.get('selected_intersections')
+    if selection:
+        mapping = json.loads((PROJECT_ROOT / 'config/mapeamento_associado.json').read_text(encoding='utf-8'))
+        expected = {(entry['name'], c['tls_id']) for entry in mapping['intersections'] if entry['name'] in selection for c in entry['controllers']}
+        if len(selection) != 1 or not expected or len(ids) != len(set(ids)) or {(t['name'], t['tls_id']) for t in targets} != expected:
+            raise ValueError('Seleção experimental incompleta: inclua todos os controladores do cruzamento')
+    elif len(ids) != 17 or len(set(ids)) != 17 or len({item["name"] for item in targets}) != 9:
         raise ValueError("O cenário experimental deve controlar os 17 controladores dos nove cruzamentos")
     if metadata["method"] == "compatible_groups_v2":
         from .grupos import audit_program
@@ -95,6 +126,40 @@ def validate_experimental(config):
 def prepare_experimental(config, output):
     from .preparacao import prepare_grouped
     return prepare_grouped(config, output)
+
+
+def prepare_or_reuse(config, results):
+    """Reutiliza somente a infraestrutura; mantém os parâmetros do estudo atual."""
+    from .configuracao import read_config
+    results = Path(results)
+    source_hash = digest(PROJECT_ROOT / 'dados/rede/uberlandia.rondon_norte_corrigida.net.xml')
+    mapping_hash = digest(PROJECT_ROOT / 'config/mapeamento_associado.json')
+    candidates = sorted(results.glob('cenario_nove_*/cenario.json'), key=lambda p: p.stat().st_mtime, reverse=True)
+    for path in candidates:
+        try:
+            saved = read_config(path)
+            metadata = saved.get('experimental', {})
+            if (metadata.get('method') != 'compatible_groups_v2'
+                    or metadata.get('source_sha256') != source_hash
+                    or metadata.get('mapping_sha256') != mapping_hash
+                    or metadata.get('selected_intersections')):
+                continue
+            rows = validate_experimental(saved)
+        except (OSError, ValueError, TypeError, KeyError, ET.ParseError):
+            continue
+        prepared = copy.deepcopy(config)
+        for key in ('network', 'targets', 'experimental'):
+            prepared[key] = copy.deepcopy(saved[key])
+        prepared['targets_from_mapping'] = False
+        prepared['control'] = copy.deepcopy(config.get('control', config['ppo']))
+        for key in ('action_mode', 'phase_types', 'phase_duration_bounds', 'duration_limits', 'maximum_cycle_seconds'):
+            prepared['control'][key] = copy.deepcopy(saved['control'][key])
+        prepared['ppo'] = {**prepared['ppo'], **prepared['control']}
+        prepared['duration_seconds'] = max(int(config['duration_seconds']), int(prepared['control']['maximum_cycle_seconds'] * 2))
+        return prepared, rows, True
+    results.mkdir(parents=True, exist_ok=True)
+    prepared, rows = prepare_experimental(config, results / f'cenario_nove_{uuid.uuid4().hex[:12]}')
+    return prepared, rows, False
 
 
 def preview_experimental(config, output):

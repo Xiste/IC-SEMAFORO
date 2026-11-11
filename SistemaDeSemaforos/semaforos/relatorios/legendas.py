@@ -157,7 +157,7 @@ PARAMETERS = {
     "n_steps": ("Passos por coleta", "Decisões coletadas antes de atualizar o modelo; no piloto, múltiplo do minibatch."),
     "batch_size": ("Tamanho do minibatch", "Quantidade de amostras usada em cada atualização de gradiente; pelo menos 2."),
     "total_timesteps": ("Orçamento do treinamento", "Total solicitado de decisões PPO; a execução pode arredondar para completar a última coleta."),
-    "action_mode": ("Modo de controle", "phase_durations escolhe durações das fases; green_extension ajusta somente verdes."),
+    "action_mode": ("Modo de controle", "adaptive_signals escolhe aberturas compatíveis pelas condições das entradas, preservando transições; phase_durations escolhe durações; green_extension ajusta verdes na ordem do programa."),
     "phase_types": ("Tipos de fase ajustáveis", "green = verde; yellow = amarelo; all_red = vermelho de limpeza."),
     "phase_indices": ("Índices dos verdes controlados", "Posições das fases verdes selecionadas no programa SUMO, começando em zero."),
     "tls_id": ("ID do controlador", "Identificador do semáforo/controlador na rede SUMO."),

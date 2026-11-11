@@ -392,3 +392,148 @@ Justificativa: conduzir o usuário pelo estudo e mostrar a configuração antes 
 Verificação: quatro verificadores AppTest aprovados — fluxo novo (abas, callback de navegação, resumo atualizado, configuração inválida, avaliação sem modelo e comando de treino substituído), métricas, diagnóstico e funcionalidade (reconexão em duas sessões, gráficos, cancelamento da execução fictícia e importações). Compilação, git diff --check e health do servidor aprovados. Navegador Brave abriu Cenário e Treinamento e a árvore de acessibilidade confirmou a hierarquia e os ajustes recolhidos. Captura de screenshot pelo navegador expirou em duas tentativas; não foi possível conferir a aparência em pixels. Nenhum treinamento ou simulação foi iniciado nesta etapa; os comandos de início foram substituídos nos testes.
 Impactos e pendências: configuração e formatos de resultados preservados; as cinco abas renderizam os controles em cada ciclo para manter seu estado. Estilo usa componentes Streamlit e CSS local sem novas dependências. Mudanças anteriores e arquivos compartilhados preservados, sem commit/push.
 Continuidade: atualizar a página em localhost:8501 para usar a nova interface; guia em docs/interface.md.
+
+[2026-10-28]: Tema escuro da interface
+Responsável: agente Codex.
+Objetivo: atender ao pedido de visual dark no site do simulador.
+Alterações: .streamlit/config.toml passa a usar base dark, fundos azul-escuros, texto claro e destaque verde-água; interface.css ajusta destaque, bordas e color-scheme para o mesmo tema.
+Justificativa: usar o tema nativo do Streamlit para abranger formulários e tabelas e manter contraste dos componentes próprios.
+Verificação: TOML lido com tomllib e configuração efetiva theme.base=dark confirmada pelo Streamlit em processo novo; health HTTP 200; git diff --check aprovado. Aparência em pixels não inspecionada nesta etapa.
+Impactos e pendências: alterações preexistentes preservadas; nenhum treino ou simulação iniciado. Preferência de tema salva pelo navegador pode exigir selecionar o tema personalizado nas configurações do Streamlit.
+Continuidade: atualizar localhost:8501 para carregar o visual.
+
+[2026-10-28]: Remocao da conferencia visual na interface
+Responsavel: agente Codex.
+Objetivo: retirar a secao de conferencia visual dos nove cruzamentos conforme pedido.
+Alteracoes: removido de semaforos/apresentacao/app.py o expansor com tabela Street View, observacoes de auditoria e imagem da geometria.
+Justificativa: simplificar a tela de cenario conforme solicitado.
+Verificacao: AppTest carregou interface.py sem excecoes e confirmou ausencia da secao. A primeira tentativa de edicao falhou por codificacao do comando; corrigida com escape Unicode e verificacao repetida com sucesso. git diff --check executado.
+Impactos e pendencias: verificacoes automaticas do cenario e dados historicos de auditoria preservados; alteracoes preexistentes preservadas. Nenhuma simulacao ou treinamento iniciado.
+Continuidade: atualizar a pagina do simulador.
+
+[2026-10-28]: Explicacao dos conjuntos de semaforos
+Responsavel: agente Codex.
+Objetivo: tornar o significado de controladores explicito na tabela do cenario.
+Alteracoes: layout.py troca o titulo da coluna para Conjuntos de semaforos; adiciona explicacao visivel sobre programacao compartilhada e distincao de postes, lampadas e equipamentos fisicos; ajuda da coluna relaciona conjunto ao controlador SUMO e legenda explica exemplo de quatro conjuntos e intervalo de ciclos.
+Justificativa: explicar o conceito no local da consulta, sem exigir conhecimento de SUMO ou passar o mouse.
+Verificacao: AppTest da secao aprovado com dois controladores no mesmo local, contagem 2, intervalo 68-76 s, nova coluna e explicacao visivel. Primeira invocacao de teste falhou por aspas no shell; repetida com entrada via stdin e aprovada. git diff --check aprovado.
+Impactos e pendencias: apenas apresentacao, sem alterar IDs, agrupamentos, tempos ou treinamento; alteracoes preexistentes preservadas.
+Continuidade: atualizar a pagina para consultar a explicacao na tabela do cenario.
+
+[2026-10-28]: Resumo compacto dos semaforos
+Responsavel: agente Codex.
+Objetivo: recolher tabela e explicacao dos conjuntos conforme solicitado.
+Alteracoes: layout.py exibe totais dinamicos de cruzamentos selecionados e conjuntos; tabela, explicacao e exemplo de ciclos ficam em Detalhes dos semaforos, fechado por padrao. Singular e plural acompanham a selecao.
+Justificativa: reduzir o espaco ocupado na tela mantendo a consulta disponivel.
+Verificacao: AppTest aprovado para dois cruzamentos e tres conjuntos; confirmou resumo visivel, expansor fechado, tabela e explicacao dentro dele e contagem por cruzamento preservada. git diff --check aprovado.
+Impactos e pendencias: mudanca apenas visual, preservados controles de tempos, detalhes tecnicos e alteracoes preexistentes. Nenhum treino ou simulacao iniciado.
+Continuidade: atualizar a pagina do simulador.
+
+[2026-10-28]: Remocao do resumo de conjuntos
+Responsavel: agente Codex.
+Objetivo: remover a secao anteriormente recolhida, conforme nova orientacao do usuario.
+Alteracoes: layout.py remove titulo Semaforos preparados para o estudo, totais de cruzamentos/conjuntos, expansor Detalhes dos semaforos, tabela resumida e explicacoes associadas; remove tambem calculos usados exclusivamente pelo resumo.
+Justificativa: retirar completamente o bloco indicado pelo usuario.
+Verificacao: AppTest da funcao aprovado sem excecoes, confirmou ausencia do expansor e resumo e renderizacao dos detalhes tecnicos remanescentes; git diff --check aprovado.
+Impactos e pendencias: consulta de tempos por sinal e detalhes tecnicos preexistentes preservados. Nenhuma mudanca em controle semaforico ou treinamento.
+Continuidade: atualizar a pagina do simulador.
+
+[2026-10-28]: Rotulo do tempo de vermelho
+Responsavel: agente Codex.
+Objetivo: substituir Vermelho total por um titulo mais direto na tabela de tempos.
+Alteracoes: layout.py apresenta Tempo de vermelho (s) usando o rotulo da coluna Streamlit; ajuda e legenda explicam o tempo por ciclo e que o intervalo de seguranca ja esta incluido.
+Justificativa: melhorar leitura sem alterar o calculo ou as chaves dos dados usados por outros componentes.
+Verificacao: AST Python valido e rotulo visivel NumberColumn confirmado; git diff --check aprovado. Nao executada simulacao, pois os valores nao mudaram.
+Impactos e pendencias: apenas texto de apresentacao; calculos e chave interna Vermelho total (s) preservados.
+Continuidade: atualizar a pagina do simulador.
+
+[2026-10-28]: Retirada da coluna de intervalo de seguranca
+Responsavel: agente Codex.
+Objetivo: retirar a coluna de seguranca da tabela de tempos conforme solicitado.
+Alteracoes: layout.py exclui a coluna somente do DataFrame apresentado; remove sua ajuda e simplifica legenda, mantendo que o vermelho inclui os intervalos de seguranca.
+Justificativa: evitar leitura do intervalo como tempo adicional ao vermelho.
+Verificacao: AppTest aprovado com cinco colunas e vermelho preservado em 87 segundos; primeira tentativa do teste falhou por codificacao do fonte temporario, repetida com escapes e aprovada. git diff --check aprovado.
+Impactos e pendencias: intervalos e calculos da simulacao preservados, apenas apresentacao alterada.
+Continuidade: atualizar a pagina do simulador.
+
+[2026-10-28]: Simplificacao da consulta de tempos
+Responsavel: agente Codex.
+Objetivo: retirar as partes indicadas nas imagens pelo usuario.
+Alteracoes: layout.py remove seletor Quais semaforos voce quer consultar, seletor de movimentos, descricao repetida, desenho e legenda da geometria, e expansor de detalhes tecnicos. Tabela mostra todos os conjuntos do cruzamento escolhido; quando existem varios, uma coluna Conjunto identifica as linhas para nao ocultar tempos nem misturar etapas de programacoes distintas.
+Justificativa: manter consulta de tempos direta sem os controles e detalhes indicados pelo usuario.
+Verificacao: AppTest aprovado com dois conjuntos em A e um em B, confirmou unico seletor (cruzamento), ausencia de expansores/desenho, preservacao dos tempos dos dois conjuntos e troca de cruzamento. git diff --check aprovado. Suite completa nao repetida.
+Impactos e pendencias: apenas apresentacao; preparacao, verificacao automatica e simulacao preservadas. O antigo teste test_signal_timing_interface.py pressupoe dois seletores e indices de tabelas anteriores e precisara acompanhar a nova navegacao em revisao dos testes de interface.
+Continuidade: atualizar a pagina do simulador.
+
+[2026-10-28]: Identificacao e preenchimento de volumes por cruzamento
+Responsavel: agente Codex.
+Objetivo: facilitar identificacao das entradas e associacao do volume ao mapa.
+Alteracoes: vias.py fornece sentido separado e editor por cruzamento com colunas Entrada, Via, Sentido de chegada e Veiculos/h; valores mantidos em estado por rede/conjunto de entradas. Seletor de entrada limitado ao cruzamento aciona mapa existente com destaque azul e mesma referencia numerica. app.py usa detalhes de vias em cache e integra novo editor, retornando todas as entradas para a configuracao, inclusive de cruzamentos nao visiveis.
+Justificativa: evitar repeticao do cruzamento em cada linha sem perder volumes ao navegar ou ocultar entradas da demanda final.
+Verificacao: AppTest dedicado passou para filtro de cruzamento, quatro colunas, troca de entrada enviada ao mapa, edicao de 100 para 450 veiculos/h e persistencia apos visitar outro cruzamento e voltar. AppTest de interface.py passou ao selecionar Volume por via, confirmou editor e mapa renderizados sem excecoes nem erro de listagem. Compilacao dos dois modulos e git diff --check aprovados. Nenhum treino ou simulacao iniciado.
+Impactos e pendencias: demanda final continua usando IDs SUMO originais; referencias e nomes nao foram inventados. Se rua nao tem nome, a tabela explicita Nome nao cadastrado. Mapa usa componente existente; verificacao funcional feita por AppTest, sem inspecao visual em pixels. Alteracoes preexistentes preservadas.
+Continuidade: atualizar a pagina; selecionar cruzamento, preencher volumes e escolher entrada para destacar no mapa. Verificadores antigos que dependem da coluna from_edge visivel devem acompanhar as novas colunas na proxima revisao desses scripts.
+
+[2026-11-11]: Simplificacao do mapa de entradas
+Alteracoes: consulta destaca somente a entrada selecionada, com enquadramento automatico, legenda curta e creditos. Removidos seletores de visualizacao/area, outras entradas e saidas verdes. Desenho alternativo disponivel em expansor para falha do mapa; detalhes tecnicos fechados por padrao. Removida explicacao repetida junto ao seletor.
+Verificacao: dois testes existentes de mapa aprovados; AppTest da interface sem excecoes; diff --check aprovado. Sem inspecao visual em pixels e sem simulacao nova.
+
+[2026-11-11]: Remocao da janela personalizada na interface
+Alteracoes: removidos checkbox de periodo especifico e campos de inicio/fim; indicadores sempre usam do fim do aquecimento ate o fim da simulacao. Titulo avancado simplificado. Backend preservado para cenarios CLI.
+Verificacao: AppTest carregou sem excecoes e confirmou ausencia da opcao. Nenhum treino iniciado.
+
+[2026-11-11]: Pedestres por cruzamento e mapa real
+Editor filtra percursos por cruzamento, preserva volumes dos demais e identifica entradas e sentidos. Mapa interativo CARTO/OpenStreetMap destaca travessia, seta, partida e chegada usando projecao e offset da rede. Desenho local apenas para rede sem projecao. Teste existente de pedestres aprovado e serializacao/coordenadas do mapa verificadas na rede real do projeto. Sem inspecao visual em pixels.
+
+[2026-11-11]: Correcao do contorno da seta de pedestres
+PolygonLayer agora desativa explicitamente o contorno e mantem preenchimento azul, eliminando a borda preta padrao. Configuracao serializada do mapa verificada na rede do projeto.
+
+[2026-11-11]: Remocao da seta do mapa de pedestres
+Removido triangulo do mapa interativo; mantidas linha azul e marcacoes de partida/chegada. Legenda atualizada. Sintaxe e ausencia de PolygonLayer verificadas.
+
+[2026-11-11]: Perfil temporal somente em tabela
+Removidos presets, sliders e campos repetidos por periodo. Tabela permite editar fim e percentual, adicionar/remover periodos. Percentual convertido para intensidade considerando duracao; exige soma 100 e cobertura ate fim, bloqueando configuracao incompleta. AppTest e distribuicao padrao 25/50/25 aprovados.
+
+[2026-11-11]: Tabela temporal com intervalos completos
+Tabela mostra periodo (0 a 75 s etc.), veiculos estimados e porcentagem editavel. Quatro periodos iguais por padrao, preservando intervalos salvos. Quantidade acompanha percentual; soma deve ser 100. AppTest aprovado.
+
+[2026-11-11]: Remocao do resumo de veiculos planejados
+Removidos bloco e legenda do total pelas vias; preservados tabela por periodo e aviso de volumes zerados. AppTest da interface aprovado.
+
+[2026-11-11]: Simplificacao da etapa de treinamento
+Tela principal com objetivo em seletor, quantidade direta de decisoes e opcao de visualizar simulacao. Removidos presets de tamanho e textos repetidos; algoritmo unico em legenda discreta. Velocidade aparece somente com visualizacao ativa. Pesos personalizados, parametros PPO e coleta detalhada ficam em Configuracoes avancadas; limites em Ajustar limites dos tempos. Indicadores principais mantidos automaticamente. Verificador de fluxo atualizado para controles atuais. AppTest conferiu selecao de objetivo, edicao de decisoes e visualizacao condicional. Verificador completo de fluxo aprovado, incluindo validacao e inicio substituido recebendo 4096 decisoes e aquecimento de 60 s, sem iniciar treinamento real. Sem inspecao visual em pixels.
+
+[2026-11-11]: Retirada da conferencia antes de executar
+Removida chamada do resumo de configuracao da etapa de treino e botao Voltar ajustar trafego. Validacao preservada, com erro compacto junto ao inicio quando necessario. AppTest confirmou ausencia da secao e botoes redundantes, presenca de Iniciar treinamento e nenhuma excecao.
+
+[2026-11-11]: Controle adaptativo por entradas e sensores virtuais
+Objetivo: alinhar o controle a informacoes das entradas, retirando a escolha de etapas semaforicas da interface.
+Alteracoes: novo modo adaptive_signals escolhe um verde compativel por controlador, com observacoes por faixa (presenca, quantidade, fila, velocidade, ocupacao e ocupacao das saidas) e estado agregado do sinal. Acessos de pedestres usam pessoas do SUMO. Layout de sensores e versao de observacao ficam no manifesto e run_config. Controle permite selecionar aberturas fora da ordem ciclica, respeita verde minimo/maximo, percorre amarelo e limpeza cadastrados e protege atendimento de aberturas sem servico (gatilho de 120 s, sem garantir espera maxima). Referencia segue programa original sem intervencao; heuristica por filas adaptada ao novo espaco. Avaliacao recusa modo, acoes ou sensores incompativeis com o modelo. Modos legados preservados.
+Interface: novos treinos usam modo adaptativo; tabela por cruzamento mostra entradas/movimentos e limites de verde. Removidos seletor de etapa/conjunto e ajuste de amarelo/limpeza pelo modelo. Consulta inicial tambem deixa de mostrar coluna Etapa. Documentacao em docs/controle_adaptativo.md, README e guia da interface; legenda tecnica atualizada.
+Verificacao: quatro testes novos aprovados em 76,960 s, incluindo transicao fora da ordem ciclica com minimos/limpeza, resposta dos sensores, SUMO real com limites/referencia distintos e treino/save/load/avaliacao dos nove cruzamentos (17 controladores). Regressao completa executou 65 testes em 402,992 s: 63 passaram e dois testes de interface usavam controles antigos carregados antes de sua atualizacao. Reexecucao atualizada dos dois arquivos de interface aprovou seus tres testes em 15,25 s; portanto os 65 casos ficaram cobertos entre as execucoes. Mais seis testes funcionais pytest de tabelas, navegacao, apresentacao e limites passaram (incluindo edicao/persistencia por cruzamento). Verificador do fluxo completo com inicio substituido passou: parametros, objetivo e modo adaptativo chegam ao comando, sem treino real de usuario. compileall, diff --check e health HTTP 200 aprovados. Uma execucao concorrente de AppTest encontrou historico temporario ja removido pelo teste de integracao; testes novos passaram a usar pasta temporaria fora do historico e o verificador posterior passou.
+Limites: cameras e detectores fisicos nao estao conectados; dados sao sensores virtuais ideais do SUMO. Nao implementada visao computacional nem validacao em campo. Recompensa preservada, sem comprovar convergencia ou melhoria de transito. Modelos antigos nao servem ao novo espaco; treinar modelo novo. Nenhum treino longo foi iniciado, nenhum modelo existente foi alterado, sem commit/push. Sem inspecao visual em pixels.
+
+[2026-11-11]: Retirada da alternativa manual do mapa
+Removido expansor Mapa nao carregou e checkbox Usar desenho da rede. Mapa interativo preservado, assim como alternativa automatica para rede sem projecao geografica. Sintaxe e ausencia dos controles verificadas.
+
+[2026-11-11]: Tabela completa de metricas do treinamento e exportacao Excel
+Objetivo: reunir as metricas do treino em uma tabela exportavel na aba Resultados.
+Alteracoes: relatorios/tabela_treino.py consolida registros canonicos por episodio, detalhes por controlador/cruzamento/faixa/movimento/travessia/classe, historico por decisao, acoes e logs do otimizador. Evita duplicar metricas do CSV quando existe JSON, preserva complementos como timesteps e oferece fallback para resultados antigos. Catalogo identifica metricas nao coletadas; ausencia e zero ficam distintos. Tabela inclui valor numerico, unidade, episodio/semente, situacao completo/parcial, identificacao, tempo, codigo, descricao e arquivo de origem. Exportador do aplicativo usa openpyxl ja instalado, com escrita incremental, filtros, cabecalho fixo, numeros nativos e textos literais (sem executar formulas vindas de IDs). Divide folhas ao atingir o limite do Excel, sem descartar registros.
+Interface: tabela visivel no acompanhamento de treino e treino ativo de estudos, alem do historico de treinamentos. Preparar exportacao para Excel gera fotografia completa sob demanda; Baixar tabela completa fornece .xlsx. Opcao sob demanda evita reconstruir arquivo grande a cada refresh. Coleta de detalhes/emissoes continua respeitando configuracao, sem inventar metricas antigas. Novos treinos passam a registrar diagnosticos SB3 em optimizer/progress.csv, incluindo perdas, entropia, KL, taxa de aprendizado e atualizacoes. Logger encerrado explicitamente para liberar arquivo no Windows.
+Verificacao: tres testes novos cobrem escopos, episodio parcial, zero versus ausencia, nao coletadas, nao duplicacao, leitura do xlsx com numeros/filtros/painel fixo e textos literais, botao na interface e treino real curto com diagnostico do otimizador. Tres testes existentes de interface/relatorio passaram em 14,75 s. Primeiro teste real detectou arquivo de log aberto ao encerrar; corrigido com fechamento do logger e repeticao aprovada. Sem treinamento longo e sem alterar resultados existentes. Guia da interface atualizado. Sem conferencia visual do arquivo no Excel nativo; estrutura e valores verificados com reabertura programatica.
+
+[2026-11-11]: Demonstracao rapida solicitada pelo usuario
+Treino adaptativo piloto com 120 s simulados, 24 decisoes, uma epoca por lote, demanda sintetica 1800 veiculos/h e pedestres disponiveis; coleta detalhada, emissoes e recursos ativados. Execucao ui_3c792f77a48b concluida com exit_code 0, um episodio completo e 12,1 s de treino (cerca de 21 s incluindo inicializacao). Tabela unificada e metricas_demonstracao.xlsx gerados na pasta execucao. Demonstra coleta/exportacao, sem avaliar qualidade do modelo ou melhoria de transito.
+
+[2026-11-11]: Simplificacao dos resultados
+Tabela mostra um escopo por vez, com resumo do episodio como selecao inicial e apenas colunas pertinentes. Exportacao Excel continua completa. Retiradas tabelas repetidas e multiplos botoes de arquivos tecnicos do historico e acompanhamento; substituidos por expansor com seletor e download unico. Analises comparativas e estudos continuam acessiveis quando existentes. Dois testes de tabela/download e AppTest da interface passaram, sem novo treino.
+
+[2026-11-11]: Auditoria de RL e prioridades cientificas
+Revisados ambiente, sensores/acoes, recompensa, geracao/calibracao, PPO, avaliacoes/repeticoes e exportacoes. Relatorio em docs/auditoria_rl_2026-11-11.md. Confirmados desvio de uma amostra na atribuicao do tempo dos sinais (24/3/1/2 esperados versus 23/3/1/3 registrados), estados internos pending/last_served nao observados e horizonte terminal sem tempo restante observado. Dez testes direcionados passaram; simulacao temporaria de 30 s e reproducao controlada executadas. .venv com heranca Anaconda reproduziu OMP Error 15 ao importar torch; ambiente isolado importou com sucesso. Inventario preservado contem um treino adaptive_signals de 24 decisoes, sem evidencia de treino longo desse modo. Nenhuma logica de controle ou configuracao do usuario alterada; sugestoes e limites separados de falhas reproduzidas.
+
+[2026-11-11]: Fechamento da interface: contrato, persistencia, mensagens e resultados simples
+Objetivo: conferir os dados enviados ao executor, preservar edicoes e simplificar a tela de resultados para resumo e Excel.
+Alteracoes: estado de edicao recebe uma revisao ao carregar configuracoes, incluindo widgets basicos e editores de volumes, pedestres, periodos e limites. Carregar cenario individual remove estado experimental anterior. Rascunhos sao mantidos ao trocar de cruzamento, entrada, secao ou ocultar/mostrar editores. Campos vazios/invalidos recebem validacao em vez de virar zero silenciosamente. Erros de porcentagem nao interrompem mais a renderizacao nem apagam outros campos; bloqueiam apenas o inicio. Estimativa de veiculos por periodo usa a mesma alocacao cumulativa e arredondamento por entrada da geracao de demanda, preservando o total. Mensagens de configuracao orientam a acao em portugues e evitam chaves tecnicas.
+Resultados: removidas tabelas, seletores de metricas, graficos detalhados e downloads tecnicos do acompanhamento/historico. Mantidos resumo, progresso/cartoes ao vivo e um botao Baixar resultados em Excel. Arquivo completo e gerado em cache depois de concluir/interromper; fontes originais preservadas internamente. Nao ha descarte dos dados ou alteracao da logica do treinamento.
+Verificacao: 15 testes selecionados passaram em 46,57 s (contrato, persistencia por cruzamento/direcao, percentuais, limites, navegacao, exportacao e interface). Teste de contrato reforcado e repetido: tres testes passaram em 34,90 s, conferindo payload com volumes 650/360, percentuais 40/10/20/30, pedestres 120/60, verde minimo/maximo 30/60 e 4096 decisoes; cenarios gravados pelo executor foram comparados com o payload com Popen substituido. Previa por periodo comparada com viagens realmente materializadas pelo gerador, sem rodar SUMO. Erro de percentuais preservou os demais campos. Recarga da mesma rede restaurou valores salvos e limpou estado experimental antigo. Cinco verificadores AppTest passaram no ambiente isolado: fluxo, acompanhamento/cancelamento, metricas/estudo, diagnostico e selecao dos nove cruzamentos. Assercoes antigas de graficos/arquivos/periodos removidos foram atualizadas; validacao de volumes zerados preservada. compileall e diff --check aprovados. Nenhum treino longo ou processo real de treinamento iniciado; sem inspecao visual em pixels.
+Documentacao: docs/interface.md atualizado para o fluxo atual e para o reset de edicoes ao carregar configuracoes. Trabalho local sem commit/push, preservando alteracoes anteriores.

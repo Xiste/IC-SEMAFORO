@@ -1,5 +1,7 @@
 ﻿# Simulação e otimização semafórica — Rondon Norte
 
+A interface configura novos treinamentos com controle adaptativo por entradas e sensores virtuais do SUMO. Veja [controle adaptativo e compatibilidade](docs/controle_adaptativo.md). Câmeras e detectores físicos ainda não estão conectados; modelos anteriores exigem seus cenários originais.
+
 Pipeline de pesquisa com SUMO/TraCI, Gymnasium, PPO e Streamlit. A estrutura separa cenário, simulação, algoritmos, experimentos e apresentação. Consulte a [arquitetura e extensão dos algoritmos](docs/arquitetura.md).
 
 ## Executar

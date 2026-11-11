@@ -20,6 +20,7 @@ def run_reference(config, output):
     output.mkdir(parents=True, exist_ok=False)
     export_catalogs(output, config)
     env = SemaforosEnv(config, output / "episodes", gui=bool(control_parameters(config).get("gui", False)))
+    env.reference_mode = True
     rows, signals, flows = [], [], []
     intersections, crossings = [], []
     cancelled = False
@@ -30,7 +31,8 @@ def run_reference(config, output):
             done = False
             reward = 0.0
             while not done:
-                _, value, done, _, info = env.step(np.ones(len(env.action_spec), dtype=np.int64))
+                action = np.zeros(len(env.action_spec), dtype=np.int64) if env.action_mode == 'adaptive_signals' else np.ones(len(env.action_spec), dtype=np.int64)
+                _, value, done, _, info = env.step(action)
                 reward += value
                 write_json(output / "progress.json", {"seed": seed, "simulated_seconds_current_episode": info["simulated_seconds"],
                                                         "real_seconds": round(time.perf_counter() - started, 2)})

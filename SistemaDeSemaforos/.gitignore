@@ -2,3 +2,6 @@ resultados/
 __pycache__/
 .venv/
 .venv-verificacao/
+
+streamlit.stdout.log
+streamlit.stderr.log

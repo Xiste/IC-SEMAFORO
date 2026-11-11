@@ -2,7 +2,6 @@
 import sys
 import tempfile
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pandas as pd
@@ -37,25 +36,16 @@ with tempfile.TemporaryDirectory(dir=ROOT / 'resultados', prefix='ui_diag_') as 
     app = AppTest.from_file(str(ROOT / 'interface.py'), default_timeout=90).run()
     next(w for w in app.selectbox if w.label == 'Execução para acompanhar').set_value(str(folder)).run()
     assert not app.exception, str(app.exception)
-    assert any('Melhoria consistente' in w.value for w in app.success)
-    assert any(w.label == 'Exportar melhorias.csv' for w in app.get('download_button'))
-    counts = SimpleNamespace(name='counts.csv', file_id='period-test', getvalue=lambda:
-        b'edge_id,vehicles,hora_inicio,hora_fim\n1156717168,10,2026-06-26 08:00:00,2026-06-26 08:01:00\n1156717168,20,2026-06-26 08:01:00,2026-06-26 08:02:00\n')
-    with patch('streamlit.file_uploader', side_effect=lambda label, **kwargs: counts if 'contagens' in label else None):
-        next(w for w in app.radio if w.label == 'Modelo').set_value('Volume por via').run()
-        next(w for w in app.checkbox if w.label == 'Selecionar período das contagens').check().run()
-        next(w for w in app.text_input if w.label.startswith('Início da medição')).set_value('2026-06-26 08:01:00').run()
-        next(w for w in app.button if w.label == 'Aplicar contagens associadas').click().run()
+    assert (output / 'diagnostico.json').is_file()
+    assert not any(w.label == 'Exportar melhorias.csv' for w in app.get('download_button'))
+    from semaforos.cenario.importacao import parse_counts, count_period
+    counts = b'edge_id,vehicles,hora_inicio,hora_fim\n1156717168,10,2026-06-26 08:00:00,2026-06-26 08:01:00\n1156717168,20,2026-06-26 08:01:00,2026-06-26 08:02:00\n'
+    measured = parse_counts(counts, 'counts.csv', '2026-06-26 08:01:00', '2026-06-26 08:02:00')
+    _, period = count_period(counts, 'counts.csv', '2026-06-26 08:01:00', '2026-06-26 08:02:00')
+    assert period['selected_rows'] == 1
+    assert measured[0]['vehicles_per_hour'] == 1200
+    with patch('semaforos.experimentos.tarefas.start_job', return_value=job_paths(folder)) as launch:
+        next(w for w in app.button if w.label == 'Comparar tempos iniciais com controle por filas').click().run()
+        assert launch.call_args.args[1] == 'compare-baselines'
         assert not app.exception, str(app.exception)
-        assert not app.error, str(app.error)
-        source_keys = [k for k in app.session_state.filtered_state if k.startswith('counts_source_')]
-        assert source_keys
-        assert app.session_state[source_keys[0]]['selected_rows'] == 1
-        with patch('semaforos.experimentos.tarefas.start_job', return_value=job_paths(folder)) as launch:
-            next(w for w in app.button if w.label == 'Validar demanda calibrada no SUMO').click().run()
-            assert launch.call_args.args[1] == 'validate-demand'
-            assert launch.call_args.args[0]['demand']['edge_volumes'][0]['vehicles_per_hour'] == 1200
-            next(w for w in app.button if w.label == 'Comparar referência e controle por filas sem treinamento').click().run()
-            assert launch.call_args.args[1] == 'compare-baselines'
-            assert not app.exception, str(app.exception)
-print('AppTest: período, fonte, botões de validação/comparação e painel de melhoria aprovados.')
+print('AppTest: diagnostico, comparacao e suporte a contagens preservados.')

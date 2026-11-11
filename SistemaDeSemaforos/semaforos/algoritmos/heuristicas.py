@@ -6,6 +6,17 @@ import traci
 
 def queue_actuated_action(env):
     """Heurística reativa: favorece o verde com maior fila de entrada."""
+    if getattr(env, 'action_mode', '') == 'adaptive_signals':
+        actions = []
+        for spec in env.action_spec:
+            links = traci.trafficlight.getControlledLinks(spec['tls_id'])
+            scores = []
+            for index in spec['green_indices']:
+                lanes = {c[0] for i, color in enumerate(env.programs[spec['tls_id']][index]['state'])
+                         if color in 'Gg' and i < len(links) for c in (links[i] or ())}
+                scores.append(sum(traci.lane.getLastStepHaltingNumber(lane) for lane in lanes))
+            actions.append(int(np.argmax(scores)))
+        return np.asarray(actions, dtype=np.int64)
     actions = []
     phase_actions = {}
     duration_mode = getattr(env, "action_mode", "green_extension") == "phase_durations"

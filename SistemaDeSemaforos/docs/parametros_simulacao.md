@@ -19,9 +19,13 @@ O pipeline gera tráfego de teste, roda o SUMO por **600 segundos**, mede veícu
 
 ## 2. Gerar veículos
 
+A interface usa volumes definidos para o experimento, informados como total da rede ou veículos/h por entrada, com saídas automáticas. Esses cenários são registrados com `demand.synthetic: true`. As medições de veículos/h da Settran estão sendo aguardadas; os volumes de teste não devem ser apresentados como tráfego real calibrado.
+
+Importação, calibração de contagens e distribuição por cruzamento foram retiradas da tela de configuração. O suporte no pipeline e os arquivos de execuções anteriores continuam preservados. Quando as medições chegarem, será necessário conferir período, sentido e seção de contagem e associar cada registro ao trecho correspondente da rede. Contagens de passagem em cruzamentos consecutivos não devem gerar novamente os mesmos veículos em cada entrada.
+
 O modo atual é `demand.mode: "random"`. [`demanda.py`](../semaforos/cenario/demanda.py) transforma **360 veículos/h** em uma partida a cada **10 s** (`3600 ÷ 360`) e chama `randomTrips.py`. Ele recebe a rede, os tempos **0–600 s**, a semente **11** e grava `trips.trips.xml` e `routes.rou.xml`.
 
-Quando houver contagens por via, o modo `flows` aceitará `from_edge`, `to_edge` e `vehicles_per_hour` para cada fluxo. A configuração atual contém `flows: []`, então nenhuma taxa por via foi informada ainda.
+O pipeline também aceita `observed_counts` para ajustar rotas às contagens de passagem e `flows` quando as origens e os destinos são conhecidos. Uma contagem de veículos/h por via não identifica, sozinha, os destinos dessas viagens.
 
 ## 3. Rodar o SUMO
 

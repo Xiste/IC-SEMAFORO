@@ -87,10 +87,15 @@ def train_rl(config, output):
     (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     env = SemaforosEnv(config, output / "episodes", gui=bool(control.get("gui", False)))
     manifest.update(action_mode=env.action_mode, action_spec=env.action_spec)
+    manifest.update(sensor_layout=env.sensor_layout, observation_version='lane_sensors_v1' if env.sensor_layout else 'aggregate_v1')
     callback = ProgressCallback(output)
     started = time.perf_counter()
+    optimizer_logger = None
     try:
         model = algorithm.create(env, config)
+        from stable_baselines3.common.logger import configure
+        optimizer_logger = configure(str(output / 'optimizer'), ['csv'])
+        model.set_logger(optimizer_logger)
         if algorithm.name == "PPO":
             manifest["ppo_effective"] = {**constructor,
                 "normalize_advantage": model.normalize_advantage,
@@ -102,6 +107,7 @@ def train_rl(config, output):
         manifest["algorithm_effective"] = {**constructor, "device": str(model.device)}
         (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
         model.learn(total_timesteps=total_steps, callback=callback)
+        model.logger.dump(step=model.num_timesteps)
         env.close()
         partial = read_json(env.current_output / 'episode_metrics.json') if env.current_output else None
         if partial and not partial.get('episode_complete', True):
@@ -122,6 +128,8 @@ def train_rl(config, output):
         return summary
     finally:
         env.close()
+        if optimizer_logger is not None:
+            optimizer_logger.close()
 
 
 def evaluate_rl(config, output, model_path=None, seeds=None):
@@ -137,7 +145,7 @@ def evaluate_rl(config, output, model_path=None, seeds=None):
     action_mode, action_spec = phase_action_spec(config, network_programs(config["network"]))
     if model_path and training_manifest.get("action_mode", "green_extension") != action_mode:
         raise ValueError("O modo de ação mudou; treine um novo modelo PPO")
-    if model_path and action_mode == "phase_durations" and training_manifest.get("action_spec") != action_spec:
+    if model_path and action_mode in ('phase_durations', 'adaptive_signals') and training_manifest.get("action_spec") != action_spec:
         raise ValueError("As fases ou os limites de duração mudaram; treine um novo modelo PPO")
     if training_manifest.get("targets") and training_manifest["targets"] != config["targets"]:
         raise ValueError("O modelo foi treinado com outros semáforos/fases")
@@ -149,6 +157,13 @@ def evaluate_rl(config, output, model_path=None, seeds=None):
             and training_manifest["mapping_sha256"] != file_hash(config["mapping_path"])):
         raise ValueError("O mapeamento difere do usado no treinamento")
     model = algorithm.load(model_path) if model_path else None
+    if model_path and action_mode == 'adaptive_signals':
+        import sumolib
+        from semaforos.simulacao.adaptativo import sensor_layout
+        expected_layout = sensor_layout(sumolib.net.readNet(str(config['network'])), config['targets'])
+        if (training_manifest.get('observation_version') != 'lane_sensors_v1'
+                or training_manifest.get('sensor_layout') != expected_layout):
+            raise ValueError('A configuração dos sensores mudou; treine um novo modelo')
     seeds = seeds or config.get("evaluation", {}).get("seeds") or config["seeds"]
     if len(set(seeds)) != len(seeds):
         raise ValueError('Sementes de avaliação devem ser distintas')
@@ -166,6 +181,7 @@ def evaluate_rl(config, output, model_path=None, seeds=None):
     try:
         for seed in seeds:
             for controller in (("network_reference", "queue_actuated", algorithm.name) if model else ("network_reference", "queue_actuated")):
+                env.reference_mode = controller == 'network_reference'
                 observation, _ = env.reset(seed=int(seed))
                 episode_reward = 0.0
                 while True:
@@ -174,7 +190,7 @@ def evaluate_rl(config, output, model_path=None, seeds=None):
                     elif controller == "queue_actuated":
                         action = queue_actuated_action(env)
                     else:
-                        action = np.ones(len(env.action_spec), dtype=np.int64)
+                        action = np.zeros(len(env.action_spec), dtype=np.int64) if action_mode == 'adaptive_signals' else np.ones(len(env.action_spec), dtype=np.int64)
                     observation, reward, done, truncated, info = env.step(action)
                     episode_reward += reward
                     cancelled = cancellation_requested(output)

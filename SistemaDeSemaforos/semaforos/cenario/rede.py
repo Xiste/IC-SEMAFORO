@@ -22,6 +22,44 @@ def network_programs(path):
     return programs
 
 
+def initial_signal_timings(config, labels=None):
+    """Tempos por grupo no programa inicial, incluindo toda a espera no vermelho."""
+    labels = labels or {}
+    root = ET.parse(config['network']).getroot()
+    edges = {edge.get('id'): edge.get('name') or edge.get('id') for edge in root.findall('edge')}
+    turns = {'s': 'reto', 'l': 'esquerda', 'r': 'direita', 't': 'retorno', 'L': 'esquerda', 'R': 'direita'}
+    rows = []
+    for target in config['targets']:
+        tls = target['tls_id']
+        logic = next(logic for logic in root.findall('tlLogic') if logic.get('id') == tls)
+        phases = logic.findall('phase')
+        connections = [c for c in root.findall('connection') if c.get('tl') == tls]
+        for group, start in enumerate(target['phase_indices'], 1):
+            green = phases[start]
+            opened = {i for i, color in enumerate(green.get('state')) if color in 'Gg'}
+            if not opened:
+                continue
+            index = min(opened)
+            totals = {'green': 0.0, 'yellow': 0.0, 'red': 0.0}
+            for phase in phases:
+                color = phase.get('state')[index]
+                kind = 'green' if color in 'Gg' else 'yellow' if color in 'yY' else 'red' if color in 'rR' else None
+                if kind:
+                    totals[kind] += float(phase.get('duration'))
+            movements = sorted({f"{labels.get(c.get('from'), edges.get(c.get('from'), c.get('from')))} · {turns.get(c.get('dir'), 'travessia/outro')}"
+                                for c in connections if int(c.get('linkIndex')) in opened})
+            clearance = 0.0
+            # Intervalo com todos em vermelho imediatamente após o amarelo deste grupo.
+            following = phases[(start + 2) % len(phases)]
+            if set(following.get('state')) <= set('rR'):
+                clearance = float(following.get('duration'))
+            rows.append({'cruzamento': target['name'], 'controlador': tls, 'Grupo': f'Grupo {group}',
+                         'Movimentos liberados': '; '.join(movements), 'Verde (s)': totals['green'],
+                         'Amarelo (s)': totals['yellow'], 'Vermelho total (s)': totals['red'],
+                         'Limpeza após amarelo (s)': clearance})
+    return rows
+
+
 def phase_kind(state):
     if any(color in "yY" for color in state):
         return "yellow"
@@ -54,6 +92,13 @@ def phase_action_spec(config, programs):
     """Lista as durações que cada componente da ação PPO pode selecionar."""
     params = control_parameters(config)
     mode = params.get("action_mode", "green_extension")
+    if mode == 'adaptive_signals':
+        import copy
+        from semaforos.simulacao.adaptativo import adaptive_specs
+        legacy = copy.deepcopy(config)
+        legacy.setdefault('control', dict(params))['action_mode'] = 'phase_durations'
+        _, durations = phase_action_spec(legacy, programs)
+        return mode, adaptive_specs(config, programs, durations)
     if mode == "green_extension":
         return mode, [{"tls_id": target["tls_id"]} for target in config["targets"]]
     if mode != "phase_durations":

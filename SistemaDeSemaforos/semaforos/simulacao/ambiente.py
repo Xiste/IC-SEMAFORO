@@ -62,9 +62,17 @@ class SemaforosEnv(gym.Env):
         if self.interval < self.step_length:
             raise ValueError("decision_seconds deve ser >= step_seconds")
         self.gui = gui
-        self.action_space = spaces.MultiDiscrete([3] * len(self.action_spec))
+        self.sensor_layout = []
+        self.adaptive = None
+        self.reference_mode = False
+        if self.action_mode == 'adaptive_signals':
+            from semaforos.simulacao.adaptativo import sensor_layout
+            self.sensor_layout = sensor_layout(self.network, self.targets)
+        self.action_space = spaces.MultiDiscrete(
+            [len(s['green_indices']) for s in self.action_spec] if self.action_mode == 'adaptive_signals'
+            else [3] * len(self.action_spec))
         # Por sinal: fila, veículos, velocidade, índice da fase, tempo nela e restante.
-        self.observation_space = spaces.Box(0, 1, shape=(6 * len(self.targets),), dtype=np.float32)
+        self.observation_space = spaces.Box(0, 1, shape=(6 * len(self.targets) + 6 * len(self.sensor_layout),), dtype=np.float32)
         self.connected = False
         self.episode = 0
         self.seed_value = None
@@ -115,6 +123,9 @@ class SemaforosEnv(gym.Env):
 
     def _observation(self):
         values = []
+        if self.sensor_layout:
+            from semaforos.simulacao.adaptativo import sensor_values
+            values.extend(sensor_values(self.sensor_layout))
         now = traci.simulation.getTime()
         for target in self.targets:
             tls_id = target["tls_id"]
@@ -180,6 +191,8 @@ class SemaforosEnv(gym.Env):
             "ppo": self.config.get("ppo"), "metrics": self.config.get("metrics"),
             "planned": self.planned,
             "action_mode": self.action_mode, "action_spec": self.action_spec,
+            "sensor_source": "sumo_virtual" if self.sensor_layout else "sumo_aggregate",
+            "sensor_layout": self.sensor_layout,
         }, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
         try:
             self.last_info = None
@@ -231,6 +244,7 @@ class SemaforosEnv(gym.Env):
             self.duration_applied = set()
             self.desired_durations = {}
             self.warming_up = True
+            self.adaptive = None
             interval = self.interval
             try:
                 while traci.simulation.getTime() < self.measurement.warmup:
@@ -238,7 +252,8 @@ class SemaforosEnv(gym.Env):
                     if cancellation_requested(self.output.parent):
                         raise InterruptedError('Aquecimento interrompido pelo usuário')
                     self.interval = min(interval, self.measurement.warmup - traci.simulation.getTime())
-                    self.step(np.ones(len(self.action_spec), dtype=np.int64))
+                    self.step(np.zeros(len(self.action_spec), dtype=np.int64) if self.action_mode == 'adaptive_signals'
+                              else np.ones(len(self.action_spec), dtype=np.int64))
             finally:
                 self.interval = interval
                 self.warming_up = False
@@ -277,6 +292,14 @@ class SemaforosEnv(gym.Env):
         action = np.asarray(action)
         if not self.action_space.contains(action):
             raise ValueError(f"Ação inválida: {action}")
+        if self.action_mode == 'adaptive_signals' and not self.warming_up and not self.reference_mode:
+            from semaforos.simulacao.adaptativo import AdaptiveSignals
+            if self.adaptive is None:
+                self.adaptive = AdaptiveSignals(self.action_spec, self.programs, self.step_length)
+            self.adaptive.request(action)
+            events = self.adaptive.tick(traci.simulation.getTime())
+            if self.config.get('metrics', {}).get('collect_actions', True):
+                self.action_log.extend(events)
         if self.action_mode == "phase_durations":
             self.desired_durations = {(item["tls_id"], item["phase_index"]):
                                       (int(choice), item["durations_seconds"][int(choice)])
@@ -314,6 +337,10 @@ class SemaforosEnv(gym.Env):
             previous_time = traci.simulation.getTime()
             traci.simulationStep()
             current = traci.simulation.getTime()
+            if self.adaptive is not None and not self.warming_up and not self.reference_mode:
+                events = self.adaptive.tick(current)
+                if self.config.get('metrics', {}).get('collect_actions', True):
+                    self.action_log.extend(events)
             measured = self.measurement.contains_step(previous_time, current)
             departing = traci.simulation.getDepartedNumber()
             arriving = traci.simulation.getArrivedNumber()

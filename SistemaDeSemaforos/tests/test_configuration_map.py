@@ -133,7 +133,7 @@ import streamlit as st
 from semaforos.apresentacao.mapa_configuracao import render_configuration_map
 base = {{'network':{str(network)!r}, 'targets':[{{'tls_id':'a','name':'Local A'}},{{'tls_id':'b','name':'Local B'}}]}}
 initial = [dict(from_edge=e, vehicles_per_hour=10., to_edge='') for e in ('a','b')]
-details = {{e: dict(crossing='Local '+e.upper(), reference='Entrada '+e, street='Rua '+e, approach='norte', label=e) for e in ('a','b')}}
+details = {{e: dict(crossing='Local '+e.upper(), reference='Entrada '+e, street='Rua '+e if e == 'a' else '', approach='norte', label=e) for e in ('a','b')}}
 specs = [dict(tls_id=tls,phase_index=i,kind=kind,durations_seconds=bounds) for tls in ('a','b')
          for i,kind,bounds in [(0,'green',[10,20,30]),(1,'yellow',[3,3,3]),(2,'all_red',[2,2,2])]]
 from semaforos.apresentacao.mapa_configuracao import apply_map_selection
@@ -146,7 +146,7 @@ def pick(layer, field, value):
 st.button('Via A', on_click=pick, args=('configuration-roads','edge_id','a'))
 st.button('Via B', on_click=pick, args=('configuration-roads','edge_id','b'))
 st.button('Sinal A', on_click=pick, args=('configuration-signals','tls_id','a'))
-roads, pedestrians, limits, enabled, speed = render_configuration_map(base,initial,details,('a','b'),specs,{{'a':'Rua A','b':'Rua B'}},[],volume_by_road=True)
+roads, pedestrians, limits, enabled = render_configuration_map(base,initial,details,('a','b'),specs,{{'a':'Rua A','b':'Rua B'}},[],volume_by_road=True)
 st.session_state.roads = roads.to_dict('records')
 st.session_state.limits = limits.to_dict('records')
 '''
@@ -159,15 +159,27 @@ st.session_state.limits = limits.to_dict('records')
         assert not app.exception
     assert not any(w.label == 'Cruzamento no mapa' for w in app.selectbox)
     assert not any(w.label == 'Veículos por hora' for w in app.number_input)
+    def visible_roads():
+        deck = json.loads(app.get('deck_gl_json_chart')[0].proto.json)
+        return {road['edge_id'] for layer in deck['layers'] if layer['id'] == 'configuration-roads' for road in layer['data']}
+    def search_options():
+        return next(w.options for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa')
+    assert visible_roads() == {'a'}
+    assert len(search_options()) == 1 and 'Rua a' in search_options()[0]
     app.button[0].click().run()
     next(w for w in app.number_input if w.label == 'Veículos por hora').set_value(420.).run()
     app.button[2].click().run()
     next(w for w in app.number_input if w.label == 'Verde mínimo (s)').set_value(12.).run()
     next(w for w in app.number_input if w.label == 'Verde máximo (s)').set_value(35.).run()
     assert not any('entries' in item.value.columns for item in app.dataframe)
-    app.button[1].click().run()
+    next(w for w in app.toggle if w.label == 'Mostrar também vias sem nome').set_value(True).run()
+    assert visible_roads() == {'a', 'b'}
+    assert len(search_options()) == 2 and any('Nome não cadastrado' in option for option in search_options())
+    next(w for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa').select('b').run()
     next(w for w in app.number_input if w.label == 'Veículos por hora').set_value(160.).run()
     next(w for w in app.button if w.label == 'Fechar ajustes').click().run()
+    next(w for w in app.toggle if w.label == 'Mostrar também vias sem nome').set_value(False).run()
+    assert visible_roads() == {'a'}
     app.button[0].click().run()
     assert not app.exception
     assert next(w for w in app.number_input if w.label == 'Veículos por hora').value == 420.

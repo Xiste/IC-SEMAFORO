@@ -15,17 +15,22 @@ import streamlit as st
 import sumolib
 
 from semaforos.cenario.configuracao import read_config
+from semaforos.cenario.ciclos import adjusted_programs, include_adjusted_times, save_adjusted_network
+from semaforos.cenario.demanda import planned_vehicle_count
 from semaforos.cenario.rede import network_programs, phase_action_spec
 from semaforos.apresentacao.sinais import signal_presentation
 from semaforos.arquivos import read_json
 from semaforos.experimentos.tarefas import start_job as launch_job, saved_jobs, job_paths, job_state
 from semaforos.apresentacao.diagnostico import render_diagnostics
-from semaforos.apresentacao.layout import page_header, select_workflow_tab, preparation_summary, step_heading, section_label, readiness_panel, workflow_navigation
+from semaforos.apresentacao.layout import (
+    RESULTS_TAB, TRAINING_TAB, configuration_summary, friendly_configuration_error, page_header,
+    preparation_summary, readiness_panel, section_label, select_workflow_tab, step_heading, workflow_navigation,
+)
+from semaforos.apresentacao.estudos import load_study_configuration, render_study_starts
 from semaforos.apresentacao.gargalos import render_study
 from semaforos.apresentacao.resultados import result_overview, render_training_metrics
 from semaforos.apresentacao.vias import identify_roads
-from semaforos.apresentacao.estado import configuration_key, loaded_configuration_changed
-from semaforos.apresentacao.layout import friendly_configuration_error
+from semaforos.apresentacao.estado import configuration_key
 from semaforos.simulacao.janela import measurement_window
 from semaforos.experimentos.repeticoes import study_plan
 from semaforos.cenario.pedestres import crossing_routes
@@ -113,18 +118,19 @@ def map_pedestrian_routes(network_path, version, targets):
 
 def start_job(command, config, model=None):
     st.session_state.job = launch_job(config, command, RESULTS, model)
-    select_workflow_tab('4 · Resultados')
+    select_workflow_tab(RESULTS_TAB)
 
 
 st.set_page_config(page_title="Semáforos Rondon Norte", layout="wide")
 page_header()
-scenario_tab, demand_tab, training_tab, results_tab, advanced_tab = workflow_navigation()
-with scenario_tab:
-    step_heading(1, 'Rede da simulação', 'O mapa usa a rede completa, com os nove cruzamentos controlados em conjunto.')
+setup_tab, training_tab, results_tab, advanced_tab = workflow_navigation()
+with setup_tab:
+    step_heading(1, 'Cenário e tráfego', 'Busque uma rua ou selecione vias, semáforos e travessias no mapa.')
 
 with st.sidebar:
+    jobs = saved_jobs(RESULTS)
+    render_study_starts(DEFAULT, jobs)
     with st.expander("Acompanhar ou recuperar uma execução", expanded=False):
-        jobs = saved_jobs(RESULTS)
         current_folder = str(st.session_state['job']['folder']) if 'job' in st.session_state else ''
         if not current_folder:
             current_folder = next((str(j['folder']) for j in jobs if job_state(j)['status'] in ('starting', 'running')), '')
@@ -136,74 +142,63 @@ with st.sidebar:
             st.session_state.job = job_paths(followed)
             st.caption('O processo continua ao atualizar a página. Este seletor recupera o acompanhamento; não reinicia nem retoma um treinamento encerrado.')
             if st.button('Carregar configurações desta execução'):
-                loaded = read_config(Path(followed) / 'cenario.json')
-                loaded_configuration_changed()
-                st.session_state.loaded_config = loaded
-                if loaded.get('experimental'):
-                    st.session_state.experimental_config = loaded
-                    st.session_state.experimental_rows = validate_experimental(loaded)
-                else:
-                    st.session_state.pop('experimental_config', None)
-                    st.session_state.pop('experimental_rows', None)
+                if error := load_study_configuration(Path(followed) / 'cenario.json'):
+                    st.error(error)
         else:
             st.session_state.pop('job', None)
 
-with scenario_tab:
+with setup_tab:
     base = st.session_state.get('loaded_config') or read_config(DEFAULT)
-    names = intersection_names()
-    st.caption('Controle conjunto dos nove cruzamentos da rede.')
+    wanted_names = set(intersection_names())
     joint = True
     experimental_ready = False
     if joint:
+        preparation_status = st.empty()
         prepared_names = {t['name'] for t in st.session_state.get('experimental_config', {}).get('targets', [])}
-        if set(names) != prepared_names:
-            try:
-                with st.spinner('Carregando a rede completa do mapa...'):
-                    prepared, rows, _ = prepare_or_reuse(base, RESULTS)
-                    prepared['duration_seconds'] = base['duration_seconds']
-                    st.session_state.experimental_config = prepared
-                    st.session_state.experimental_rows = rows
-            except Exception as error:
-                st.error(friendly_configuration_error(error))
-        st.caption("A rede experimental inclui os movimentos, as travessias e os tempos de segurança dos nove cruzamentos.")
-        if st.button("Preparar simulação", type="primary"):
-            try:
-                with st.spinner("Preparando a simulação e verificando os movimentos..."):
-                    prepared, rows, _ = prepare_or_reuse(base, RESULTS)
-                    st.session_state.experimental_config = prepared
-                    st.session_state.experimental_rows = rows
-                st.success("Simulação dos nove cruzamentos pronta.")
-            except Exception as error:
-                st.error(friendly_configuration_error(error))
+        if wanted_names != prepared_names:
+            with preparation_status.container():
+                try:
+                    with st.spinner('Carregando a rede completa do mapa...'):
+                        prepared, rows, _ = prepare_or_reuse(base, RESULTS)
+                        prepared['duration_seconds'] = base['duration_seconds']
+                        st.session_state.experimental_config = prepared
+                        st.session_state.experimental_rows = rows
+                except Exception as error:
+                    st.error(friendly_configuration_error(error))
         prepared_names = {t['name'] for t in st.session_state.get('experimental_config', {}).get('targets', [])}
-        wanted_names = set(names)
-        if wanted_names <= prepared_names:
-            base = st.session_state.experimental_config
-            selected_rows = validate_experimental(base)
-            experimental_ready = True
-            st.caption(f"{len({t['name'] for t in base['targets']})} cruzamento(s) e {len(base['targets'])} controlador(es) selecionados. Verificação da simulação, sem certificação em campo.")
-            timing_labels = road_labels(str(base['network']), tuple((t['tls_id'], t['name']) for t in base['targets']))
-            with st.expander('Consultar os tempos iniciais e os movimentos no mapa'):
+        scenario_focus = st.session_state.get('configuration_focus') == 'scenario'
+        if scenario_focus:
+            st.session_state.pop('configuration_focus', None)
+        with st.expander('Detalhes da rede', expanded=scenario_focus or not wanted_names <= prepared_names):
+            st.caption('Rede experimental. Os fluxos informados representam hipóteses do estudo.')
+            if st.button('Preparar simulação'):
+                try:
+                    with st.spinner('Preparando a simulação e verificando os movimentos...'):
+                        prepared, rows, _ = prepare_or_reuse(base, RESULTS)
+                        st.session_state.experimental_config = prepared
+                        st.session_state.experimental_rows = rows
+                    prepared_names = {t['name'] for t in prepared['targets']}
+                    st.success('Simulação dos nove cruzamentos pronta.')
+                except Exception as error:
+                    st.error(friendly_configuration_error(error))
+            if wanted_names <= prepared_names:
+                base = st.session_state.experimental_config
+                selected_rows = validate_experimental(base)
+                experimental_ready = True
+                timing_labels = road_labels(str(base['network']), tuple((t['tls_id'], t['name']) for t in base['targets']))
                 preparation_summary(selected_rows, base['experimental'].get('external_repaired', []),
                                     signal_presentation(base, timing_labels))
+                st.caption('Para observar todos os ciclos completos, use uma duração maior que o maior ciclo inicial indicado na tabela.')
+        if experimental_ready:
+            st.caption(f"Rede experimental · {len(prepared_names)} cruzamentos · {len(base['targets'])} controladores")
             if base["experimental"]["method"] == "serial_links_v1":
                 st.warning("Este cenário salvo usa atendimento serial antigo. Prepare um cenário novo para utilizar movimentos agrupados e correções externas.")
-            st.caption("Para observar um ciclo completo de todos os controladores, use uma duração de simulação maior que o maior ciclo inicial da tabela.")
         else:
             if base.get('experimental'):
                 base = read_config(DEFAULT)
-            st.warning("Clique em Preparar simulação antes de iniciar o treinamento.")
+            st.warning('Abra Detalhes da rede e clique em Preparar simulação para usar o mapa.')
     network = str(base["network"])
     plans = str(base["plans"])
-    if not joint or experimental_ready:
-        st.success('Cenário pronto. O próximo passo é informar os veículos e a duração da simulação.')
-    st.caption('Rede experimental com tempos de sinais preparados para a pesquisa. As contagens da Settran ainda são aguardadas; os volumes informados por você representam hipóteses do estudo.')
-
-
-
-with scenario_tab:
-    st.divider()
-    st.button('Continuar: configurar o tráfego', on_click=select_workflow_tab, args=('2 · Tráfego',), type='primary', disabled=joint and not experimental_ready)
 
 import copy
 limits_config = copy.deepcopy(base)
@@ -213,10 +208,36 @@ selected_specs = phase_action_spec(limits_config, programs)[1]
 max_yellow = max(s['durations_seconds'][1] for s in selected_specs if s['kind'] == 'yellow')
 max_clearance = max(s['durations_seconds'][1] for s in selected_specs if s['kind'] == 'all_red')
 maximum_cycle = float(base.get('control', base['ppo']).get('maximum_cycle_seconds', 3600))
+warmup_seconds = float(base.get('measurement', {}).get('warmup_seconds', 0))
 
 @st.fragment
 def traffic_configuration():
-    step_heading(2, 'Configure pelo mapa', 'Selecione semáforos, vias e travessias. Os ajustes aparecem no painel ao lado.')
+    focus = st.session_state.get('configuration_focus')
+    focus_object = None
+    if focus in ('roads', 'pedestrians', 'signals', 'duration', 'profile'):
+        st.session_state.pop('configuration_focus', None)
+        focus_object = st.session_state.pop('configuration_focus_object', None)
+    duration_options = {'300 s': 300, '600 s': 600}
+    section_label('Duração de cada simulação')
+    default_duration = next((label for label, seconds in duration_options.items() if seconds == int(base['duration_seconds'])), 'Personalizar')
+    duration_choice = st.radio('Por quanto tempo simular?', list(duration_options) + ['Personalizar'],
+        index=(list(duration_options) + ['Personalizar']).index(default_duration), horizontal=True,
+        format_func=lambda label: f'{duration_options[label] // 60} min ({label})' if label in duration_options else label,
+        key=configuration_key('Por quanto tempo simular?'))
+    if duration_choice == 'Personalizar':
+        custom_duration = st.number_input('Duração da simulação (segundos)', min_value=10,
+            value=int(base['duration_seconds']), step=10, key=configuration_key('Duração da simulação (segundos)'))
+        duration = custom_duration if custom_duration is not None else int(base['duration_seconds'])
+    else:
+        duration = duration_options[duration_choice]
+    duration_incomplete = duration_choice == 'Personalizar' and custom_duration is None
+    duration_error = None
+    if duration_incomplete:
+        duration_error = 'Preencha a duração da simulação em segundos.'
+    elif duration <= warmup_seconds:
+        duration_error = f'A duração da simulação precisa superar os {warmup_seconds:g} s de aquecimento do cenário.'
+    if duration_error:
+        st.warning(duration_error)
     demand_mode = 'Volume por via'
     if base['demand']['mode'] != 'edge_volumes' and st.session_state.get('loaded_config'):
         st.caption('Informe os volumes por via no mapa. A quantidade total da execução antiga não é distribuída automaticamente entre as vias.')
@@ -224,7 +245,6 @@ def traffic_configuration():
     profile_table = None
     pedestrian_table = None
     pedestrian_enabled = False
-    pedestrian_speed = float(base.get('pedestrians', {}).get('walking_speed_meters_per_second', .8))
     phase_table = None
     if not joint or experimental_ready:
         try:
@@ -241,46 +261,24 @@ def traffic_configuration():
             defaults = [{**row, 'persons_per_hour': saved_pedestrians.get((row['intersection'], row['from_edge'], row['to_edge']), 0.)}
                         for row in ped_routes]
             from semaforos.apresentacao.mapa_configuracao import render_configuration_map
-            road_table, pedestrian_table, phase_table, pedestrian_enabled, pedestrian_speed = render_configuration_map(
+            road_table, pedestrian_table, phase_table, pedestrian_enabled = render_configuration_map(
                 base, initial, details, incoming_ids, selected_specs,
                 {edge: info['reference'] + ' · ' + (info['street'] or 'Nome não cadastrado') for edge, info in details.items()}, defaults,
-                volume_by_road=demand_mode == 'Volume por via')
+                volume_by_road=demand_mode == 'Volume por via', duration=None if duration_incomplete else duration,
+                focus=focus, focus_object=focus_object)
         except Exception as error:
             st.error(friendly_configuration_error(error))
     else:
         st.info('Prepare o cenário selecionado para configurar os locais pelo mapa.')
-    duration_options = {'300 s': 300, '600 s': 600, '900 s': 900}
-    section_label('Duração de cada simulação')
-    default_duration = next((label for label, seconds in duration_options.items() if seconds == int(base['duration_seconds'])), 'Personalizar')
-    duration_choice = st.radio('Por quanto tempo simular?', list(duration_options) + ['Personalizar'],
-        index=(list(duration_options) + ['Personalizar']).index(default_duration), horizontal=True, key=configuration_key('Por quanto tempo simular?'))
-    if duration_choice == 'Personalizar':
-        duration = st.number_input('Duração da simulação (segundos)', min_value=10,
-            value=int(base['duration_seconds']), step=10, key=configuration_key('Duração da simulação (segundos)'))
-    else:
-        duration = duration_options[duration_choice]
-    st.caption('Esse é o tempo de trânsito de cada simulação, não o tempo de espera no computador.')
-    with st.expander('Avançado: precisão e aquecimento'):
-        step_seconds = st.number_input("Passo do SUMO (s)", min_value=0.1,
-            value=float(base["step_seconds"]), step=0.1,
-            help='Quanto o relógio do simulador avança a cada atualização. Com 1 s, posições e filas são atualizadas a cada segundo simulado. Não é o tamanho do treinamento.', key=configuration_key('Passo do SUMO (s)'))
-        st.caption('Passo do simulador: com 1 s, o trânsito é atualizado de segundo em segundo. Um passo menor faz mais atualizações e pode tornar a execução mais lenta.')
-        warmup_seconds = st.number_input('Aquecimento sem atuação do algoritmo (s)', min_value=0.0, max_value=float(duration),
-            value=min(float(base.get('measurement', {}).get('warmup_seconds', 0)), float(duration)), step=float(step_seconds),
-            help='Tempo inicial para os veículos começarem a ocupar a rede. Os sinais seguem os tempos iniciais; o algoritmo ainda não atua e esse período fica fora dos indicadores.', key=configuration_key('Aquecimento sem atuação do algoritmo (s)'))
-        st.caption('Aquecimento: período inicial para o trânsito se formar. Zero começa sem essa espera; 60 s deixa o trânsito circular por um minuto antes da atuação do algoritmo.')
-        measurement_start, measurement_end = warmup_seconds, float(duration)
-        st.info(f'A simulação dura {duration} s. Os indicadores são coletados do segundo {measurement_start:g} ao {measurement_end:g}: {max(0, measurement_end - measurement_start):g} s de medição. O aquecimento dura {warmup_seconds:g} s e não entra nessa medição.')
     if demand_mode == "Volume por via":
         vary_flow = st.toggle("Variar o fluxo ao longo da simula\u00e7\u00e3o?", value=bool(base["demand"].get("time_profile")), key=configuration_key('Variar o fluxo ao longo da simulação?'))
         if vary_flow:
             from semaforos.apresentacao.fluxo import flow_profile_editor
-            profile_total = sum(int(float(v) * duration / 3600 + .5) for v in
-                pd.to_numeric(road_table['vehicles_per_hour'], errors='coerce').fillna(0)) if road_table is not None else 0
-            entry_counts = [int(float(v) * duration / 3600 + .5) for v in
-                pd.to_numeric(road_table['vehicles_per_hour'], errors='coerce').fillna(0)] if road_table is not None else []
+            entry_counts = [planned_vehicle_count(v, duration) for v in
+                pd.to_numeric(road_table['vehicles_per_hour'], errors='coerce').fillna(0)
+                ] if road_table is not None and not road_table.attrs.get('validation_error') else []
             profile_table = flow_profile_editor(duration, base["demand"].get("time_profile"),
-                key=f"flow_{network}", planned_vehicles=profile_total, entry_counts=entry_counts)
+                key=f"flow_{network}", planned_vehicles=sum(entry_counts), entry_counts=entry_counts)
     if road_table is not None:
         rates = pd.to_numeric(road_table["vehicles_per_hour"], errors="coerce").fillna(0)
         if rates.sum() == 0:
@@ -292,27 +290,28 @@ def traffic_configuration():
         'phase_table': phase_table,
         'pedestrian_table': pedestrian_table,
         'pedestrian_enabled': pedestrian_enabled,
-        'pedestrian_speed': pedestrian_speed,
         'duration': duration,
-        'step_seconds': step_seconds,
-        'warmup_seconds': warmup_seconds,
-        'measurement_start': measurement_start,
-        'measurement_end': measurement_end,
+        'duration_error': duration_error,
     }
 
-with demand_tab:
+with setup_tab:
+    preview_actions = st.container()
     traffic_configuration()
 traffic_values = st.session_state['traffic_configuration_values']
 (demand_mode, road_table, profile_table, phase_table, pedestrian_table,
- pedestrian_enabled, pedestrian_speed, duration, step_seconds, warmup_seconds,
- measurement_start, measurement_end) = (
+ pedestrian_enabled, duration, duration_error) = (
     traffic_values[name] for name in (
         'demand_mode', 'road_table', 'profile_table', 'phase_table', 'pedestrian_table',
-        'pedestrian_enabled', 'pedestrian_speed', 'duration', 'step_seconds',
-        'warmup_seconds', 'measurement_start', 'measurement_end'))
+        'pedestrian_enabled', 'duration', 'duration_error'))
 
 with training_tab:
-    step_heading(3, 'Treinamento', 'Escolha o objetivo e a quantidade de prática do algoritmo.')
+    training_focus = st.session_state.get('configuration_focus')
+    if training_focus in ('seeds', 'ppo', 'objectives'):
+        st.session_state.pop('configuration_focus', None)
+        st.session_state.pop('configuration_focus_object', None)
+    restored_study = st.session_state.get('study_source', {}).get('kind') in ('duplicate', 'recovered')
+    saved_metrics = base.get('metrics', {}) if restored_study else {}
+    step_heading(2, 'Treinamento', 'Escolha o objetivo e a quantidade de prática do algoritmo.')
     algorithm_names = available_algorithms()
     if len(algorithm_names) == 1:
         selected_algorithm = algorithm_names[0]
@@ -333,12 +332,13 @@ with training_tab:
     total_steps = st.number_input('Quantidade de decisões para treinar', min_value=2,
         value=algorithm_budget, step=128, help=config_help('total_timesteps'), key=configuration_key('Quantidade de decisões para treinar'))
     st.caption('Mais decisões dão mais prática ao algoritmo e aumentam o tempo de treinamento.')
-    gui = st.toggle('Ver simulação durante o treino', value=False, key=configuration_key('Ver simulação durante o treino'))
+    gui = st.toggle('Ver simulação durante o treino', value=restored_study and bool(base.get('control', base['ppo']).get('gui', False)),
+                    key=configuration_key('Ver simulação durante o treino'))
     gui_delay = int(base.get('control', base['ppo']).get('gui_delay_milliseconds', 0))
     if gui:
         gui_delay = st.number_input('Atraso da visualização (ms por passo)', min_value=0, max_value=2000,
             value=gui_delay, step=10, help='Zero executa o mais rápido possível. Aumente para observar os movimentos mais devagar.', key=configuration_key('Atraso da visualização (ms por passo)'))
-    with st.expander("Configurações avançadas"):
+    with st.expander("Configurações avançadas", expanded=training_focus in ('seeds', 'ppo', 'objectives')):
         st.caption("Sementes tornam o estudo reproduzível. Use valores diferentes para treino e avaliação. Os pesos indicam quais objetivos o algoritmo prioriza.")
         seed = st.number_input("Semente", min_value=0, value=int(base["seeds"][0]), help=config_help("seeds"), key=configuration_key('Semente'))
         evaluation_seeds = st.text_input("Sementes de avaliação (separadas por vírgula)",
@@ -358,12 +358,14 @@ with training_tab:
         n_epochs = st.number_input("Épocas por lote", min_value=1, value=int(base["ppo"]["n_epochs"]), help=config_help("n_epochs"), disabled=selected_algorithm != "PPO", key=configuration_key('Épocas por lote'))
         n_steps = st.number_input("Passos por coleta", min_value=2, value=int(base["ppo"]["n_steps"]), help=config_help("n_steps"), disabled=selected_algorithm != "PPO", key=configuration_key('Passos por coleta'))
         batch_size = st.number_input("Tamanho do minibatch", min_value=2, value=int(base["ppo"]["batch_size"]), help=config_help("batch_size"), disabled=selected_algorithm != "PPO", key=configuration_key('Tamanho do minibatch'))
-        detailed_analysis = st.checkbox('Coletar análise detalhada', value=False, key=configuration_key('Coletar análise detalhada'))
+        detailed_analysis = st.checkbox('Coletar análise detalhada',
+            value=bool(saved_metrics.get('collect_lane_details') or saved_metrics.get('collect_extended')),
+            key=configuration_key('Coletar análise detalhada'))
         with st.expander('Indicadores e critérios da análise detalhada'):
-            collect_lane = st.checkbox("Velocidade e ocupação das faixas", value=True, help=config_help("collect_lane_details"), disabled=not detailed_analysis, key=configuration_key('Velocidade e ocupação das faixas'))
-            collect_emissions = st.checkbox("CO₂, CO, HC, NOx, partículas, combustível e eletricidade", value=False, help=config_help("collect_emissions"), key=configuration_key('CO₂, CO, HC, NOx, partículas, combustível e eletricidade'))
-            collect_events = st.checkbox("Teletransportes e colisões", value=True, help=config_help("collect_events"), key=configuration_key('Teletransportes e colisões'))
-            collect_resources = st.checkbox("CPU e memória", value=True, help=config_help("collect_resources"), key=configuration_key('CPU e memória'))
+            collect_lane = st.checkbox("Velocidade e ocupação das faixas", value=saved_metrics.get('collect_lane_details', True), help=config_help("collect_lane_details"), disabled=not detailed_analysis, key=configuration_key('Velocidade e ocupação das faixas'))
+            collect_emissions = st.checkbox("CO₂, CO, HC, NOx, partículas, combustível e eletricidade", value=saved_metrics.get('collect_emissions', False), help=config_help("collect_emissions"), key=configuration_key('CO₂, CO, HC, NOx, partículas, combustível e eletricidade'))
+            collect_events = st.checkbox("Teletransportes e colisões", value=saved_metrics.get('collect_events', True), help=config_help("collect_events"), key=configuration_key('Teletransportes e colisões'))
+            collect_resources = st.checkbox("CPU e memória", value=saved_metrics.get('collect_resources', True), help=config_help("collect_resources"), key=configuration_key('CPU e memória'))
             collect_extended = st.checkbox('Faixas, movimentos, filas em metros e bloqueios', value=base.get('metrics', {}).get('collect_extended', True), disabled=not detailed_analysis, key=configuration_key('Faixas, movimentos, filas em metros e bloqueios'))
             collect_dynamics = st.checkbox('Frenagens, paradas, velocidade e TTC exploratório', value=base.get('metrics', {}).get('collect_vehicle_dynamics', True), disabled=not collect_extended, key=configuration_key('Frenagens, paradas, velocidade e TTC exploratório'))
             collect_classes = st.checkbox('Separar indicadores por classe de veículo', value=base.get('metrics', {}).get('collect_vehicle_classes', True), disabled=not collect_extended, key=configuration_key('Separar indicadores por classe de veículo'))
@@ -374,7 +376,7 @@ with training_tab:
             thresholds['hard_braking_meters_per_second_squared'] = st.number_input('Desaceleração para frenagem forte (m/s²)', min_value=0.1, value=float(thresholds.get('hard_braking_meters_per_second_squared', 4)), key=configuration_key('Desaceleração para frenagem forte (m/s²)'))
             thresholds['ttc_seconds'] = st.number_input('Limiar de TTC longitudinal exploratório (s)', min_value=0.1, value=float(thresholds.get('ttc_seconds', 1.5)), key=configuration_key('Limiar de TTC longitudinal exploratório (s)'))
             st.caption('Detalhes adicionais aumentam o custo de coleta. Bloqueio é um indicador baseado em verde, veículos parados e ocupação da saída; TTC não certifica risco de acidente. Limiares são configuráveis e ficam registrados.')
-    st.caption('Os limites dos semáforos são configurados no mapa, na aba Tráfego.')
+    st.caption('Ajuste os limites dos semáforos no mapa, em Cenário e tráfego.')
     collect_lane = detailed_analysis and collect_lane
     collect_extended = detailed_analysis and collect_extended
     collect_dynamics = collect_extended and collect_dynamics
@@ -383,6 +385,8 @@ with training_tab:
 
 
 def configured():
+    if duration_error:
+        raise ValueError(duration_error)
     if phase_table is None:
         raise ValueError("Prepare o cenário e confira os ajustes dos semáforos no mapa antes de executar.")
     if joint and not experimental_ready:
@@ -406,6 +410,8 @@ def configured():
             entry = {"from_edge": row["from_edge"],
                             "vehicles_per_hour": float(row.get("vehicles_per_hour") or 0),
                             "to_edge": row.get("to_edge") or ""}
+            if isinstance(row.get('destinations'), list):
+                entry['destinations'] = row['destinations']
             entries.append(entry)
         config["demand"] = {"mode": "edge_volumes", "edge_volumes": entries}
         if profile:
@@ -417,7 +423,7 @@ def configured():
         raise ValueError("Escolha ao menos uma prioridade positiva")
     config["objectives"] = {"waiting": float(w_wait), "queues": float(w_queue), "travel": float(w_travel)}
     config["duration_seconds"] = int(duration)
-    config['measurement'] = {'warmup_seconds': float(warmup_seconds), 'start_seconds': float(measurement_start), 'end_seconds': float(measurement_end)}
+    config['measurement'] = {'warmup_seconds': warmup_seconds, 'start_seconds': warmup_seconds, 'end_seconds': float(duration)}
     if pedestrian_enabled:
         if pedestrian_table is None:
             raise ValueError('Prepare uma rede com travessias antes de ativar pedestres')
@@ -426,15 +432,15 @@ def configured():
         ped_flows = [row for row in pedestrian_table.to_dict('records') if float(row.get('persons_per_hour', 0)) > 0]
         if not ped_flows or sum(int(row['persons_per_hour'] * duration / 3600 + 0.5) for row in ped_flows) == 0:
             raise ValueError('Preencha pessoas/h suficientes para gerar ao menos um pedestre no episódio')
-        config['pedestrians'] = {'enabled': True, 'walking_speed_meters_per_second': pedestrian_speed,
+        speed = float(base.get('pedestrians', {}).get('walking_speed_meters_per_second', .8))
+        config['pedestrians'] = {'enabled': True, 'walking_speed_meters_per_second': speed,
                                 'synthetic': True, 'flows': ped_flows}
     else:
         config['pedestrians'] = {'enabled': False}
     if config['demand']['mode'] == 'edge_volumes' and not config['pedestrians']['enabled']:
-        planned_vehicles = sum(int(row['vehicles_per_hour'] * duration / 3600 + .5) for row in config['demand']['edge_volumes'])
+        planned_vehicles = sum(planned_vehicle_count(row['vehicles_per_hour'], duration) for row in config['demand']['edge_volumes'])
         if planned_vehicles <= 0:
             raise ValueError('Informe veículos por hora em pelo menos uma entrada para gerar tráfego nesta duração de simulação')
-    config["step_seconds"] = float(step_seconds)
     config["seeds"] = [int(seed)]
     try:
         parsed_seeds = [int(item.strip()) for item in evaluation_seeds.split(",") if item.strip()]
@@ -483,11 +489,21 @@ def configured():
     if joint:
         validate_experimental(config)
     measurement_window(config)
-    phase_action_spec(config, programs)
+    from semaforos.apresentacao.mapa_configuracao import cycle_edit_key
+
+    cycle_edits = st.session_state.get(cycle_edit_key(network), {})
+    effective_programs = adjusted_programs(config, programs, cycle_edits)
+    if cycle_edits:
+        include_adjusted_times(config['control'], effective_programs, cycle_edits)
+        config['ppo'].update(config['control'])
+    phase_action_spec(config, effective_programs)
     if demand_mode == "Volume por via":
         from semaforos.cenario.demanda import validate_time_profile, validate_vehicle_types
         validate_time_profile(config)
         validate_vehicle_types(config)
+    if cycle_edits:
+        save_adjusted_network(config, cycle_edits, RESULTS / 'redes_ajustadas')
+        validate_experimental(config)
     return config
 
 
@@ -498,11 +514,13 @@ with advanced_tab:
         st.markdown('**Simulação:** uma execução que representa o trânsito durante o período escolhido.\n\n**Treinamento:** repetição de simulações para o algoritmo aprender.\n\n**Decisão:** escolha feita pelo algoritmo para controlar os sinais.\n\n**Etapa:** movimentos que recebem verde juntos.\n\n**Ciclo:** sequência completa das etapas de um conjunto de semáforos.\n\n**Avaliação:** comparação do modelo treinado com os tempos iniciais, em simulações reservadas para esse fim.')
     tab_options, tab_parameters, tab_metrics = st.tabs(["Opções SUMO", "Parâmetros de treinamento", "Dicionário de métricas"])
 configuration_error = None
+raw_configuration_error = None
 
 try:
     current_config = configured()
 except (ValueError, TypeError, KeyError) as error:
     current_config = None
+    raw_configuration_error = error
     configuration_error = friendly_configuration_error(error)
 
 with tab_options:
@@ -556,16 +574,9 @@ with tab_metrics:
 
 active = any(job_state(job)['status'] in ('starting', 'running') for job in saved_jobs(RESULTS))
 readiness_panel(current_config, configuration_error, active)
-with demand_tab:
-    section_label('Conferir antes de treinar')
-    st.caption('Opcional: observe o cenário ou simule com os tempos iniciais. Para treinar diretamente, use Continuar abaixo.')
-    if st.button("Simular com os tempos iniciais", disabled=active, type="primary"):
-        try:
-            start_job("run-reference", configured())
-            st.rerun()
-        except Exception as error:
-            st.error(friendly_configuration_error(error))
-    if st.button("Ver uma prévia de 30 segundos", disabled=active):
+with preview_actions:
+    if st.button("Ver uma prévia de 30 segundos", disabled=active, type='primary',
+                 help='Abre o SUMO-GUI com o programa inicial e os ajustes atuais, por até 30 s simulados.'):
         try:
             with st.spinner("Executando teste curto no SUMO…"):
                 preview_config = configured()
@@ -577,23 +588,26 @@ with demand_tab:
         except Exception as error:
             st.error(friendly_configuration_error(error))
 
-with demand_tab:
+with setup_tab:
+    section_label('Simular com os tempos iniciais')
+    st.caption('Execute a simulação completa com os ajustes do mapa para registrar as métricas de referência.')
+    if st.button("Simular com os tempos iniciais", disabled=active):
+        try:
+            start_job("run-reference", configured())
+            st.rerun()
+        except Exception as error:
+            st.error(friendly_configuration_error(error))
     st.divider()
-    navigation_left, navigation_right = st.columns(2)
-    with navigation_left:
-        st.button('Voltar: escolher o cenário', on_click=select_workflow_tab, args=('1 · Cenário',))
-    with navigation_right:
-        st.button('Continuar: preparar o treinamento', on_click=select_workflow_tab, args=('3 · Treinamento',), type='primary')
+    st.button('Continuar: preparar o treinamento', on_click=select_workflow_tab, args=(TRAINING_TAB,), type='primary')
 
 with results_tab:
-    step_heading(4, 'Acompanhe e compare os resultados', 'Observe a execução e, ao concluir o treino, compare o modelo com os tempos iniciais.')
+    step_heading(3, 'Acompanhe e compare os resultados', 'Observe a execução e, ao concluir o treino, compare o modelo com os tempos iniciais.')
     st.caption('A referência são os tempos iniciais da rede simulada. A comparação usa o mesmo tráfego e as mesmas sementes de avaliação para os controles comparados.')
 
 with training_tab:
     if active:
         st.info('Já existe uma execução em andamento. Aguarde a conclusão ou interrompa na etapa Resultados para iniciar outra.')
-    if current_config is None:
-        st.error(f'Não foi possível iniciar: {configuration_error}')
+    configuration_summary(current_config, configuration_error, baseline=base, raw_error=raw_configuration_error)
     if st.button("Iniciar treinamento", disabled=active or current_config is None, type="primary"):
         try:
             start_job("rl-train", configured())
@@ -684,7 +698,7 @@ with results_tab:
         with st.container(border=True):
             st.markdown('### Seu resultado aparecerá aqui')
             st.write('Depois de iniciar uma simulação ou treinamento, você verá o progresso, as filas e as chegadas nesta etapa.')
-            st.button('Ir para o treinamento', on_click=select_workflow_tab, args=('3 · Treinamento',))
+            st.button('Ir para o treinamento', on_click=select_workflow_tab, args=(TRAINING_TAB,))
             st.caption('Já executou antes? Recupere uma execução na barra lateral ou abra os relatórios anteriores abaixo.')
     progress_panel()
 

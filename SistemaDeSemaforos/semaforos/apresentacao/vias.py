@@ -20,7 +20,9 @@ def identify_roads(network, targets, osm_names=None):
     for number, edge in enumerate(sorted(network.getEdges(withInternal=False), key=lambda e: e.getID()), 1):
         edge_id = edge.getID()
         match = re.match(r'^-?(\d+)(?:#|$)', edge_id)
-        name = edge.getName() or (osm_names.get(match.group(1), {}).get('name', '') if match else '')
+        name = (edge.getName() or '').strip()
+        if not name and match:
+            name = (osm_names.get(match.group(1), {}).get('name') or '').strip()
         if name.startswith(':'):
             name = ''
         shape = edge.getShape()
@@ -42,7 +44,7 @@ def identify_roads(network, targets, osm_names=None):
     return details
 
 
-def edit_road_volumes(network, initial, details, incoming_ids, render_map, *, selected_crossing=None, selected_edge=None, show_map=True, map_only=False):
+def edit_road_volumes(network, initial, details, incoming_ids, render_map, *, selected_crossing=None, selected_edge=None, show_map=True, map_only=False, duration=None):
     """Edita um cruzamento mantendo volumes dos demais na mesma configuração."""
     import pandas as pd
     import streamlit as st
@@ -67,8 +69,16 @@ def edit_road_volumes(network, initial, details, incoming_ids, render_map, *, se
                 st.session_state[input_key] = values[selected_edge]
             values[selected_edge] = st.number_input('Veículos por hora', min_value=0., step=10.,
                 key=input_key, help='Quantidade de veículos inseridos por hora neste trecho e neste sentido. Zero não insere veículos.')
-            st.caption('A alteração é guardada ao confirmar o campo. Clique em outra via para continuar.')
-        result = pd.DataFrame([dict(row, vehicles_per_hour=values[row['from_edge']], to_edge='') for row in initial])
+            rate = values[selected_edge]
+            if duration is not None and rate is not None and math.isfinite(rate) and rate >= 0:
+                from semaforos.cenario.demanda import planned_vehicle_count
+
+                planned = planned_vehicle_count(rate, duration)
+                horizon = f'{duration // 60:g} min' if duration % 60 == 0 else f'{duration:g} s'
+                label = 'veículo previsto' if planned == 1 else 'veículos previstos'
+                st.markdown(f'**{planned:,} {label} em {horizon}**'.replace(',', '.'))
+                st.caption('Demanda programada para este sentido. Partidas e chegadas efetivas variam durante a simulação.')
+        result = pd.DataFrame([dict(row, vehicles_per_hour=values[row['from_edge']]) for row in initial])
         if any(v is None or not math.isfinite(v) or v < 0 for v in values.values()):
             result.attrs['validation_error'] = 'Confira os volumes das vias: use números maiores ou iguais a zero.'
         return result

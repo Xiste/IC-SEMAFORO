@@ -26,8 +26,18 @@ def initial_signal_timings(config, labels=None):
     """Tempos por grupo no programa inicial, incluindo toda a espera no vermelho."""
     labels = labels or {}
     root = ET.parse(config['network']).getroot()
-    edges = {edge.get('id'): edge.get('name') or edge.get('id') for edge in root.findall('edge')}
+    edges = {edge.get('id'): edge.get('name') for edge in root.findall('edge')}
+    pedestrian_edges = {edge.get('id') for edge in root.findall('edge')
+                        if edge.get('function') in ('walkingarea', 'crossing')}
     turns = {'s': 'reto', 'l': 'esquerda', 'r': 'direita', 't': 'retorno', 'L': 'esquerda', 'R': 'direita'}
+
+    def movement_label(connection):
+        source = connection.get('from')
+        if source in pedestrian_edges or connection.get('to') in pedestrian_edges:
+            return 'Travessia de pedestres'
+        road = labels.get(source) or edges.get(source) or 'Via sem nome cadastrado'
+        return f"{road} · {turns.get(connection.get('dir'), 'movimento')}"
+
     rows = []
     for target in config['targets']:
         tls = target['tls_id']
@@ -46,8 +56,7 @@ def initial_signal_timings(config, labels=None):
                 kind = 'green' if color in 'Gg' else 'yellow' if color in 'yY' else 'red' if color in 'rR' else None
                 if kind:
                     totals[kind] += float(phase.get('duration'))
-            movements = sorted({f"{labels.get(c.get('from'), edges.get(c.get('from'), c.get('from')))} · {turns.get(c.get('dir'), 'travessia/outro')}"
-                                for c in connections if int(c.get('linkIndex')) in opened})
+            movements = sorted({movement_label(c) for c in connections if int(c.get('linkIndex')) in opened})
             clearance = 0.0
             # Intervalo com todos em vermelho imediatamente após o amarelo deste grupo.
             following = phases[(start + 2) % len(phases)]

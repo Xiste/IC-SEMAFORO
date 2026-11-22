@@ -174,11 +174,14 @@ def preview_experimental(config, output):
     # Gerar a demanda completa preserva taxas e janelas sem tráfego no início.
     # Somente a execução é interrompida aos 30 s; não redistribuir viagens.
     env = SemaforosEnv(preview, output, gui=bool(control.get("gui", False)), demand_config=config)
+    env.reference_mode = True
+    neutral_choice = 0 if env.action_mode == 'adaptive_signals' else 1
+    action = [neutral_choice] * len(env.action_spec)
     try:
         env.reset(seed=preview["seeds"][0])
         done = False
         while not done:
-            _, _, done, _, info = env.step([1] * len(env.action_spec))
+            _, _, done, _, info = env.step(action)
         (Path(output) / "preview.json").write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
         return info
     finally:

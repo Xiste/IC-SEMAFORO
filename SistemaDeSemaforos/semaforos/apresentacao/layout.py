@@ -1,5 +1,12 @@
 """Apresentação do fluxo de trabalho, sem alterar configuração ou execução."""
+import re
+
 import streamlit as st
+
+
+SETUP_TAB = '1 · Cenário e tráfego'
+TRAINING_TAB = '2 · Treinamento'
+RESULTS_TAB = '3 · Resultados'
 
 
 def select_workflow_tab(label):
@@ -8,17 +15,20 @@ def select_workflow_tab(label):
 
 
 def workflow_navigation():
-    """Navegação controlada; botões Voltar/Continuar mudam a tela visível."""
-    options = ['1 · Cenário', '2 · Tráfego', '3 · Treinamento', '4 · Resultados', 'Referência técnica']
+    """Navegação controlada; os botões mudam a etapa visível."""
+    options = [SETUP_TAB, TRAINING_TAB, RESULTS_TAB, 'Referência técnica']
     pending = st.session_state.pop('ui_next_tab', None)
     if pending in options:
         st.session_state.ui_workflow_selection = pending
     if st.session_state.get('ui_workflow_selection') not in options:
-        st.session_state.ui_workflow_selection = st.session_state.get('ui_default_tab', options[1])
+        previous = st.session_state.get('ui_default_tab')
+        if previous not in options:
+            previous = {'3 · Treinamento': TRAINING_TAB, '4 · Resultados': RESULTS_TAB}.get(previous, SETUP_TAB)
+        st.session_state.ui_workflow_selection = previous
     selected = st.radio('Etapas do estudo', options, horizontal=True,
                         key='ui_workflow_selection', label_visibility='collapsed')
     st.session_state.ui_default_tab = selected
-    names = ['scenario', 'traffic', 'training', 'results', 'reference']
+    names = ['traffic', 'training', 'results', 'reference']
     hidden = [f'.st-key-view_{name}' for index, name in enumerate(names) if options[index] != selected]
     st.markdown('<style>' + ','.join(hidden) + '{display:none!important;}</style>', unsafe_allow_html=True)
     return tuple(st.container(key=f'view_{name}') for name in names)
@@ -60,12 +70,11 @@ def page_header():
     with st.sidebar:
         st.markdown('<div class="lab-section">Seu percurso</div>', unsafe_allow_html=True)
         st.subheader('Seu estudo de trânsito')
-        st.markdown('''<div class="guide-item"><span class="guide-number">01</span><div><strong>Conheça a rede</strong><small>Nove cruzamentos controlados em conjunto.</small></div></div>
-        <div class="guide-item"><span class="guide-number">02</span><div><strong>Configure pelo mapa</strong><small>Semáforos, vias e travessias.</small></div></div>
-        <div class="guide-item"><span class="guide-number">03</span><div><strong>Treine os semáforos</strong><small>Escolha um objetivo e inicie.</small></div></div>
-        <div class="guide-item"><span class="guide-number">04</span><div><strong>Compare o resultado</strong><small>Confira espera, viagens e atendimento.</small></div></div>''', unsafe_allow_html=True)
+        st.markdown('''<div class="guide-item"><span class="guide-number">01</span><div><strong>Monte o cenário no mapa</strong><small>Vias, semáforos e travessias dos nove cruzamentos.</small></div></div>
+        <div class="guide-item"><span class="guide-number">02</span><div><strong>Treine os semáforos</strong><small>Escolha um objetivo e inicie.</small></div></div>
+        <div class="guide-item"><span class="guide-number">03</span><div><strong>Compare o resultado</strong><small>Confira espera, viagens e atendimento.</small></div></div>''', unsafe_allow_html=True)
         with st.expander('Primeira vez por aqui?'):
-            st.markdown('1. Localize as vias no mapa da rede.\n\n2. Informe os veículos por hora e os segundos de simulação.\n\n3. Use **Teste de funcionamento** no primeiro treino.\n\n4. Ao terminar, clique em **Comparar este modelo com os tempos iniciais**.')
+            st.markdown('1. Localize as vias no mapa da rede.\n\n2. Informe o fluxo e a duração da simulação.\n\n3. Use **Ver uma prévia de 30 segundos** para conferir o cenário antes de treinar.\n\n4. Ao terminar, clique em **Comparar este modelo com os tempos iniciais**.')
             st.caption('Tempo simulado é o tempo de trânsito representado. O tempo no computador depende da execução.')
         st.divider()
 
@@ -81,18 +90,40 @@ def section_label(text):
     st.markdown(f'<div class="lab-section">{escape(text)}</div>', unsafe_allow_html=True)
 
 
+def configuration_issue(error):
+    text = str(error or '').casefold()
+    rules = (
+        (('prepare', 'rede válida', 'rede experimental'), 'scenario', SETUP_TAB, 'Preparar a rede'),
+        (('duração da simulação', 'aquecimento', 'warmup', 'medição', 'measurement'), 'duration', SETUP_TAB, 'Ajustar a duração'),
+        (('decision_seconds',), 'ppo', TRAINING_TAB, 'Ajustar o intervalo entre decisões'),
+        (('step_seconds', 'passo da simulação', 'passo sumo'), 'scenario', SETUP_TAB, 'Conferir o cenário'),
+        (('pessoas', 'pedestre', 'travessia'), 'pedestrians', SETUP_TAB, 'Ajustar a demanda de pedestres'),
+        (('perfil', 'porcentag', 'intervalo temporal', 'time_profile', 'janela de demanda'), 'profile', SETUP_TAB, 'Ajustar o perfil de fluxo'),
+        (('limites ppo', 'limites de verde', 'fase', 'semáforo', 'máximo de ciclo', 'maximum_cycle', 'phase_duration'), 'signals', SETUP_TAB, 'Ajustar os semáforos'),
+        (('veículo', 'entrada', 'fluxo', 'volume', 'tráfego'), 'roads', SETUP_TAB, 'Ajustar o fluxo nas vias'),
+        (('semente',), 'seeds', TRAINING_TAB, 'Ajustar as sementes'),
+        (('prioridade', 'pesos', 'objetivo'), 'objectives', TRAINING_TAB, 'Ajustar o objetivo'),
+    )
+    for terms, group, destination, action in rules:
+        if any(term in text for term in terms):
+            return group, destination, action
+    return 'ppo', TRAINING_TAB, 'Abrir as configurações avançadas do treinamento'
+
+
 def configuration_guidance(error):
-    """Liga a validação técnica a uma ação e uma etapa compreensíveis."""
-    text = (error or '').casefold()
-    if any(term in text for term in ('prepare', 'rede válida', 'travessias')):
-        return '1 · Cenário', 'Confira a rede dos nove cruzamentos e clique em Preparar simulação se for necessário carregá-la novamente.'
-    if any(term in text for term in ('medição', 'measurement', 'aquecimento', 'warmup', 'janela', 'start_seconds', 'end_seconds')):
-        return '2 · Tráfego', 'Confira a duração e o aquecimento na aba Tráfego. O aquecimento precisa terminar antes do fim da simulação.'
-    if any(term in text for term in ('veículo', 'entrada', 'pessoas', 'pedestre', 'fluxo', 'intervalo temporal', 'perfil', 'porcentag', 'volume', 'tráfego')):
-        return '2 · Tráfego', 'Confira os volumes, a duração e os percursos ativados. Preencha uma quantidade suficiente para gerar participantes na simulação.'
-    if any(term in text for term in ('limites', 'mínimo', 'maximum_cycle', 'phase_duration')):
-        return '2 · Tráfego', 'No mapa, selecione Semáforos e confira os limites de verde do cruzamento.'
-    return '3 · Treinamento', 'Confira os ajustes avançados e os limites dos semáforos. Os limites precisam incluir o tempo inicial e respeitar os mínimos do cenário.'
+    _, destination, action = configuration_issue(error)
+    return destination, action
+
+
+def focus_configuration_issue(error):
+    group, destination, _ = configuration_issue(error)
+    st.session_state['configuration_focus'] = group
+    st.session_state.pop('configuration_focus_object', None)
+    if group == 'signals':
+        match = re.search(r'Limites (?:PPO inválidos para|de)\s+([^\s:;]+)(?=:\d|\s+excedem)', str(error), re.IGNORECASE)
+        if match:
+            st.session_state['configuration_focus_object'] = {'tls_id': match.group(1)}
+    select_workflow_tab(destination)
 
 
 def friendly_configuration_error(error):
@@ -102,15 +133,17 @@ def friendly_configuration_error(error):
     if 'porcentag' in lowered:
         return text
     if any(t in lowered for t in ('pessoas/h', 'ao menos um pedestre', 'zero pedestres')):
-        return 'Em Tráfego, preencha pessoas por hora em pelo menos uma travessia ou desative a opção de incluir pedestres. Para gerar pessoas, pode ser necessário aumentar o volume ou a duração.'
+        return 'Preencha pessoas por hora em pelo menos uma travessia do mapa ou desative a opção de incluir pedestres. Se necessário, aumente o volume ou a duração.'
     if 'step_seconds' in lowered and ('duraç' in lowered or 'múltipl' in lowered):
-        return 'O passo da simulação não combina com os tempos dos semáforos. Em Tráfego → Avançado, use 1 segundo ou um valor que divida esses tempos exatamente.'
+        return 'Os tempos dos semáforos precisam ser múltiplos do passo definido no cenário. Confira a configuração do estudo.'
     if 'decision_seconds' in lowered:
-        return 'O intervalo entre decisões precisa ser igual ou maior que o passo da simulação. Confira esses dois valores nos ajustes avançados.'
+        return 'Nos ajustes avançados do treinamento, use um intervalo entre decisões igual ou maior que o passo definido no cenário.'
+    if lowered.startswith('a duração da simulação precisa superar'):
+        return text
     if any(t in lowered for t in ('measurement', 'warmup', 'medição', 'aquecimento', '0 ≤')):
-        return 'O aquecimento precisa terminar antes do fim da simulação. Ajuste a duração ou reduza o aquecimento na aba Tráfego.'
+        return 'Escolha uma duração compatível com o aquecimento e o passo definidos no cenário.'
     if any(t in lowered for t in ('limites ppo', 'mínimo', 'máximo de ciclo', 'phase_duration', 'maximum_cycle')):
-        return 'Em Tráfego → mapa → Semáforos, confira os verdes: o mínimo não pode superar o máximo, os limites devem incluir o tempo inicial e respeitar os tempos de segurança.'
+        return 'Em Semáforos no mapa, confira os limites de verde. Eles devem incluir o tempo inicial e respeitar os tempos de segurança.'
     if any(t in lowered for t in ('n_steps', 'batch_size', 'minibatch', 'parâmetros ppo')):
         return 'Nos ajustes avançados do treinamento, a coleta precisa ser múltipla do tamanho do lote, e o lote não pode ser maior que a coleta.'
     if 'semente' in lowered:
@@ -120,16 +153,16 @@ def friendly_configuration_error(error):
     if isinstance(error, (ValueError, TypeError)) and ('invalid literal' in lowered or 'could not convert' in lowered):
         return 'Confira os campos numéricos: preencha somente números válidos, sem letras ou campos vazios.'
     if 'prepare' in lowered or 'rede válida' in lowered:
-        return 'Na aba Cenário, confira a rede dos nove cruzamentos e clique em Preparar simulação antes de continuar.'
+        return 'Em Cenário e tráfego, abra Detalhes da rede e clique em Preparar simulação.'
     if any(t in lowered for t in ('zero veículos', 'gerar tráfego', 'veículos por hora')):
-        return 'Em Tráfego, preencha o volume de pelo menos uma entrada. Se os valores forem baixos, aumente o volume ou a duração para gerar veículos.'
+        return 'No mapa, preencha o volume de pelo menos uma via. Se necessário, aumente o volume ou a duração para gerar veículos.'
     return text or 'Confira os valores preenchidos antes de iniciar.'
 
 
 def readiness_panel(config, error, busy=False):
     with st.sidebar:
         section_label('Antes de executar')
-        if st.session_state.get('ui_default_tab') == '2 · Tráfego':
+        if st.session_state.get('ui_default_tab') == SETUP_TAB:
             st.caption('Configure as vias no mapa. Os ajustes são conferidos ao avançar para o treinamento ou executar uma simulação.')
         elif config is None:
             destination, instruction = configuration_guidance(error)
@@ -139,48 +172,108 @@ def readiness_panel(config, error, busy=False):
             st.success('Configuração pronta')
             st.caption(f"{len({t['name'] for t in config['targets']})} cruzamento(s) · {config['duration_seconds']:g} s por simulação")
         if busy:
-            st.info('Há uma execução em andamento. Acompanhe ou interrompa na etapa 4.')
+            st.info('Há uma execução em andamento. Acompanhe ou interrompa em Resultados.')
         st.caption('Alterar os campos configura a próxima execução. Um processo em andamento mantém a configuração com que foi iniciado.')
 
 
-def configuration_summary(config, error=None):
-    st.subheader('Confira antes de executar')
+def configuration_changes(config, baseline, *, restored_study=True):
+    """Descreve edições do rascunho em relação à configuração que abriu os campos."""
+    if baseline is None:
+        return []
+    def active_entries(source):
+        return {
+            row['from_edge']: (row['vehicles_per_hour'], row.get('to_edge') or '')
+            for row in source.get('demand', {}).get('edge_volumes', []) if row['vehicles_per_hour'] > 0
+        }
+
+    def pedestrian_settings(source):
+        settings = source.get('pedestrians', {})
+        if not settings.get('enabled'):
+            return False,
+        flows = {(row['from_edge'], row['to_edge']): row['persons_per_hour']
+                 for row in settings.get('flows', []) if row['persons_per_hour'] > 0}
+        return True, settings.get('walking_speed_meters_per_second', .8), flows
+
+    def green_limits(source):
+        control = source.get('control', source.get('ppo', {}))
+        bounds = control.get('phase_duration_bounds', {})
+        greens = source.get('experimental', {}).get('green_floors', bounds)
+        return {key: bounds[key] for key in greens if key in bounds}
+
+    def optional_metrics(source, use_saved):
+        metrics = source.get('metrics', {}) if use_saved else {}
+        details = bool(metrics.get('collect_lane_details') or metrics.get('collect_extended'))
+        extended = details and metrics.get('collect_extended', True)
+        return (
+            details and metrics.get('collect_lane_details', True), extended,
+            extended and metrics.get('collect_vehicle_dynamics', True),
+            extended and metrics.get('collect_vehicle_classes', True),
+            metrics.get('collect_emissions', False),
+            metrics.get('collect_events', True), metrics.get('collect_resources', True),
+        )
+
+    def visualization(source, use_saved):
+        control = source.get('control', source.get('ppo', {}))
+        gui = use_saved and control.get('gui', False)
+        return gui, control.get('gui_delay_milliseconds', 0) if gui else 0
+
+    changes = []
+    before, after = active_entries(baseline), active_entries(config)
+    roads = sum(before.get(edge) != after.get(edge) for edge in before.keys() | after.keys())
+    if roads:
+        changes.append('Fluxo alterado em 1 via' if roads == 1 else f'Fluxo alterado em {roads} vias')
+    before_duration, after_duration = baseline['duration_seconds'], config['duration_seconds']
+    if before_duration != after_duration:
+        changes.append(f'Duração de {before_duration:g} para {after_duration:g} s')
+    before_warmup = baseline.get('measurement', {}).get('warmup_seconds', 0)
+    after_warmup = config.get('measurement', {}).get('warmup_seconds', 0)
+    if before_warmup != after_warmup:
+        changes.append(f'Aquecimento de {before_warmup:g} para {after_warmup:g} s')
+    if baseline['step_seconds'] != config['step_seconds']:
+        changes.append(f'Passo da simulação de {baseline["step_seconds"]:g} para {config["step_seconds"]:g} s')
+    if baseline['demand'].get('time_profile', []) != config['demand'].get('time_profile', []):
+        changes.append('Distribuição do fluxo ao longo da simulação alterada')
+    if pedestrian_settings(baseline) != pedestrian_settings(config):
+        changes.append('Configuração de pedestres alterada')
+    if green_limits(baseline) != green_limits(config):
+        changes.append('Limites de verde alterados')
+    if baseline.get('experimental', {}).get('network_sha256') != config.get('experimental', {}).get('network_sha256'):
+        changes.append('Tempos do ciclo inicial alterados')
+    if baseline.get('objectives') != config.get('objectives'):
+        changes.append('Prioridades do treinamento alteradas')
+    if baseline.get('seeds') != config.get('seeds') or baseline.get('evaluation') != config.get('evaluation'):
+        changes.append('Sementes do estudo alteradas')
+    before_ppo, after_ppo = baseline.get('ppo', {}), config.get('ppo', {})
+    old, new = before_ppo.get('total_timesteps', 2048), after_ppo.get('total_timesteps', 2048)
+    if old != new:
+        changes.append(f'Decisões solicitadas de {old:,} para {new:,}'.replace(',', '.'))
+    if any(before_ppo.get(key) != after_ppo.get(key) for key in ('decision_seconds', 'n_epochs', 'n_steps', 'batch_size')):
+        changes.append('Parâmetros avançados de treinamento alterados')
+    if visualization(baseline, restored_study) != visualization(config, True):
+        changes.append('Visualização durante o treino alterada')
+    from semaforos.simulacao.detalhes import metric_settings
+
+    try:
+        thresholds_changed = metric_settings(baseline) != metric_settings(config)
+    except (TypeError, ValueError):
+        thresholds_changed = (baseline.get('metrics', {}).get('thresholds')
+                              != config.get('metrics', {}).get('thresholds'))
+    if optional_metrics(baseline, restored_study) != optional_metrics(config, True) or thresholds_changed:
+        changes.append('Coleta de indicadores ou limiares alterados')
+    return changes
+
+
+def configuration_summary(config, error=None, *, baseline=None, raw_error=None):
+    """Mostra somente as alterações e o atalho da primeira pendência."""
     if config is None:
-        st.error(f'A configuração precisa de um ajuste: {error}')
-        destination, instruction = configuration_guidance(error)
-        st.caption(instruction)
-        st.button(f'Conferir ajustes em {destination}', on_click=select_workflow_tab, args=(destination,), key='fix_configuration')
+        st.error(f'Não foi possível iniciar: {error}')
+        issue = raw_error or error
+        _, _, action = configuration_issue(issue)
+        st.button(action, on_click=focus_configuration_issue, args=(issue,), key='fix_configuration')
         return
-    count = len({target['name'] for target in config['targets']})
-    window = config['measurement']
-    algorithm = config.get('algorithm', 'PPO')
-    from semaforos.algoritmos.registro import get_algorithm
-    budget = config.get(get_algorithm(algorithm).config_key, {}).get('total_timesteps', 2048)
-    traffic = config['demand']
-    if traffic['mode'] == 'random':
-        traffic_description = f"{traffic['vehicles_per_hour']:g} veículos por hora na rede"
-    elif traffic['mode'] == 'edge_volumes':
-        traffic_description = f"{sum(row['vehicles_per_hour'] for row in traffic['edge_volumes']):g} veículos por hora nas entradas informadas"
-    elif traffic['mode'] == 'flows':
-        traffic_description = 'viagens entre as origens e os destinos informados'
-    else:
-        traffic_description = 'tráfego ajustado às contagens reais'
-    objectives = config.get('objectives', {})
-    objective = next((name for name, weights in {
-        'Equilibrar os resultados': {'waiting': 1., 'queues': 1., 'travel': 1.},
-        'Diminuir a espera': {'waiting': 2., 'queues': 1., 'travel': 1.},
-        'Diminuir as filas': {'waiting': 1., 'queues': 2., 'travel': 1.},
-    }.items() if objectives == weights), 'Prioridades personalizadas')
-    st.info(f"Você vai treinar o {algorithm} em {count} cruzamento(s), com {traffic_description}. Objetivo: {objective.lower()}.")
-    columns = st.columns(4)
-    columns[0].metric('Cruzamentos no estudo', count)
-    columns[1].metric('Duração de cada simulação', f"{config['duration_seconds']:g} s")
-    columns[2].metric('Tempo de medição', f"{window['end_seconds'] - window['start_seconds']:g} s")
-    columns[3].metric('Decisões solicitadas para treinar', f'{budget:,}'.replace(',', '.'))
-    st.caption('O algoritmo repete simulações para praticar. A duração de cada simulação é tempo de trânsito; a quantidade de decisões define o treinamento. O tempo no computador depende da execução.')
-    modes = {'random': 'Taxa total da rede', 'edge_volumes': 'Entradas por via',
-             'observed_counts': 'Contagens observadas com calibração', 'flows': 'Origens e destinos'}
-    with st.expander('Detalhes do período de medição'):
-        st.caption(f"{modes[config['demand']['mode']]} · Aquecimento: {window['warmup_seconds']:g} s · Medição: {window['start_seconds']:g}–{window['end_seconds']:g} s")
-    if config['demand']['mode'] == 'observed_counts':
-        st.info('Antes do treino, confira o ajuste em Tráfego e valide as passagens no SUMO. O ajuste das rotas, sozinho, não comprova calibração.')
+    restored = st.session_state.get('study_source', {}).get('kind') in ('duplicate', 'recovered')
+    changes = configuration_changes(config, baseline, restored_study=restored)
+    if changes:
+        label = 'Ver 1 alteração antes de executar' if len(changes) == 1 else f'Ver {len(changes)} alterações antes de executar'
+        with st.expander(label):
+            st.markdown('\n'.join('- ' + change for change in changes))

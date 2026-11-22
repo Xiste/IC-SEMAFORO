@@ -1,0 +1,238 @@
+<div id="rondon-study-preview" class="viz-dotted-background">
+  <section class="study-window" aria-label="Configuração de tráfego, exemplo ilustrativo">
+    <header class="study-header">
+      <div>
+        <div class="study-project">Rondon Norte · Lab de trânsito</div>
+        <h2>Configure pelo mapa</h2>
+      </div>
+      <span>Dados ilustrativos</span>
+    </header>
+    <div class="study-main">
+      <section class="study-map-section" aria-label="Trechos editáveis">
+        <div class="study-map-top">
+          <strong>Rondon Pacheco × Rua Paraná</strong>
+          <span>Vias · 2 sentidos</span>
+        </div>
+        <div class="study-map" role="group" aria-label="Mapa esquemático com os dois sentidos da avenida">
+          <div class="study-blocks" aria-hidden="true"></div>
+          <div class="study-local-road" aria-hidden="true"></div>
+          <div class="study-avenue" aria-hidden="true"></div>
+          <span class="study-local-name" aria-hidden="true">Rua Paraná</span>
+          <span class="study-avenue-name" aria-hidden="true">Av. Rondon Pacheco</span>
+          <button type="button" class="study-pin study-east" data-road="east" aria-pressed="true">
+            <span class="study-arrow" aria-hidden="true">→</span>
+            <span class="study-pin-direction">Leste</span>
+            <span data-rate="east">600</span><span class="study-unit">veíc./h</span>
+          </button>
+          <button type="button" class="study-pin study-west" data-road="west" aria-pressed="false">
+            <span class="study-arrow" aria-hidden="true">←</span>
+            <span class="study-pin-direction">Oeste</span>
+            <span data-rate="west">360</span><span class="study-unit">veíc./h</span>
+          </button>
+        </div>
+      </section>
+      <section class="study-editor" aria-label="Ajustes da via">
+        <div class="study-editor-title">
+          <span>Ajustes da via</span>
+          <h3>Av. Rondon Pacheco</h3>
+          <p data-direction>Sentido leste →</p>
+        </div>
+        <div class="study-fields">
+          <label>Fluxo de veículos (veíc./h)
+            <input type="number" data-flow min="0" step="any" value="600" required>
+          </label>
+          <label>Duração da simulação
+            <select data-duration>
+              <option value="300">5 minutos</option>
+              <option value="600" selected>10 minutos</option>
+              <option value="900">15 minutos</option>
+            </select>
+          </label>
+        </div>
+        <div class="study-estimate" aria-live="polite">
+          <output data-estimate>100 veículos previstos</output>
+          <span data-caption>Neste sentido, em 10 minutos.</span>
+        </div>
+      </section>
+    </div>
+    <footer class="study-footer" aria-live="polite">
+      <span data-changes>Nenhuma via alterada</span>
+      <span data-total>160 veículos previstos nos 2 sentidos</span>
+    </footer>
+  </section>
+</div>
+<style>
+  #rondon-study-preview { padding: 12px; }
+  #rondon-study-preview .study-window {
+    color-scheme: light dark;
+    --study-paper: light-dark(#fff, #181f27);
+    --study-ink: light-dark(#122837, #ebf3f8);
+    --study-muted: light-dark(#4f6572, #bacbd6);
+    --study-line: light-dark(#cad8df, #405362);
+    --study-map: light-dark(#e7efeb, #222e31);
+    --study-block: light-dark(#d8e4dc, #293b3b);
+    --study-road: light-dark(#f8fbfa, #35474b);
+    --study-arterial: light-dark(#b7cbd0, #4d666d);
+    --study-accent: light-dark(#075e56, #a0ece0);
+    --study-accent-ink: light-dark(#fff, #142523);
+    --study-highlight: light-dark(#e9f5ef, #243c36);
+    font: 14px/1.45 system-ui, sans-serif;
+    color: var(--study-ink);
+    background: var(--study-paper);
+    border: 1px solid var(--study-line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  #rondon-study-preview .study-header {
+    display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between;
+    gap: 8px 20px; padding: 14px 16px; border-bottom: 1px solid var(--study-line);
+  }
+  #rondon-study-preview .study-project { color: var(--study-accent); font-weight: 650; }
+  #rondon-study-preview h2 { color: var(--study-ink); font: 700 22px/1.2 system-ui, sans-serif; margin: 3px 0 0; }
+  #rondon-study-preview .study-header > span,
+  #rondon-study-preview .study-map-top > span,
+  #rondon-study-preview .study-editor-title > span,
+  #rondon-study-preview .study-editor-title p { color: var(--study-muted); }
+  #rondon-study-preview .study-main { display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr); }
+  #rondon-study-preview .study-map-section { display: grid; grid-template-rows: auto 1fr; }
+  #rondon-study-preview .study-map-top {
+    display: flex; flex-wrap: wrap; justify-content: space-between; padding: 10px 16px;
+    gap: 4px 10px; border-bottom: 1px solid var(--study-line);
+  }
+  #rondon-study-preview .study-map { position: relative; min-height: 208px; isolation: isolate; background: var(--study-map); }
+  #rondon-study-preview .study-blocks {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0 39px, var(--study-road) 39px 43px),
+                repeating-linear-gradient(90deg, var(--study-block) 0 63px, var(--study-road) 63px 68px);
+  }
+  #rondon-study-preview .study-local-road { position: absolute; inset: 0 auto 0 49%; width: 18px; background: var(--study-road); }
+  #rondon-study-preview .study-avenue { position: absolute; inset: 32% 0 auto; height: 49%; background: var(--study-road); border-block: 1px solid var(--study-arterial); }
+  #rondon-study-preview .study-avenue::after {
+    content: ''; position: absolute; inset: 50% 0 auto; border-top: 2px dashed var(--study-arterial);
+  }
+  #rondon-study-preview .study-local-name,
+  #rondon-study-preview .study-avenue-name {
+    position: absolute; color: var(--study-muted); background: var(--study-road); padding: 2px 6px;
+    border-radius: 6px; font-size: 12px;
+  }
+  #rondon-study-preview .study-local-name { left: 49%; top: 9%; }
+  #rondon-study-preview .study-avenue-name { left: 12px; bottom: 5%; }
+  #rondon-study-preview .study-pin {
+    position: absolute; z-index: 1; display: inline-flex; align-items: center; gap: 5px;
+    max-width: calc(100% - 24px); min-height: 44px; border: 1px solid var(--study-line);
+    border-radius: 8px; padding: 4px 8px; background: var(--study-paper); color: var(--study-ink);
+    cursor: pointer; font: 650 13px/1.2 system-ui, sans-serif; white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  #rondon-study-preview .study-pin[aria-pressed="true"] { color: var(--study-accent-ink); background: var(--study-accent); border-color: var(--study-accent); }
+  #rondon-study-preview .study-arrow { font-size: 18px; line-height: 1; }
+  #rondon-study-preview .study-pin [data-rate] { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  #rondon-study-preview .study-unit { font-weight: 400; }
+  #rondon-study-preview .study-east { top: 32%; left: 12px; }
+  #rondon-study-preview .study-west { bottom: 19%; right: 12px; }
+  #rondon-study-preview .study-editor {
+    display: grid; gap: 12px; align-content: start; padding: 12px 16px; border-inline-start: 1px solid var(--study-line);
+  }
+  #rondon-study-preview .study-editor-title h3 { color: var(--study-ink); font: 700 17px/1.25 system-ui, sans-serif; margin: 2px 0; }
+  #rondon-study-preview .study-editor-title p { margin: 0; }
+  #rondon-study-preview .study-fields,
+  #rondon-study-preview .study-fields label { display: grid; gap: 5px; }
+  #rondon-study-preview .study-fields label { font-weight: 600; }
+  #rondon-study-preview .study-fields :is(input, select) {
+    box-sizing: border-box; width: 100%; min-height: 44px; padding: 6px 8px; border-radius: 7px;
+    color: var(--study-ink); background: var(--study-paper); border: 1px solid var(--study-line);
+    font: 400 16px/1.25 system-ui, sans-serif;
+  }
+  #rondon-study-preview .study-estimate { display: grid; gap: 2px; background: var(--study-highlight); border-radius: 7px; padding: 8px 10px; }
+  #rondon-study-preview .study-estimate output { color: var(--study-accent); font-size: 16px; font-weight: 700; }
+  #rondon-study-preview .study-estimate span { color: var(--study-muted); }
+  #rondon-study-preview .study-footer {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 10px 16px;
+    border-top: 1px solid var(--study-line); color: var(--study-muted);
+  }
+  #rondon-study-preview :is(.study-estimate, .study-footer) { overflow-wrap: anywhere; }
+  @media (max-width: 560px) {
+    #rondon-study-preview { padding: 4px; }
+    #rondon-study-preview .study-main { grid-template-columns: 1fr; }
+    #rondon-study-preview .study-editor { border-inline-start: 0; border-top: 1px solid var(--study-line); }
+  }
+</style>
+<script>
+  (() => {
+    const root = document.getElementById('rondon-study-preview');
+    const roads = { east: 'Sentido leste →', west: 'Sentido oeste ←' };
+    const defaults = { east: 600, west: 360 };
+    const format = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
+    const flow = root.querySelector('[data-flow]');
+    const duration = root.querySelector('[data-duration]');
+    const direction = root.querySelector('[data-direction]');
+    const estimate = root.querySelector('[data-estimate]');
+    const caption = root.querySelector('[data-caption]');
+    const changes = root.querySelector('[data-changes]');
+    const total = root.querySelector('[data-total]');
+    const pins = Array.from(root.querySelectorAll('[data-road]'));
+    const marks = Object.fromEntries(pins.map(pin => [pin.dataset.road, pin.querySelector('[data-rate]')]));
+    let rates = { ...defaults };
+    let active = 'east';
+
+    function render() {
+      const seconds = Number(duration.value);
+      const planned = rate => Math.round(rate * (seconds / 3600));
+      const changed = Object.keys(rates).filter(road => rates[road] !== defaults[road]).length;
+      const invalid = !flow.validity.valid || !Number.isFinite(flow.valueAsNumber);
+      flow.setAttribute('aria-invalid', String(invalid));
+      direction.textContent = roads[active];
+      estimate.textContent = invalid ? 'Informe um fluxo válido' : format.format(planned(rates[active])) + ' veículos previstos';
+      caption.textContent = invalid ? 'Digite um valor maior ou igual a zero.' : 'Neste sentido, em ' + seconds / 60 + ' minutos.';
+      changes.textContent = changed === 0 ? 'Nenhuma via alterada' : changed === 1 ? '1 via alterada' : '2 vias alteradas';
+      total.textContent = invalid ? 'Total aguardando correção' :
+        format.format(planned(rates.east) + planned(rates.west)) + ' veículos previstos nos 2 sentidos';
+      for (const pin of pins) {
+        const road = pin.dataset.road;
+        pin.setAttribute('aria-pressed', String(road === active));
+        marks[road].textContent = format.format(rates[road]);
+      }
+    }
+
+    function restore(saved) {
+      if (saved?.local !== 'rondon-volume') return;
+      for (const road of Object.keys(roads)) {
+        const rate = saved.rates?.[road];
+        if (Number.isFinite(rate) && rate >= 0) rates[road] = rate;
+      }
+      if (Object.hasOwn(roads, saved.active)) active = saved.active;
+      if ([300, 600, 900].includes(saved.seconds)) duration.value = String(saved.seconds);
+      flow.value = String(rates[active]);
+      render();
+    }
+
+    function save() {
+      window.openai?.setWidgetState?.({
+        modelContent: { exemplo: 'Fluxo ilustrativo por sentido', leste: rates.east, oeste: rates.west, segundos: Number(duration.value) },
+        privateContent: { local: 'rondon-volume', rates, active, seconds: Number(duration.value) }
+      })?.catch(() => {});
+    }
+
+    for (const pin of pins) {
+      pin.addEventListener('click', () => {
+        active = pin.dataset.road;
+        flow.value = String(rates[active]);
+        render();
+        save();
+      });
+    }
+    flow.addEventListener('input', () => {
+      if (flow.validity.valid && Number.isFinite(flow.valueAsNumber)) {
+        rates[active] = flow.valueAsNumber;
+        save();
+      }
+      render();
+    });
+    duration.addEventListener('change', () => {
+      render();
+      save();
+    });
+    window.addEventListener('openai:set_globals', event => restore(event.detail?.globals?.widgetState?.privateContent));
+    restore(window.openai?.widgetState?.privateContent);
+    render();
+  })();
+</script>

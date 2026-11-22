@@ -575,3 +575,66 @@ Doze testes de mapa/limites/persistencia passaram e quatro testes do contrato co
 Icone e corredores das vias/travessias controladas foram agrupados em um objeto GeoJSON por controlador. Selecao nativa destaca seus poligonos em turquesa mantendo o JSON, ID e caminho do mapa estaveis. Corredores nao interceptam os cliques nas vias; suas subcamadas de preenchimento nao sao selecionaveis. Corrigidos literais de tipo de ponto/unidades na serializacao Pydeck. Todos os 17 controladores tiveram geometrias de destaque verificadas.
 Tabela de largura completa abaixo do mapa mostra entrada, rua, sentido, movimento e tempos totais de verde/amarelo/vermelho por ciclo inicial. Calculada diretamente das cores e duracoes do programa, incluindo todos os vermelhos e intervalos de seguranca; conversoes com horarios diferentes permanecem separadas. Travessias sao identificadas explicitamente e estados diferentes das tres cores recebem coluna Outros quando existentes. Legenda distingue esses valores dos limites adaptativos e de uma contagem ao vivo.
 Verificacao: doze testes de geometria, tempos por movimento e limites passaram em 5,36 s. Teste com programa de 60 s conferiu 20/3/37 s e 30/4/26 s e preservou movimentos com tempos diferentes. Teste de servidor Streamlit real passou em 26,69 s: selecionou FAM_RONDON_PARANA, conferiu tabela somente das referencias afetadas, ID estavel do mapa, escopo parcial e valores enviados ao executor. Tres selecoes de via levaram 0,402/0,409/0,414 s no servidor local. compileall e diff --check sem erros. Nenhum treinamento iniciado. Conferencia visual indisponivel: host de acesso ao navegador ausente. Alteracoes locais sem commit/push.
+
+[2026-11-18 17:56 -03:00]: Configuração visual e estudos reutilizáveis
+Responsável: agente Codex.
+Objetivo: facilitar localizar, editar, conferir e comparar um estudo dos nove cruzamentos.
+Alterações: app.py e mapa_configuracao.py colocam a prévia perto do mapa e oferecem busca por via, semáforo ou travessia, aproximação do local e retorno à rede completa. A opção de pedestres fica visível antes de selecionar uma travessia. vias.py usa o cálculo compartilhado de demanda.py para mostrar a quantidade prevista no sentido selecionado e conserva destinos configurados. sinais.py apresenta a sequência estática de cada movimento e mantém separados os limites de verde do treinamento. A prévia em experimental.py usa o programa inicial no cenário adaptativo. estudos.py e layout.py oferecem exemplo ilustrativo, cópia de cenários compatíveis, resumo de alterações e encaminhamento para corrigir pendências. resultados.py e gargalos.py mostram a diferença de espera por cruzamento somente para pares completos comparáveis. README e docs/interface.md descrevem o fluxo atualizado.
+Justificativa: mostrar o objeto, a consequência do ajuste e o próximo passo no ponto em que a pessoa toma a decisão. O cálculo da estimativa acompanha o gerador. A comparação distingue a espera local das viagens concluídas na rede.
+Verificação: 16 testes direcionados passaram. O teste de servidor e eventos Streamlit confirmou que selecionar e editar no mapa preserva a identidade do canvas e entrega os dados recentes ao executor substituto. O verificador do fluxo passou com busca, estimativa de 100 veículos para 600 veículos/h em 10 min, prévia e treinamento com executor substituído. AppTest conferiu que o exemplo e a duplicação não iniciam tarefas e que a cópia conserva parâmetros e arquivo de origem. Edge conferiu busca por Paraná, edição, atualização da estimativa e layout sem transbordamento a 390 px. A prévia real, sem interface gráfica, chegou a 30 s no cenário adaptativo com 17 controladores. Compileall e git diff --check aprovados. Nenhum treinamento longo ou avaliação nova foi iniciado.
+Impactos e pendências: a duplicação lista configurações da rede completa compatíveis com o editor atual. Relatórios antigos sem dados locais pareados podem mostrar somente o resumo da rede. A revisão não transforma volumes ilustrativos em medições de campo.
+Continuidade: o guia da interface traz o passo a passo. A validação de entendimento com novos usuários pode usar a tarefa de localizar uma via, ajustar o fluxo e prever a demanda antes da simulação.
+
+[2026-11-18 18:07 -03:00]: Retirada dos ajustes de velocidade, precisão e aquecimento da tela de Tráfego
+Responsável: agente Codex.
+Objetivo: remover o controle de velocidade dos pedestres e o bloco Avançado: precisão e aquecimento.
+Alterações: app.py e mapa_configuracao.py retiram os campos da interface. A execução obtém do cenário a velocidade de caminhada, o passo do SUMO e o aquecimento. layout.py orienta a ajustar a duração quando ela é insuficiente para o aquecimento do cenário. O guia da interface e os verificadores foram atualizados.
+Justificativa: manter na aba Tráfego os ajustes usados para configurar o estudo pelo mapa.
+Verificação: 13 testes direcionados passaram, incluindo a ausência das seções e o envio de velocidade de caminhada, passo e aquecimento salvos ao executor substituto. Os verificadores do fluxo e das métricas passaram, incluindo a janela de 60 a 300 s após mudar a duração. Compileall, git diff --check e resposta HTTP 200 do servidor local também foram conferidos. Nenhuma tarefa real foi iniciada.
+Impactos e pendências: os arquivos de cenário continuam representando os parâmetros. A janela de medição na interface começa ao fim do aquecimento e termina no fim da simulação.
+Continuidade: recarregar a tela de Tráfego para ver a interface atualizada.
+
+[2026-11-18 18:20 -03:00]: Cenário e tráfego em uma única etapa
+Responsável: agente Codex.
+Objetivo: reunir a preparação da rede e a configuração pelo mapa na página inicial.
+Alterações: app.py e layout.py mostram a etapa Cenário e tráfego com resumo da rede, prévia, duração e mapa. A preparação manual e a consulta de tempos iniciais ficam em Detalhes da rede. Os atalhos de correção, abertura de exemplo, duplicação, treinamento e acompanhamento apontam para as novas etapas. O guia, o README e as verificações dependentes da navegação foram atualizados.
+Justificativa: preparar e configurar o mesmo estudo sem alternar entre duas páginas.
+Verificação: quatro testes de navegação e eventos do mapa passaram. Os verificadores do fluxo com executor substituído e da preparação manual dos nove cruzamentos passaram. No Edge, os detalhes da rede estavam recolhidos na abertura e a busca do mapa estava visível. Abrir os detalhes mostrou a preparação manual na mesma página. A página não apresentou transbordamento horizontal em 390 px. Compileall e git diff --check passaram.
+Impactos e pendências: a preparação automática dos nove cruzamentos atende o mapa na mesma etapa. As etapas de Treinamento, Resultados e Referência técnica continuam disponíveis.
+Continuidade: recarregar a interface para usar a nova navegação.
+
+[2026-11-18 18:42 -03:00]: Janelas de edição no mapa e tempos do semáforo
+Responsável: agente Codex.
+Objetivo: abrir os ajustes da via ou do semáforo sobre o mapa ao clicar, inclusive em tela cheia.
+Alterações: mapa_configuracao.py usa janelas de edição, com fluxo e estimativa na via, tempos por grupo no semáforo e fluxo na travessia. O semáforo aceita verde, amarelo e todos em vermelho, e mostra a linha do tempo e os totais por movimento. ciclos.py valida os mínimos, o passo e o teto de ciclo. app.py usa uma cópia validada e identificada da rede nos comandos que consomem a configuração atual. A rede de origem e a sequência de movimentos são preservadas. interface.css eleva a janela acima do mapa em tela cheia. O guia e os testes de edição foram atualizados.
+Justificativa: editar no local selecionado e distinguir o intervalo em que todos estão fechados do vermelho total de cada movimento.
+Verificação: 15 testes direcionados passaram, além do teste de eventos Streamlit que confere persistência de fluxo, câmera e envio dos três tempos no arquivo de rede do executor substituído. O verificador do fluxo também passou. No Edge, cliques em um semáforo e em uma via abriram as janelas acima do mapa em tela cheia. Fechar a janela manteve o mapa em tela cheia. SUMO real, sem interface gráfica, carregou 25 s de verde, 4 s de amarelo e 19 s de vermelho geral no primeiro grupo de Rondon × Paraná. Compileall e git diff --check passaram.
+Impactos e pendências: a edição do ciclo inicial usa a rede experimental com grupos compatíveis e respeita a validação dos limites do controle adaptativo. As execuções que usam tempos editados registram a rede correspondente em resultados/redes_ajustadas. Nenhum treino longo foi iniciado.
+Continuidade: recarregar a interface, clicar no objeto e usar Aplicar tempos para confirmar alterações no ciclo.
+
+[2026-11-18 18:49 -03:00]: Prioridade para vias com nome cadastrado
+Responsável: agente Codex.
+Objetivo: concentrar a configuração inicial de veículos por hora nas vias identificadas pelo nome.
+Alterações: vias.py normaliza os nomes da rede e do cadastro existente. mapa_configuracao.py limita a busca e a seleção de vias aos trechos nomeados por padrão. Os demais aparecem como contexto e podem voltar à edição com Mostrar também vias sem nome. Se houver volume configurado em um trecho oculto, a tela indica como revisá-lo. Atualizados o guia e o teste de configuração do mapa.
+Justificativa: na rede preparada, 142 dos 2.088 trechos aptos a receber veículos têm nome identificado. A separação facilita localizar ruas e evita atribuir nomes sem evidência.
+Verificação: dez testes de mapa, nomes e eventos passaram. No Edge, a busca não encontrou trechos sem nome até ativar a opção adicional. Depois, um trecho sem nome abriu a janela de veículos por hora. Compileall, git diff --check e resposta HTTP 200 do servidor local conferidos.
+Impactos e pendências: o filtro afeta o editor e a busca. A rede de simulação e os volumes já preenchidos permanecem disponíveis. Ruas exclusivas do fundo cartográfico continuam fora da edição.
+Continuidade: recarregar a interface e usar a opção de vias sem nome quando o estudo precisar revisar esses trechos.
+
+[2026-11-18 19:16 -03:00]: Atalhos de duração de 5 e 10 minutos
+Responsável: agente Codex.
+Objetivo: deixar apenas 5 min, 10 min e Personalizar na escolha de duração.
+Alterações: app.py retira o atalho de 900 s. O teste de interface passa a informar essa duração pelo campo personalizado.
+Justificativa: reduzir a lista de atalhos mantendo o campo para outras durações.
+Verificação: o teste de interface confirmou as três opções e o envio de 900 s pelo campo personalizado ao executor substituto. Compilação e git diff --check passaram.
+Impactos e pendências: cenários salvos com 900 s abrem em Personalizar com os segundos já preenchidos.
+Continuidade: recarregar a página Cenário e tráfego.
+
+[2026-11-18 19:20 -03:00]: Rótulos de travessias no seletor de grupos semafóricos
+Responsável: agente Codex.
+Objetivo: explicar e corrigir os códigos de áreas de pedestres exibidos no grupo de movimentos.
+Alterações: rede.py usa o tipo do trecho para escrever Travessia de pedestres. A janela identifica o grupo pelo rótulo Grupo N, e o teste inclui um trecho interno de pedestres.
+Justificativa: os identificadores SUMO de áreas de caminhada não são nomes de vias e confundiam a leitura dos movimentos.
+Verificação: quatro testes passaram e o Grupo 2 de Rondon × Porto Alegre foi conferido na rede experimental. git diff --check passou.
+Impactos e pendências: a alteração é de apresentação. Tempos, estados e vínculos da rede seguem os dados do cenário.
+Continuidade: recarregar a interface para ver o rótulo atualizado.

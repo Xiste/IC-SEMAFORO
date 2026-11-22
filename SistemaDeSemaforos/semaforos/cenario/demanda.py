@@ -10,6 +10,11 @@ import xml.etree.ElementTree as ET
 from semaforos.cenario.configuracao import sumo_executable
 
 
+def planned_vehicle_count(vehicles_per_hour, duration_seconds):
+    """Arredonda a demanda de um trecho como no gerador de viagens."""
+    return math.floor(vehicles_per_hour * duration_seconds / 3600 + 0.5)
+
+
 def validate_time_profile(config):
     duration = float(config["duration_seconds"])
     profile = config["demand"].get("time_profile") or [{"begin": 0, "end": duration, "multiplier": 1.0}]
@@ -69,7 +74,7 @@ def create_edge_volume_demand(config, network, output, seed):
             raise ValueError(f"Via {index}: origem ausente ou sem permissão para automóveis: {origin}")
         if not math.isfinite(rate) or rate < 0:
             raise ValueError(f"Via {index}: veículos/h deve ser finito e não negativo")
-        count = math.floor(rate * duration / 3600 + 0.5)
+        count = planned_vehicle_count(rate, duration)
         if count > 100000 or len(trips) + count > 100000:
             raise ValueError("Demanda acima do limite de 100000 viagens por cenário")
         fixed_exit = str(entry.get("to_edge") or "").strip()

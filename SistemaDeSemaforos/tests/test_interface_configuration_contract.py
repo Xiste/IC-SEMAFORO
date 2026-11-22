@@ -53,11 +53,13 @@ def test_form_payload_persistence_errors_and_reload():
     entries = sorted({a.getEdge().getID() for a, _, _ in net.getTLS(config['targets'][0]['tls_id']).getConnections()
                       if a.getEdge().allows('passenger')})
     config['duration_seconds'] = 300
+    config['step_seconds'] = .5
+    config['measurement'] = {'warmup_seconds': 60., 'start_seconds': 60., 'end_seconds': 300.}
     config['demand'] = {'mode': 'edge_volumes', 'edge_volumes': [
         {'from_edge': edge, 'vehicles_per_hour': 360., 'to_edge': ''} for edge in entries],
         'time_profile': [{'begin': 75 * i, 'end': 75 * (i + 1), 'multiplier': 1.} for i in range(4)]}
     routes = crossing_routes(config['network'], config['targets'])
-    config['pedestrians'] = {'enabled': True, 'walking_speed_meters_per_second': .8,
+    config['pedestrians'] = {'enabled': True, 'walking_speed_meters_per_second': 1.1,
                             'flows': [dict(r, persons_per_hour=60.) for r in routes]}
     config = json.loads(json.dumps(config, default=str))
     with tempfile.TemporaryDirectory(dir=PROJECT_ROOT / 'resultados', prefix='ui_contract_') as temporary:
@@ -74,6 +76,7 @@ def test_form_payload_persistence_errors_and_reload():
             pick_map(app, 'configuration-roads', 'edge_id', entries[0])
             widget(app, 'number_input', 'Veículos por hora').set_value(650.).run()
             pick_map(app, 'configuration-pedestrians', 'crossing_id', routes[0]['crossing_id'])
+            assert not any(w.label in ('Velocidade dos pedestres', 'Avançado: precisão e aquecimento') for w in app.get('expander'))
             edit_table(app, '_values_', {0: {'persons_per_hour': 120.}})
             pick_map(app, 'configuration-signals', 'tls_id', config['targets'][0]['tls_id'])
             widget(app, 'number_input', 'Verde mínimo (s)').set_value(20.).run()
@@ -89,7 +92,7 @@ def test_form_payload_persistence_errors_and_reload():
             assert widget(app, 'number_input', 'Veículos por hora').value == 360.
             pick_map(app, 'configuration-roads', 'edge_id', entries[0])
             assert widget(app, 'number_input', 'Veículos por hora').value == 650.
-            widget(app, 'radio', 'Etapas do estudo').set_value('3 · Treinamento').run()
+            widget(app, 'radio', 'Etapas do estudo').set_value('2 · Treinamento').run()
             widget(app, 'number_input', 'Quantidade de decisões para treinar').set_value(4096).run()
             widget(app, 'button', 'Iniciar treinamento').click().run()
             assert not app.exception, app.exception
@@ -107,6 +110,9 @@ def test_form_payload_persistence_errors_and_reload():
             assert mass == [40., 10., 20., 30.]
             assert payload['pedestrians']['flows'][0]['persons_per_hour'] == 120.
             assert all(r['persons_per_hour'] == 60. for r in payload['pedestrians']['flows'][1:])
+            assert payload['pedestrians']['walking_speed_meters_per_second'] == 1.1
+            assert payload['step_seconds'] == .5
+            assert payload['measurement'] == config['measurement']
             first = f"{config['targets'][0]['tls_id']}:0"
             assert payload['control']['phase_duration_bounds'][first] == {'minimum_seconds': 20., 'maximum_seconds': 60.}
             assert payload['ppo']['total_timesteps'] == 4096

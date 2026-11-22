@@ -1,4 +1,5 @@
 """Novos controles da interface; tarefas são substituídas, sem SUMO/modelos."""
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -6,7 +7,6 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-import streamlit as st
 from streamlit.testing.v1 import AppTest
 from semaforos.experimentos.tarefas import job_paths
 from semaforos.arquivos import write_json
@@ -18,19 +18,18 @@ with tempfile.TemporaryDirectory(dir=ROOT / 'resultados', prefix='ui_metrics_') 
     with patch('semaforos.experimentos.tarefas.start_job', return_value=job_paths(folder)) as launch:
         app = AppTest.from_file(str(ROOT / 'interface.py'), default_timeout=90).run()
         assert not app.exception, str(app.exception)
+        app.session_state['experimental_config'] = {
+            **app.session_state['experimental_config'],
+            'measurement': {'warmup_seconds': 60., 'start_seconds': 60., 'end_seconds': 600.},
+        }
         next(w for w in app.radio if w.label == 'Por quanto tempo simular?').set_value('300 s').run()
-        next(w for w in app.number_input if w.label == 'Aquecimento sem atuação do algoritmo (s)').set_value(60.0).run()
-        next(w for w in app.radio if w.label == 'Como deseja informar o tráfego?').set_value('Volume por via').run()
+        layers = json.loads(app.get('deck_gl_json_chart')[0].proto.json)['layers']
+        roads = next(layer['data'] for layer in layers if layer['id'] == 'configuration-roads')
+        entry = next(road['edge_id'] for road in roads if road['controllers'])
+        next(w for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa').select(entry).run()
+        next(w for w in app.number_input if w.label == 'Veículos por hora').set_value(600.).run()
         next(w for w in app.checkbox if w.label == 'Coletar análise detalhada').set_value(True).run()
-        original_editor = st.data_editor
-        def edited(data, *args, **kwargs):
-            if 'volume_editor_' in str(kwargs.get('key', '')):
-                data = data.copy()
-                data.loc[data.index[0], 'vehicles_per_hour'] = 600.0
-            return original_editor(data, *args, **kwargs)
-        with patch('streamlit.data_editor', side_effect=edited):
-            app.run()
-            next(w for w in app.button if w.label == 'Executar treinos e avaliações repetidos').click().run()
+        next(w for w in app.button if w.label == 'Executar treinos e avaliações repetidos').click().run()
         assert not app.exception, str(app.exception)
         assert launch.call_count == 1
         config, command = launch.call_args.args[:2]

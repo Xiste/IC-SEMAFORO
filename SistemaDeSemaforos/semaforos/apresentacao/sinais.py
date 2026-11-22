@@ -1,17 +1,54 @@
 """Nomes e desenho dos movimentos do programa inicial dos semáforos."""
+from html import escape
+from itertools import accumulate
 import xml.etree.ElementTree as ET
 
 from semaforos.cenario.rede import initial_signal_timings
 from semaforos.apresentacao.mapa_vias import short_path
 
 
-def signal_movement_timings(network, controller, details):
+_SIGNAL_STATES = {
+    'green': ('Verde', '#168461'),
+    'yellow': ('Amarelo', '#e3af35'),
+    'red': ('Vermelho', '#c94850'),
+    'clearance': ('Todos em vermelho', '#823b64'),
+    'other': ('Outro estado', '#737b8b'),
+}
+
+
+def _initial_cycle(phases, colors):
+    intervals = []
+    ends = accumulate(float(phase.get('duration')) for phase in phases)
+    start = 0.
+    for phase, color, end in zip(phases, colors, ends):
+        state = {'g': 'green', 'y': 'yellow', 'r': 'red'}.get(color, 'other')
+        if state == 'red' and set(phase.get('state')) <= {'r', 'R'}:
+            state = 'clearance'
+        if end > start:
+            if intervals and intervals[-1]['state'] == state:
+                intervals[-1]['end'] = end
+            else:
+                intervals.append({'start': start, 'end': end, 'state': state})
+        start = end
+    return intervals
+
+
+def signal_movement_timings(network, controller, details, *, include_timeline=False, edited_durations=None):
     """Duracoes por entrada/movimento do programa inicial, sem amostrar o treino."""
     root = ET.parse(network).getroot()
     edges = {edge.get('id'): edge for edge in root.findall('edge')}
-    programs = {logic.get('id'): logic.findall('phase') for logic in root.findall('tlLogic')}
-    phases = programs.get(controller, [])
+    programs = {logic.get('id'): logic for logic in root.findall('tlLogic')}
+    logic = programs.get(controller)
+    phases = logic.findall('phase') if logic is not None else []
+    for index, phase in enumerate(phases):
+        value = (edited_durations or {}).get(f'{controller}:{index}')
+        if value is not None:
+            phase.set('duration', str(value))
     cycle = sum(float(phase.get('duration')) for phase in phases)
+    sequential = bool(phases) and logic.get('type', 'static') == 'static' and all(
+        phase.get('next', '').split() in ([], [str((index + 1) % len(phases))])
+        for index, phase in enumerate(phases)
+    )
     turns = {'s': 'Em frente', 'l': 'À esquerda', 'L': 'À esquerda',
              'r': 'À direita', 'R': 'À direita', 't': 'Retorno'}
     grouped = {}
@@ -41,9 +78,57 @@ def signal_movement_timings(network, controller, details):
                 'Sentido': info.get('approach', ''), 'Verde (s)': times['green'],
                 'Amarelo (s)': times['yellow'], 'Vermelho (s)': times['red'],
                 'Outros (s)': times['other'], 'Ciclo (s)': cycle}
+            if include_timeline and sequential:
+                grouped[key]['_timeline'] = _initial_cycle(phases, colors)
         grouped[key]['movements'].add('Atravessar' if pedestrian else turns.get(connection.get('dir'), 'Movimento'))
     return [{**{k: v for k, v in row.items() if k != 'movements'},
              'Movimento': ' / '.join(sorted(row['movements']))} for row in grouped.values()]
+
+
+def render_initial_cycle(timings, *, key):
+    import streamlit as st
+
+    st.markdown('**Ciclo inicial da simulação**')
+    if not any(row.get('_timeline') for row in timings):
+        st.caption('Este semáforo não tem uma sequência fixa disponível para exibir.')
+        return
+    st.caption('Sequência do programa inicial a partir da primeira fase cadastrada. O tamanho de cada faixa representa o tempo que ela dura.')
+    labels = [' · '.join(part for part in (row['Entrada'], row['Via'], row['Sentido'], row['Movimento']) if part)
+              for row in timings]
+    if len(set(labels)) != len(labels):
+        labels = [f'{label} · grupo {index + 1}' if labels.count(label) > 1 else label
+                  for index, label in enumerate(labels)]
+    selected = st.selectbox('Movimento no ciclo', range(len(labels)), format_func=labels.__getitem__, key=key)
+    row = timings[selected]
+    duration = row['Ciclo (s)']
+    intervals = row['_timeline']
+    segments = []
+    for interval in intervals:
+        label, color = _SIGNAL_STATES[interval['state']]
+        start, end = interval['start'], interval['end']
+        width = (end - start) / duration * 100
+        title = escape(f'{label} · {start:g} a {end:g} s')
+        segments.append(f'<span title="{title}" style="width:{width:.8f}%;background:{color}"></span>')
+    legend = []
+    for state in dict.fromkeys(interval['state'] for interval in intervals):
+        label, color = _SIGNAL_STATES[state]
+        legend.append(f'<span><span class="signal-cycle-swatch" style="background:{color}" aria-hidden="true"></span>{escape(label)}</span>')
+    st.html(
+        '<style>'
+        '.signal-cycle-track{display:flex;height:1.2rem;border-radius:.3rem;overflow:hidden;}'
+        '.signal-cycle-axis{display:flex;justify-content:space-between;margin-top:.25rem;font-size:.85rem;}'
+        '.signal-cycle-legend{display:flex;flex-wrap:wrap;gap:.25rem 1rem;margin-top:.35rem;font-size:.85rem;}'
+        '.signal-cycle-swatch{display:inline-block;width:.7rem;height:.7rem;border-radius:.15rem;margin-right:.35rem;}'
+        '</style>'
+        '<div aria-hidden="true" class="signal-cycle-track">' + ''.join(segments) + '</div>'
+        f'<div class="signal-cycle-axis"><span>0 s</span><span>{duration:g} s</span></div>'
+        '<div class="signal-cycle-legend">' + ''.join(legend) + '</div>'
+    )
+    with st.expander('Ver intervalos do ciclo em segundos'):
+        st.dataframe([{
+            'Início (s)': interval['start'], 'Fim (s)': interval['end'],
+            'Estado': _SIGNAL_STATES[interval['state']][0],
+        } for interval in intervals], hide_index=True, width='stretch')
 
 
 def signal_presentation(config, labels):

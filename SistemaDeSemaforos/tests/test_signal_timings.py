@@ -11,12 +11,14 @@ class SignalTimingTest(unittest.TestCase):
             network = Path(temporary) / 'network.xml'
             network.write_text('''<net>
               <edge id="a" name="Avenida A"/><edge id="b" name="Rua B"/>
+              <edge id=":a_w1" function="walkingarea"/><edge id=":a_c1" function="crossing"/>
               <connection tl="signal" from="a" to="b" dir="s" linkIndex="0"/>
               <connection tl="signal" from="b" to="a" dir="l" linkIndex="1"/>
+              <connection tl="signal" from=":a_w1" to=":a_c1" dir="s" linkIndex="2"/>
               <tlLogic id="signal">
-                <phase duration="24" state="Gr"/><phase duration="3" state="yr"/>
-                <phase duration="8" state="rr"/><phase duration="30" state="rG"/>
-                <phase duration="3" state="ry"/><phase duration="9" state="rr"/>
+                <phase duration="24" state="Grr"/><phase duration="3" state="yrr"/>
+                <phase duration="8" state="rrr"/><phase duration="30" state="rGG"/>
+                <phase duration="3" state="ryy"/><phase duration="9" state="rrr"/>
               </tlLogic></net>''', encoding='utf-8')
             rows = initial_signal_timings({'network': network, 'targets': [
                 {'name': 'Cruzamento A', 'tls_id': 'signal', 'phase_indices': [0, 3]}]})
@@ -31,3 +33,5 @@ class SignalTimingTest(unittest.TestCase):
                 self.assertEqual(sum(row[key] for key in ('Verde (s)', 'Amarelo (s)', 'Vermelho total (s)')), 77)
             self.assertIn('Avenida A', rows[0]['Movimentos liberados'])
             self.assertIn('esquerda', rows[1]['Movimentos liberados'])
+            self.assertIn('Travessia de pedestres', rows[1]['Movimentos liberados'])
+            self.assertNotIn(':a_w1', rows[1]['Movimentos liberados'])

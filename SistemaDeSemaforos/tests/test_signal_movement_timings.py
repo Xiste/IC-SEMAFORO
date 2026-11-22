@@ -19,13 +19,21 @@ def test_signal_timings_include_all_red_and_keep_different_turns_separate(tmp_pa
     </net>''', encoding='utf-8')
     rows = signal_movement_timings(network, 'tls', {
         'a': {'reference':'Entrada 1','street':'Rua A','approach':'Segue para norte'},
-        'b': {'reference':'Entrada 2','street':'Rua B','approach':'Segue para sul'}})
+        'b': {'reference':'Entrada 2','street':'Rua B','approach':'Segue para sul'}},
+        include_timeline=True)
     assert len(rows) == 3
     a = [r for r in rows if r['Via'] == 'Rua A']
     assert len(a) == 2
     straight = next(r for r in a if 'Em frente' in r['Movimento'])
     assert 'À direita' in straight['Movimento']
     assert [straight[k] for k in ('Verde (s)','Amarelo (s)','Vermelho (s)')] == [20,3,37]
+    assert straight['_timeline'] == [
+        {'start': 0, 'end': 20, 'state': 'green'},
+        {'start': 20, 'end': 23, 'state': 'yellow'},
+        {'start': 23, 'end': 25, 'state': 'clearance'},
+        {'start': 25, 'end': 59, 'state': 'red'},
+        {'start': 59, 'end': 60, 'state': 'clearance'},
+    ]
     left = next(r for r in a if r['Movimento'] == 'À esquerda')
     assert [left[k] for k in ('Verde (s)','Amarelo (s)','Vermelho (s)')] == [30,4,26]
     for row in rows:

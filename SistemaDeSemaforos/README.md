@@ -16,9 +16,9 @@ Na pasta SistemaDeSemaforos, em PowerShell:
 .\.venv\Scripts\python.exe pipeline.py rl-eval --model resultados/PASTA_DO_TREINO/ppo_model.zip
 ```
 
-Interface: http://localhost:8501. Os comandos ppo-train e ppo-eval continuam disponíveis. train executa a busca com modelo substituto, separada do aprendizado por reforço. run executa a referência da rede ou um candidato de tempos fixos.
+Interface: http://localhost:8501. Abra **Começar com um exemplo** na barra lateral para explorar a configuração com volumes ilustrativos. Os comandos ppo-train e ppo-eval continuam disponíveis. train executa a busca com modelo substituto, separada do aprendizado por reforço. run executa a referência da rede ou um candidato de tempos fixos.
 
-Para instalação nova no Windows x64 com Python 3.13: instale SUMO, exponha sumo no PATH ou defina SUMO_HOME e execute `powershell -ExecutionPolicy Bypass -File .\iniciar_interface.ps1`. O script cria um ambiente sem pacotes do Anaconda e instala `requirements-lock.txt`. Os resultados são gravados em diretórios novos; não são sobrescritos. A interface oferece **Executar simulação sem treinamento**, para testar a infraestrutura antes de escolher um algoritmo. O comando equivalente é `pipeline.py run-reference`.
+Para instalação nova no Windows x64 com Python 3.13: instale SUMO, exponha sumo no PATH ou defina SUMO_HOME e execute `powershell -ExecutionPolicy Bypass -File .\iniciar_interface.ps1`. O script cria um ambiente sem pacotes do Anaconda e instala `requirements-lock.txt`. Os resultados são gravados em diretórios novos. Em **Cenário e tráfego**, **Ver uma prévia de 30 segundos** abre uma visualização curta. **Simular com os tempos iniciais** executa o episódio completo e salva as métricas de referência, como o comando `pipeline.py run-reference`.
 
 ## Estrutura
 
@@ -45,13 +45,11 @@ SistemaDeSemaforos/
 
 ## Estado do experimento
 
-A interface agora permite selecionar o período das contagens, validar os fluxos realizados no SUMO e comparar referência × controle por filas sem treinamento. Avaliações de modelos também mostram percentuais de melhora/piora, diferenças por cruzamento e evidência pareada entre sementes. Consulte [calibração e demonstração de melhoria](docs/calibracao_e_melhoria.md) para usar o fluxo e interpretar as conclusões.
+O cenário da interface usa os nove cruzamentos e seus 17 controladores. O mapa permite buscar e editar vias, semáforos e travessias. Os resultados apresentam a espera por cruzamento em avaliações pareadas e as viagens concluídas na rede. Veja o [guia da interface](docs/interface.md) para configurar um estudo e interpretar o que aparece na tela.
 
 Consulte a [atualização funcional de 07/10/2026](docs/estado_funcional_2026-10-07.md) para correções verificadas e limites restantes.
 
-A interface permite importar contagens/OD em CSV ou XLSX, configurar pedestres nas travessias cadastradas, acompanhar quatro gráficos ao vivo, recuperar o acompanhamento após atualizar a página e exportar métricas de episódios completos ou parciais. `intersections.csv` mede cada faixa uma vez por cruzamento; `pedestrian_crossings.csv` registra atendimento das travessias. O SUMO-GUI oferece atraso visual configurável. Pedestres não alteram a fórmula da recompensa: métricas adicionais ficam disponíveis para definir futuros experimentos.
-
-O cenário padrão mantém o piloto com um controlador. Pela interface, **Nove cruzamentos: cenário experimental** prepara uma cópia da rede com os 17 controladores associados, grupos compatíveis pela matriz de conflitos e atendimento de todos os movimentos e travessias. Corrige também quatro programas externos sem verde. Permite salvar/reutilizar o cenário, testar no SUMO, simular sem treino e selecionar um modelo para avaliação. Os programas são sintéticos. Cenários seriais antigos continuam disponíveis; prepare um cenário novo para obter os grupos. Veja o [passo a passo e as limitações](docs/controle_nove_interface.md).
+A preparação experimental agrupa movimentos compatíveis pela matriz de conflitos. Os programas simulados e os volumes do exemplo são sintéticos. Para o histórico das etapas de preparação, calibração e importação, consulte [controle dos nove cruzamentos](docs/controle_nove_interface.md) e [calibração e comparação](docs/calibracao_e_melhoria.md). `intersections.csv` conta cada faixa uma vez por cruzamento, e `pedestrian_crossings.csv` registra o atendimento das travessias.
 
 O único adaptador publicado é PPO. Outro algoritmo precisa de implementação, registro e teste de compatibilidade com as observações e ações do ambiente. Não há garantia de convergência ou ótimo global.
 
@@ -70,7 +68,7 @@ Os guias treinamento.md, parametros_simulacao.md e referencia_parametros.md docu
 
 ## Manutenção e verificações
 
-A interface usa abas para **Cenário → Tráfego → Treinamento → Resultados**, com catálogos em **Referência técnica**. Consulte [o guia da interface](docs/interface.md).
+A interface segue **Cenário e tráfego → Treinamento → Resultados**, com catálogos em **Referência técnica**. Consulte [o guia da interface](docs/interface.md).
 
 Aquecimento, janela medida, volumes totais por cruzamento, métricas ampliadas, mapa de gargalos e estudos repetidos estão descritos em [docs/metricas_janela_e_repeticoes.md](docs/metricas_janela_e_repeticoes.md). O estudo automático só inicia pelo botão correspondente ou pelo comando `run-study`. Os verificadores `scripts/verificar_interface_metricas.py` e `tests/test_metricas_ampliadas.py` usam dados artificiais e substituem SUMO/modelos.
 

@@ -644,23 +644,17 @@ def comparison_sheets(output):
 
 def render_signal_changes(output, candidate, seeds, key, *, reference=REFERENCE, labels=None):
     table = signal_color_table(output, candidate, seeds, reference=reference)
+    st.markdown('**Tempos por semáforo**')
     if table.empty:
         st.caption('Tempos por cor indisponíveis nesta avaliação.')
         return
-    crossing = st.selectbox('Cruzamento para ver os tempos dos semáforos', sorted(table['Cruzamento'].unique()),
-                           key=f'{key}_signal_changes_{output}_{candidate}')
-    _display_color_times(table, crossing, candidate, reference, key, labels)
-
-
-def _display_color_times(table, crossing, candidate, reference, key, labels=None):
-    st.markdown('**Tempos por semáforo**')
-    if table.empty or crossing not in table['Cruzamento'].values:
-        st.caption('Tempos por cor indisponíveis neste cruzamento.')
-        return
+    widget_key = f'{key}_signal_{output}_{candidate}'
+    crossing = st.selectbox('Cruzamento para ver os tempos dos semáforos',
+                           sorted(table['Cruzamento'].unique()), key=f'{widget_key}_crossing')
     baseline_label, candidate_label = labels or ('Programa original', candidate)
     titles = {candidate: candidate_label, reference: baseline_label}
     control = st.radio('Tempos de', [candidate, reference], horizontal=True, format_func=titles.__getitem__,
-                       key=f'{key}_signal_colors_{crossing}')
+                       key=f'{widget_key}_control')
     local = table.loc[table['Cruzamento'].eq(crossing) & table['Controle'].eq(control)]
     fields = list(SIGNAL_COLOR_COLUMNS.values())
     if not local[fields].notna().any().any():
@@ -779,9 +773,8 @@ def result_overview(output, key, *, view='Resumo'):
         if paired.empty:
             st.info('A comparação precisa de simulações completas dos dois controles com a mesma semente, demanda e duração.')
             return
-        table = _comparison_metrics(paired)
         if view == 'Resumo':
-            _render_comparison_summary(table, model_label, len(paired), baseline_label)
+            _render_comparison_summary(_comparison_metrics(paired), model_label, len(paired), baseline_label)
             return
     except (OSError, ValueError, pd.errors.ParserError, pd.errors.EmptyDataError):
         st.caption('Ainda não foi possível ler a comparação desta execução.')
@@ -807,10 +800,6 @@ def result_overview(output, key, *, view='Resumo'):
         local = detail.loc[detail['Cruzamento'] == crossing]
         _render_intersection_traffic(local, 'Modelo B (referência)' if against_model else 'Programa original',
                                      'Modelo A' if against_model else f'Com {selected}')
-        signals = signal_color_table(output, selected, paired['seed'], reference=reference)
-        _display_color_times(signals, crossing, selected, reference, f'{key}_{output}', color_labels)
     else:
         st.caption('Esta execução ainda não tem contagens de veículos parados por cruzamento para exibir.')
-        render_signal_changes(output, selected, paired['seed'], key, reference=reference, labels=color_labels)
-    with st.expander('Ver todos os indicadores da rede'):
-        st.dataframe(table.rename(columns={'Tempos iniciais': baseline_label, 'Controle avaliado': model_label}), hide_index=True)
+    render_signal_changes(output, selected, paired['seed'], key, reference=reference, labels=color_labels)

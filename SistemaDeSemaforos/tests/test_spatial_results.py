@@ -129,16 +129,19 @@ class SpatialResultsTest(unittest.TestCase):
             {'intersection': 'Rondon x Niterói', 'latitude': -18.907, 'longitude': -48.267},
         ]
         network = PROJECT_ROOT / 'dados/rede/uberlandia.rondon_norte_corrigida.net.xml'
-        tls = 'FAM_CESARIO_PARANA'
+        targets = [
+            {'name': 'Rondon x Paraná', 'tls_id': 'FAM_RONDON_PARANA', 'phase_indices': [0]},
+            {'name': 'Rondon x Niterói', 'tls_id': 'FAM_RONDON_PORTO_ALEGRE', 'phase_indices': [0]},
+        ]
         programs = network_programs(network)
-        signals = [{'tls_id': tls, 'intersection': 'Rondon x Paraná', 'seed': 101, 'controller': 'PPO',
+        signals = [{'tls_id': target['tls_id'], 'intersection': target['name'], 'seed': 101, 'controller': 'PPO',
                     **{f'link_{index}_{color}_mean_seconds': seconds
-                       for index in range(len(programs[tls][0]['state']))
-                       for color, seconds in (('green', 25), ('yellow', 3), ('red', 45))}}]
+                       for index in range(len(programs[target['tls_id']][0]['state']))
+                       for color, seconds in (('green', green), ('yellow', 3), ('red', 45))}}
+                   for target, green in zip(targets, (25, 35))]
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp)
-            write_json(output / 'summary.json', {'config': {'network': str(network), 'targets': [
-                {'name': 'Rondon x Paraná', 'tls_id': tls, 'phase_indices': [0]}]}})
+            write_json(output / 'summary.json', {'config': {'network': str(network), 'targets': targets}})
             for file, rows in (('runs.csv', runs), ('intersections.csv', intersections),
                                ('gargalos.csv', coordinates), ('signals.csv', signals)):
                 pd.DataFrame(rows).to_csv(output / file, index=False)
@@ -161,8 +164,10 @@ class SpatialResultsTest(unittest.TestCase):
             self.assertTrue(app.get('deck_gl_json_chart'))
             self.assertEqual(len(app.get('download_button')), 1)
             detail = next(widget for widget in app.selectbox if widget.label == 'Cruzamento para detalhar')
-            self.assertEqual(len(app.selectbox), 1)
             detail.select('Rondon x Paraná').run()
+            crossing = next(w for w in app.selectbox if w.label == 'Cruzamento para ver os tempos dos semáforos')
+            self.assertCountEqual(crossing.options, ['Rondon x Paraná', 'Rondon x Niterói'])
+            crossing.select('Rondon x Paraná').run()
             self.assertFalse(app.exception, str(app.exception))
             local = next(frame.value for frame in app.dataframe if 'O que mudou' in frame.value)
             self.assertEqual(list(local), ['Indicador', 'Programa original', 'Com PPO', 'O que mudou'])
@@ -177,9 +182,14 @@ class SpatialResultsTest(unittest.TestCase):
             self.assertNotIn('ID do semáforo', times.columns)
             detail.select('Rondon x Niterói').run()
             self.assertFalse(app.exception, str(app.exception))
-            self.assertFalse(any('Verde (s)' in frame.value for frame in app.dataframe))
+            times = next(frame.value for frame in app.dataframe if 'Verde (s)' in frame.value)
+            self.assertEqual(times.iloc[0]['Verde (s)'], 25)
             local = next(frame.value for frame in app.dataframe if 'O que mudou' in frame.value)
             self.assertEqual(local.iloc[0]['O que mudou'], 'Sem dados')
+            crossing.select('Rondon x Niterói').run()
+            self.assertFalse(app.exception, str(app.exception))
+            times = next(frame.value for frame in app.dataframe if 'Verde (s)' in frame.value)
+            self.assertEqual(times.iloc[0]['Verde (s)'], 35)
             runs[0]['arrived'], runs[1]['arrived'] = 376, 281
             pd.DataFrame(runs).to_csv(output / 'runs.csv', index=False)
             app.radio[0].set_value('Resumo').run()

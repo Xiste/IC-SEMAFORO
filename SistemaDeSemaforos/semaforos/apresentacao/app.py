@@ -174,7 +174,8 @@ with results_tab:
                 if selected is not None:
                     st.session_state.job = selected
 
-            followed = st.selectbox('Execução', list(choices), format_func=execution_labels.__getitem__,
+            history_label = 'Execução' if results_section == TRAIN_RESULTS else 'Comparação salva'
+            followed = st.selectbox(history_label, list(choices), format_func=execution_labels.__getitem__,
                                     key=execution_key, on_change=follow_execution, args=(execution_key, choices))
             st.session_state.job = choices[followed]
             saved_selections[results_section] = followed
@@ -706,12 +707,12 @@ if show_results:
             progress_panel()
 
 def render_new_comparison(compare_models):
-    with results_tab, st.expander('Nova comparação', expanded=results_job is None):
+    with results_tab, st.expander('Rodar nova comparação', expanded=results_job is None):
         models = sorted(RESULTS.glob('**/*_model.zip'), key=lambda p: p.stat().st_mtime, reverse=True)
         if len(models) < (2 if compare_models else 1):
             if compare_models and models:
                 st.info('Você tem 1 modelo salvo. Treine mais um no mesmo cenário para comparar os dois.')
-                if st.button('Comparar o modelo salvo com os tempos iniciais'):
+                if st.button('Abrir área de comparação com o programa original'):
                     st.session_state['results_next_section'] = COMPARISONS
                     st.rerun()
             else:
@@ -727,7 +728,12 @@ def render_new_comparison(compare_models):
         }
         if compare_models:
             st.caption('Escolha o modelo que quer avaliar (A) e o que vai servir de referência (B).')
-        selected_model = st.selectbox('Modelo A' if compare_models else 'Modelo treinado', list(model_names), index=None,
+        else:
+            st.caption('O teste roda o modelo treinado e o programa original dos semáforos com a mesma demanda.')
+        if results_job:
+            st.caption('Um novo teste fica salvo como outra comparação.')
+        selected_model = st.selectbox('Modelo A' if compare_models else 'Modelo treinado', list(model_names),
+                                      index=0 if len(model_names) == 1 else None,
                                       format_func=model_names.__getitem__, placeholder='Selecione um treino salvo')
         if not selected_model:
             return
@@ -742,12 +748,13 @@ def render_new_comparison(compare_models):
             st.caption('Os dois modelos usarão o mesmo cenário, demanda e sementes de avaliação.')
         use_current_config = False
         if not compare_models or st.toggle('Personalizar a avaliação'):
-            use_current_config = st.checkbox('Usar o cenário atual',
-                                             help='Por padrão, a avaliação usa a configuração salva no treino.')
+            scenario_source = st.radio('Cenário do teste', ['Salvo no treino', 'Em edição'], horizontal=True,
+                                       help='Em edição usa o cenário e a demanda definidos agora em Cenário e tráfego.')
+            use_current_config = scenario_source == 'Em edição'
             if compare_models:
                 comparison_seeds = st.text_input('Sementes de avaliação para os dois modelos', placeholder='Ex.: 101, 102, 103',
                                                  help='Deixe em branco para usar as sementes do cenário. Use sementes diferentes das usadas nos dois treinos.')
-        if st.button('Comparar os dois modelos' if compare_models else 'Comparar modelo com os tempos iniciais', type='primary',
+        if st.button('Iniciar novo teste', type='primary',
                      disabled=active or (use_current_config and current_config is None)):
             try:
                 model = Path(selected_model).resolve()

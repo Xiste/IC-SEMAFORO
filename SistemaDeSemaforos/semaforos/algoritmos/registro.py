@@ -35,6 +35,9 @@ def _ensure_builtins():
     if "PPO" not in _ALGORITHMS:
         from .ppo import PPO_ALGORITHM
         register_algorithm(PPO_ALGORITHM)
+    if "A2C" not in _ALGORITHMS:
+        from .a2c import A2C_ALGORITHM
+        register_algorithm(A2C_ALGORITHM)
 
 
 def available_algorithms():

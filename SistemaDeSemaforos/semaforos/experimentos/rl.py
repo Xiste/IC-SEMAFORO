@@ -144,9 +144,9 @@ def evaluate_rl(config, output, model_path=None, seeds=None):
     algorithm = get_algorithm(model_algorithm)
     action_mode, action_spec = phase_action_spec(config, network_programs(config["network"]))
     if model_path and training_manifest.get("action_mode", "green_extension") != action_mode:
-        raise ValueError("O modo de ação mudou; treine um novo modelo PPO")
+        raise ValueError("O modo de ação mudou; treine um novo modelo")
     if model_path and action_mode in ('phase_durations', 'adaptive_signals') and training_manifest.get("action_spec") != action_spec:
-        raise ValueError("As fases ou os limites de duração mudaram; treine um novo modelo PPO")
+        raise ValueError("As fases ou os limites de duração mudaram; treine um novo modelo")
     if training_manifest.get("targets") and training_manifest["targets"] != config["targets"]:
         raise ValueError("O modelo foi treinado com outros semáforos/fases")
     if training_manifest.get("objectives") and training_manifest["objectives"] != config.get("objectives"):
@@ -178,9 +178,10 @@ def evaluate_rl(config, output, model_path=None, seeds=None):
     started = time.perf_counter()
     control = config.get("control", config.get("ppo", {}))
     env = SemaforosEnv(config, output / "episodes", gui=bool(control.get("gui", False)))
+    controllers = ("network_reference", algorithm.name if model is not None else "queue_actuated")
     try:
         for seed in seeds:
-            for controller in (("network_reference", "queue_actuated", algorithm.name) if model else ("network_reference", "queue_actuated")):
+            for controller in controllers:
                 env.reference_mode = controller == 'network_reference'
                 observation, _ = env.reset(seed=int(seed))
                 episode_reward = 0.0

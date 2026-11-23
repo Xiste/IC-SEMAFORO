@@ -13,6 +13,45 @@ from semaforos.experimentos.rl import train_rl, evaluate_rl
 
 
 class ExperimentalTest(unittest.TestCase):
+    def test_preview_runs_full_edited_cycle_without_vehicles(self):
+        import sumolib
+        import traci
+        from semaforos.cenario.ciclos import adjusted_programs, include_adjusted_times, save_adjusted_network
+        from semaforos.cenario.rede import network_programs
+
+        with tempfile.TemporaryDirectory(dir=PROJECT_ROOT / 'resultados', prefix='test_cycle_preview_') as temporary:
+            folder = Path(temporary)
+            config, _ = prepare_experimental(read_config(PROJECT_ROOT / 'config/cenario.json'), folder / 'scenario')
+            controller = 'FAM_RONDON_PARANA'
+            programs = network_programs(config['network'])
+            edits = {f'{controller}:0': programs[controller][0]['duration'] + 1}
+            adjusted = adjusted_programs(config, programs, edits)
+            include_adjusted_times(config['control'], adjusted, edits)
+            save_adjusted_network(config, edits, folder / 'edited')
+            network = sumolib.net.readNet(config['network'])
+            origin = next(edge.getID() for edge in network.getEdges() if edge.allows('passenger'))
+            config['control'].update(gui=False, action_mode='adaptive_signals')
+            config['duration_seconds'] = 30
+            config['demand'] = {'mode': 'edge_volumes', 'edge_volumes': [
+                {'from_edge': origin, 'vehicles_per_hour': 0},
+            ]}
+            config['pedestrians'] = {'enabled': False}
+            observed = []
+            simulation_step = traci.simulationStep
+
+            def record_step():
+                simulation_step()
+                observed.append(traci.trafficlight.getPhase(controller))
+
+            with patch('traci.simulationStep', side_effect=record_step):
+                result = preview_experimental(config, folder / 'preview', cycle_controller=controller)
+            expected = [index for index, phase in enumerate(adjusted[controller])
+                        for _ in range(int(phase['duration']))]
+            self.assertGreater(len(expected), 30)
+            self.assertEqual(observed, expected)
+            self.assertEqual(result['simulated_seconds'], len(expected))
+            self.assertEqual(result['departed'], 0)
+
     def test_individual_intersections(self):
         with tempfile.TemporaryDirectory(dir=PROJECT_ROOT / 'resultados', prefix='test_individual_') as temporary:
             folder = Path(temporary)

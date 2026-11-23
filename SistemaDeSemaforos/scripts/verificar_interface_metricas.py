@@ -8,6 +8,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from streamlit.testing.v1 import AppTest
+from semaforos.apresentacao.mapa_configuracao import apply_map_selection
 from semaforos.experimentos.tarefas import job_paths
 from semaforos.arquivos import write_json
 
@@ -22,11 +23,16 @@ with tempfile.TemporaryDirectory(dir=ROOT / 'resultados', prefix='ui_metrics_') 
             **app.session_state['experimental_config'],
             'measurement': {'warmup_seconds': 60., 'start_seconds': 60., 'end_seconds': 600.},
         }
-        next(w for w in app.radio if w.label == 'Por quanto tempo simular?').set_value('300 s').run()
+        next(w for w in app.number_input if w.label == 'Duração da simulação (segundos)').set_value(300).run()
         layers = json.loads(app.get('deck_gl_json_chart')[0].proto.json)['layers']
         roads = next(layer['data'] for layer in layers if layer['id'] == 'configuration-roads')
-        entry = next(road['edge_id'] for road in roads if road['controllers'])
-        next(w for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa').select(entry).run()
+        road = next(road for road in roads if road['controllers'])
+        entry = road['edge_id']
+        next(w for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa').select(('roads', entry)).run()
+        namespace = next(k.rsplit('_chart_', 1)[0] for k in app.session_state.filtered_state if '_chart_' in k)
+        apply_map_selection(app.session_state, namespace, {'roads': roads, 'signals': [], 'pedestrians': []},
+                            {'selection': {'objects': {'configuration-roads': [road]}}})
+        app.run()
         next(w for w in app.number_input if w.label == 'Veículos por hora').set_value(600.).run()
         next(w for w in app.checkbox if w.label == 'Coletar análise detalhada').set_value(True).run()
         next(w for w in app.button if w.label == 'Executar treinos e avaliações repetidos').click().run()

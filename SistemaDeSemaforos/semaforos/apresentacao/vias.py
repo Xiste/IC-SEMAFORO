@@ -3,6 +3,41 @@ import math
 import re
 
 
+# Arestas consecutivas que já recebem o fluxo de outra entrada do mesmo cruzamento.
+CONTINUATION_EDGES = {
+    '299471494#2', '1156717170#0', '331577748#4',  # Porto Alegre
+    '930831032#1', '1156717175#0',  # Niterói
+    '576014290#0',  # João Naves
+}
+ALAGOAS_ENTRY = '30620978#11'
+BENJAMIM_CONNECTOR = '853751181#0'
+ROTARY_ENTRY = '463014795#0'
+DIRECTIONS = ('leste', 'nordeste', 'norte', 'noroeste', 'oeste', 'sudoeste', 'sul', 'sudeste')
+
+
+def studied_volume_roads(edge_ids, details):
+    """Seleciona os campos de demanda do estudo, mantendo as arestas originais."""
+    eligible = set(edge_ids)
+    details = dict(details)
+    default = {edge for edge in eligible
+               if details[edge]['crossing'] and details[edge]['street']}
+    default.difference_update(CONTINUATION_EDGES | {BENJAMIM_CONNECTOR})
+    notes = {}
+    if BENJAMIM_CONNECTOR in eligible:
+        crossing = details[BENJAMIM_CONNECTOR]['crossing']
+        if crossing and ALAGOAS_ENTRY in eligible:
+            info = details[ALAGOAS_ENTRY]
+            details[ALAGOAS_ENTRY] = {
+                **info, 'crossing': crossing, 'street': 'Rua Alagoas',
+                'reference': 'Acesso lateral',
+            }
+            default.add(ALAGOAS_ENTRY)
+            notes[crossing] = 'O volume da Rua Alagoas entra antes da ligação com a Rua Ricardo Siquierolli Tucci.'
+    if ROTARY_ENTRY in eligible and (crossing := details[ROTARY_ENTRY]['crossing']):
+        notes[crossing] = 'A entrada lateral vem pela Rua Rotary Club. A Rua Antônio Crescêncio é uma das saídas desse acesso na rede.'
+    return details, default, notes
+
+
 def identify_roads(network, targets, osm_names=None):
     osm_names = osm_names or {}
     owners = {}
@@ -15,7 +50,6 @@ def identify_roads(network, targets, osm_names=None):
     entries = sorted(edge.getID() for edge in network.getEdges(withInternal=False)
                      if edge.getID() in owners and edge.allows('passenger'))
     references = {edge: f'Entrada {number}' for number, edge in enumerate(entries, 1)}
-    directions = ['leste', 'nordeste', 'norte', 'noroeste', 'oeste', 'sudoeste', 'sul', 'sudeste']
     details = {}
     for number, edge in enumerate(sorted(network.getEdges(withInternal=False), key=lambda e: e.getID()), 1):
         edge_id = edge.getID()
@@ -29,9 +63,10 @@ def identify_roads(network, targets, osm_names=None):
         # A direção é a do trecho final de chegada, inclusive em vias curvas.
         end = shape[-1]
         previous = next((point for point in reversed(shape[:-1]) if point != end), None)
+        direction = origin = ''
         if previous:
             angle = round(math.atan2(end[1] - previous[1], end[0] - previous[0]) / (math.pi / 4)) % 8
-            direction, origin = directions[angle], directions[(angle + 4) % 8]
+            direction, origin = DIRECTIONS[angle], DIRECTIONS[(angle + 4) % 8]
             approach = f'chega pelo {origin}, segue para {direction}'
         else:
             approach = 'sentido a conferir no mapa'
@@ -40,13 +75,11 @@ def identify_roads(network, targets, osm_names=None):
         parts = [reference, crossing, name, approach]
         details[edge_id] = {'label': ' · '.join(part for part in parts if part),
                             'reference': reference, 'crossing': crossing, 'street': name,
-                            'approach': approach}
+                            'approach': approach, 'origin': origin, 'direction': direction}
     return details
 
 
-def edit_road_volumes(network, initial, details, incoming_ids, render_map, *, selected_crossing=None, selected_edge=None, show_map=True, map_only=False, duration=None):
-    """Edita um cruzamento mantendo volumes dos demais na mesma configuração."""
-    import pandas as pd
+def road_volume_state(network, initial, *, map_only):
     import streamlit as st
     from semaforos.apresentacao.estado import configuration_key
 
@@ -58,13 +91,76 @@ def edit_road_volumes(network, initial, details, incoming_ids, render_map, *, se
     state_key = f'road_volume_values_{scope}'
     if state_key not in st.session_state:
         st.session_state[state_key] = {row['from_edge']: float(row.get('vehicles_per_hour', 0)) for row in initial}
-    values = st.session_state[state_key]
+    return scope, st.session_state[state_key]
+
+
+def render_road_volume_table(network, initial, details, primary_ids, visible_ids, notes):
+    import pandas as pd
+    import streamlit as st
+
+    scope, values = road_volume_state(network, initial, map_only=True)
+    eligible = [edge for edge in values if edge in visible_ids]
+    if not eligible:
+        st.caption('Abra Filtros para mostrar outros trechos da rede.')
+        return
+    groups = {}
+    for edge in eligible:
+        owners = details[edge]['crossing'] if edge in primary_ids else ''
+        for crossing in owners.split(' / '):
+            groups.setdefault(crossing or 'Outros trechos', []).append(edge)
+    crossings = sorted(groups, key=lambda name: (name == 'Outros trechos', name))
+    with st.container():
+        crossing = st.selectbox('Cruzamento das vias', crossings, key=f'road_table_crossing_{scope}')
+        edges = sorted(groups[crossing], key=lambda edge: (details[edge]['street'], details[edge]['reference']))
+        rates = tuple(values[edge] for edge in edges)
+        rows = [{'Entrada': details[edge]['reference'], 'Via': details[edge]['street'] or 'Via sem nome',
+                 'Sentido de chegada': details[edge]['approach'], 'Veículos por hora': rate}
+                for edge, rate in zip(edges, rates)]
+        table = pd.DataFrame(rows).astype({'Veículos por hora': float})
+        editor_key = f'road_table_{scope}_{hash((tuple(edges), rates))}'
+        feedback_key = f'road_table_feedback_{scope}'
+
+        def apply_volumes():
+            edited_rows = st.session_state[editor_key]['edited_rows']
+            updates = {edges[index]: cells['Veículos por hora'] for index, cells in edited_rows.items()}
+            if any(pd.isna(rate) or not math.isfinite(rate) or rate < 0 for rate in updates.values()):
+                st.session_state[feedback_key] = 'Preencha todas as linhas com valores maiores ou iguais a zero.'
+                return
+            for edge, rate in updates.items():
+                if rate != values[edge]:
+                    values[edge] = float(rate)
+                    revision_key = f'road_rate_revision_{scope}_{edge}'
+                    st.session_state[revision_key] = st.session_state.get(revision_key, 0) + 1
+            st.session_state[feedback_key] = ''
+
+        st.caption('Informe volume apenas onde os veículos entram na simulação. Use 0 nos trechos em que eles só passam.')
+        if crossing in notes:
+            st.caption(notes[crossing])
+        with st.form(f'road_table_form_{scope}'):
+            st.data_editor(table, hide_index=True, width='stretch', key=editor_key,
+                disabled=['Entrada', 'Via', 'Sentido de chegada'],
+                column_config={'Veículos por hora': st.column_config.NumberColumn(min_value=0., step=1., required=True)})
+            st.form_submit_button('Aplicar volumes da tabela', on_click=apply_volumes)
+        feedback = st.session_state.pop(feedback_key, None)
+        if feedback:
+            st.error(feedback)
+        elif feedback == '':
+            st.success('Volumes aplicados ao cenário.')
+
+
+def edit_road_volumes(network, initial, details, incoming_ids, render_map, *, selected_crossing=None, selected_edge=None, show_map=True, map_only=False, duration=None):
+    """Edita um cruzamento mantendo volumes dos demais na mesma configuração."""
+    import pandas as pd
+    import streamlit as st
+
+    scope, values = road_volume_state(network, initial, map_only=map_only)
     if map_only:
         if selected_edge in values:
             info = details[selected_edge]
             st.markdown('**' + (info['street'] or 'Via sem nome cadastrado') + '**')
             st.caption(info['reference'] + ' · ' + info['approach'])
-            input_key = f'road_rate_{scope}_{selected_edge}'
+            revision = st.session_state.get(f'road_rate_revision_{scope}_{selected_edge}', 0)
+            input_key = f'road_rate_{scope}_{selected_edge}_{revision}'
             if input_key not in st.session_state:
                 st.session_state[input_key] = values[selected_edge]
             values[selected_edge] = st.number_input('Veículos por hora', min_value=0., step=10.,

@@ -27,11 +27,12 @@ with sections[1]:
 
 
 def test_validation_points_to_the_relevant_step():
-    for error in ('Prepare o cenário', 'Aquecimento inválido', 'Informe veículos por hora', 'Limites PPO inválidos'):
+    for error in ('Prepare o cenário', 'Aquecimento inválido', 'Informe veículos por hora'):
         assert configuration_guidance(error)[0] == '1 · Cenário e tráfego'
+    assert configuration_guidance('Limites PPO inválidos')[0] == '2 · Treinamento'
 
 
-def test_fix_button_opens_the_map_with_affected_controller():
+def test_fix_button_opens_training_limits_with_affected_controller():
     app = AppTest.from_string(r'''
 from semaforos.apresentacao.layout import configuration_summary, workflow_navigation
 sections = workflow_navigation()
@@ -41,7 +42,7 @@ with sections[1]:
 ''').run()
     app.radio[0].set_value('2 · Treinamento').run()
     app.button[0].click().run()
-    assert app.radio[0].value == '1 · Cenário e tráfego'
-    assert app.session_state['configuration_focus'] == 'signals'
+    assert app.radio[0].value == '2 · Treinamento'
+    assert app.session_state['configuration_focus'] == 'green_limits'
     assert app.session_state['configuration_focus_object'] == {'tls_id': 'FAM_RONDON_PARANA'}
     assert not app.exception

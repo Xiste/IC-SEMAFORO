@@ -1,16 +1,14 @@
-"""Treino e avaliação reais verificam o contrato de extensão e o PPO migrado."""
+"""Treino, salvamento e avaliação reais para PPO e A2C."""
 
 import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 from semaforos.caminhos import PROJECT_ROOT
 from semaforos.cenario.configuracao import read_config
-from semaforos.algoritmos.registro import Algorithm, get_algorithm, register_algorithm
+from semaforos.cenario.experimental import prepare_or_reuse
 from semaforos.experimentos.rl import train_rl, evaluate_rl
-from stable_baselines3 import A2C
 
 
 class AlgorithmPipelineTest(unittest.TestCase):
@@ -30,7 +28,7 @@ class AlgorithmPipelineTest(unittest.TestCase):
         self.assertEqual(manifest["algorithm"], name)
         self.assertTrue(manifest["algorithm_parameters"])
         result = evaluate_rl(config, folder / "evaluation", summary["model"], seeds=[101])
-        self.assertEqual({row["controller"] for row in result["runs"]}, {name, "network_reference", "queue_actuated"})
+        self.assertEqual([row["controller"] for row in result["runs"]], ["network_reference", name])
         self.assertTrue(result["same_planned_demand_per_seed"])
         self.assertTrue((folder / "evaluation/comparison.png").is_file())
 
@@ -38,21 +36,19 @@ class AlgorithmPipelineTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             self.check_cycle(self.config(), "PPO", Path(folder))
 
-    def test_second_registered_algorithm_reuses_pipeline(self):
-        get_algorithm("PPO")
-
-        def parameters(config):
-            return dict(policy="MlpPolicy", n_steps=config["a2c_test"]["n_steps"], seed=config["seeds"][0], verbose=0)
-
-        # A2C é uma prova do adaptador neste teste, não um algoritmo publicado na UI.
-        with patch.dict("semaforos.algoritmos.registro._ALGORITHMS"):
-            register_algorithm(Algorithm("A2C_TEST", A2C, "a2c_test", parameters))
-            config = self.config()
-            config.update(algorithm="A2C_TEST", a2c_test={"n_steps": 4, "total_timesteps": 8})
-            with tempfile.TemporaryDirectory() as folder:
-                self.check_cycle(config, "A2C_TEST", Path(folder))
-        with self.assertRaisesRegex(ValueError, "desconhecido"):
-            get_algorithm("A2C_TEST")
+    def test_a2c_trains_and_evaluates_the_nine_intersections(self):
+        base = read_config(PROJECT_ROOT / "config/cenario_rede_corrigida.json")
+        config, _, _ = prepare_or_reuse(base, PROJECT_ROOT / 'resultados')
+        config.update(algorithm="A2C", a2c={"n_steps": 2, "total_timesteps": 4}, duration_seconds=20)
+        config["control"] = {**config["control"], "action_mode": "adaptive_signals", "gui": False}
+        config["demand"] = {"mode": "edge_volumes", "edge_volumes": [
+            {"from_edge": "1156717168", "vehicles_per_hour": 540.}
+        ]}
+        with tempfile.TemporaryDirectory() as folder:
+            self.check_cycle(config, "A2C", Path(folder))
+            manifest = json.loads((Path(folder) / "train/manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["action_mode"], "adaptive_signals")
+            self.assertEqual(len(manifest["action_spec"]), 17)
 
 
 if __name__ == "__main__":

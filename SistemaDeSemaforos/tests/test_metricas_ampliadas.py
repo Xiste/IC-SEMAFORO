@@ -194,7 +194,7 @@ class ExtendedMetricsTest(unittest.TestCase):
 
     def test_repetitions_are_independent_and_use_reserved_evaluation_seeds(self):
         config = {'seeds': [11], 'study': {'training_seeds': [11, 22]}, 'evaluation': {'seeds': [101, 102]}}
-        self.assertEqual(study_plan(config)['evaluation_episodes'], 12)
+        self.assertEqual(study_plan(config)['evaluation_episodes'], 8)
         with self.assertRaises(ValueError):
             study_plan({**config, 'evaluation': {'seeds': [11]}})
         result = {'cancelled': False, 'comparison_complete': True, 'diagnostico': {'conclusions': [],

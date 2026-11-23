@@ -23,7 +23,7 @@ flowchart TD
     UI --> R
 ```
 
-PPO conhece o ambiente pela interface Gymnasium. experimentos/rl.py compartilha treino, salvamento, cancelamento e avaliação. algoritmos/heuristicas.py mantém a referência de filas fora do PPO. Configurações do construtor são definidas uma única vez em algoritmos/ppo.py e usadas pelo treino e catálogo.
+PPO e A2C conhecem o ambiente pela interface Gymnasium. experimentos/rl.py compartilha treino, salvamento, cancelamento e avaliação. algoritmos/heuristicas.py mantém a referência de filas. Os adaptadores em algoritmos/ppo.py e algoritmos/a2c.py definem os argumentos utilizados no treino e no catálogo.
 
 caminhos.PROJECT_ROOT evita que mudanças de pasta alterem a localização de dados e configurações. pipeline.py e interface.py são entradas pequenas e preservam os comandos usados pelo usuário. Os caminhos de importação internos foram migrados; scripts externos que importavam módulos antigos precisam usar os novos caminhos.
 
@@ -31,37 +31,13 @@ caminhos.PROJECT_ROOT evita que mudanças de pasta alterem a localização de da
 
 O adaptador Algorithm é para modelos compatíveis com o ciclo Stable-Baselines3: construtor com env, learn(total_timesteps, callback), predict(observation, deterministic), save, load, num_timesteps e device. O ambiente atual usa observações Box e ações **MultiDiscrete**. Um algoritmo com espaço de ações diferente exige um adaptador do ambiente e testes adicionais.
 
-Exemplo de um novo adaptador A2C, para implementação futura:
-
-```python
-# semaforos/algoritmos/a2c.py
-from stable_baselines3 import A2C
-from .registro import Algorithm
-
-def constructor_parameters(config):
-    params = config.get("a2c", {})
-    return dict(policy="MlpPolicy", n_steps=int(params.get("n_steps", 128)),
-                seed=config["seeds"][0], verbose=0)
-
-A2C_ALGORITHM = Algorithm("A2C", A2C, "a2c", constructor_parameters)
-```
-
-Na função _ensure_builtins de registro.py, importar e registrar uma vez o adaptador, de modo semelhante ao PPO. O registro explícito impede carregar código arbitrário a partir do JSON. Selecionar algorithm: "A2C" no cenário e criar a2c: {"n_steps": 128, "total_timesteps": 2048}. Na interface, o seletor mostra os algoritmos registrados; parâmetros específicos são informados no campo JSON. Criar também as legendas correspondentes para campos novos.
-
-```python
-# Acrescentar dentro de _ensure_builtins, após o registro PPO:
-if "A2C" not in _ALGORITHMS:
-    from .a2c import A2C_ALGORITHM
-    register_algorithm(A2C_ALGORITHM)
-```
+PPO e A2C são registrados em `_ensure_builtins`, em registro.py. Para adicionar outro algoritmo, registre um adaptador compatível nessa função e defina os controles de configuração na interface. Para configurar A2C no cenário, use `"algorithm": "A2C"` e `"a2c": {"n_steps": 5, "total_timesteps": 2048}`.
 
 ```powershell
 .\.venv\Scripts\python.exe pipeline.py algorithms
 .\.venv\Scripts\python.exe pipeline.py rl-train --algorithm A2C --config config/meu_cenario.json
 .\.venv\Scripts\python.exe pipeline.py rl-eval --algorithm A2C --model resultados/PASTA/a2c_model.zip
 ```
-
-Esses comandos A2C passam a funcionar **após implementar e registrar** o adaptador. Só PPO é publicado nesta revisão. O teste de integração registra A2C temporariamente e executa o mesmo fluxo para comprovar a extensão, sem disponibilizá-lo como produto.
 
 Os controles comuns podem ficar em control: intervalo de decisão, modo, tipos de fase, limites, opções por fase e GUI. Arquivos existentes que mantêm esses campos em ppo continuam aceitos. Os hiperparâmetros do otimizador ficam na chave de seu adaptador. Manifestos PPO antigos e ppo_model.zip continuam aceitos quando rede, mapeamento e espaço de ações são compatíveis.
 

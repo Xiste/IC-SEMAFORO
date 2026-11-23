@@ -61,45 +61,21 @@ def page_header():
     from pathlib import Path
     styles = Path(__file__).with_name('interface.css').read_text(encoding='utf-8')
     st.markdown(f'<style>{styles}</style>', unsafe_allow_html=True)
-    st.markdown('''<div class="lab-hero">
-      <span class="lab-eyebrow">Rondon Norte / Pesquisa em mobilidade</span>
-      <h1>Laboratório de trânsito</h1>
-      <p>Da configuração ao resultado: simule o tráfego e descubra como o aprendizado pode ajustar os semáforos.</p>
-      <div class="lab-tags"><span>Uberlândia, MG</span><span>9 cruzamentos disponíveis</span><span>Ambiente experimental</span></div>
-    </div>''', unsafe_allow_html=True)
-    with st.sidebar:
-        st.markdown('<div class="lab-section">Seu percurso</div>', unsafe_allow_html=True)
-        st.subheader('Seu estudo de trânsito')
-        st.markdown('''<div class="guide-item"><span class="guide-number">01</span><div><strong>Monte o cenário no mapa</strong><small>Vias, semáforos e travessias dos nove cruzamentos.</small></div></div>
-        <div class="guide-item"><span class="guide-number">02</span><div><strong>Treine os semáforos</strong><small>Escolha um objetivo e inicie.</small></div></div>
-        <div class="guide-item"><span class="guide-number">03</span><div><strong>Compare o resultado</strong><small>Confira espera, viagens e atendimento.</small></div></div>''', unsafe_allow_html=True)
-        with st.expander('Primeira vez por aqui?'):
-            st.markdown('1. Localize as vias no mapa da rede.\n\n2. Informe o fluxo e a duração da simulação.\n\n3. Use **Ver uma prévia de 30 segundos** para conferir o cenário antes de treinar.\n\n4. Ao terminar, clique em **Comparar este modelo com os tempos iniciais**.')
-            st.caption('Tempo simulado é o tempo de trânsito representado. O tempo no computador depende da execução.')
-        st.divider()
-
-
-def step_heading(number, title, description):
-    from html import escape
-    st.markdown(f'<div class="step-heading"><span class="step-badge">{number:02d}</span><h3>{escape(title)}</h3></div>', unsafe_allow_html=True)
-    st.caption(description)
-
-
-def section_label(text):
-    from html import escape
-    st.markdown(f'<div class="lab-section">{escape(text)}</div>', unsafe_allow_html=True)
+    st.title('Rondon Norte · 9 cruzamentos')
 
 
 def configuration_issue(error):
     text = str(error or '').casefold()
+    if re.search(r'limites de [^ ]+ excedem', text):
+        return 'green_limits', TRAINING_TAB, 'Ajustar os limites de verde'
     rules = (
         (('prepare', 'rede válida', 'rede experimental'), 'scenario', SETUP_TAB, 'Preparar a rede'),
         (('duração da simulação', 'aquecimento', 'warmup', 'medição', 'measurement'), 'duration', SETUP_TAB, 'Ajustar a duração'),
         (('decision_seconds',), 'ppo', TRAINING_TAB, 'Ajustar o intervalo entre decisões'),
         (('step_seconds', 'passo da simulação', 'passo sumo'), 'scenario', SETUP_TAB, 'Conferir o cenário'),
         (('pessoas', 'pedestre', 'travessia'), 'pedestrians', SETUP_TAB, 'Ajustar a demanda de pedestres'),
-        (('perfil', 'porcentag', 'intervalo temporal', 'time_profile', 'janela de demanda'), 'profile', SETUP_TAB, 'Ajustar o perfil de fluxo'),
-        (('limites ppo', 'limites de verde', 'fase', 'semáforo', 'máximo de ciclo', 'maximum_cycle', 'phase_duration'), 'signals', SETUP_TAB, 'Ajustar os semáforos'),
+        (('limites ppo', 'limites de verde'), 'green_limits', TRAINING_TAB, 'Ajustar os limites de verde'),
+        (('fase', 'semáforo', 'máximo de ciclo', 'maximum_cycle', 'phase_duration'), 'signals', SETUP_TAB, 'Ajustar os semáforos'),
         (('veículo', 'entrada', 'fluxo', 'volume', 'tráfego'), 'roads', SETUP_TAB, 'Ajustar o fluxo nas vias'),
         (('semente',), 'seeds', TRAINING_TAB, 'Ajustar as sementes'),
         (('prioridade', 'pesos', 'objetivo'), 'objectives', TRAINING_TAB, 'Ajustar o objetivo'),
@@ -119,7 +95,7 @@ def focus_configuration_issue(error):
     group, destination, _ = configuration_issue(error)
     st.session_state['configuration_focus'] = group
     st.session_state.pop('configuration_focus_object', None)
-    if group == 'signals':
+    if group in ('signals', 'green_limits'):
         match = re.search(r'Limites (?:PPO inválidos para|de)\s+([^\s:;]+)(?=:\d|\s+excedem)', str(error), re.IGNORECASE)
         if match:
             st.session_state['configuration_focus_object'] = {'tls_id': match.group(1)}
@@ -130,8 +106,6 @@ def friendly_configuration_error(error):
     """Mantém o detalhe técnico nos arquivos, com uma ação clara na tela."""
     text = str(error or '')
     lowered = text.casefold()
-    if 'porcentag' in lowered:
-        return text
     if any(t in lowered for t in ('pessoas/h', 'ao menos um pedestre', 'zero pedestres')):
         return 'Preencha pessoas por hora em pelo menos uma travessia do mapa ou desative a opção de incluir pedestres. Se necessário, aumente o volume ou a duração.'
     if 'step_seconds' in lowered and ('duraç' in lowered or 'múltipl' in lowered):
@@ -143,7 +117,7 @@ def friendly_configuration_error(error):
     if any(t in lowered for t in ('measurement', 'warmup', 'medição', 'aquecimento', '0 ≤')):
         return 'Escolha uma duração compatível com o aquecimento e o passo definidos no cenário.'
     if any(t in lowered for t in ('limites ppo', 'mínimo', 'máximo de ciclo', 'phase_duration', 'maximum_cycle')):
-        return 'Em Semáforos no mapa, confira os limites de verde. Eles devem incluir o tempo inicial e respeitar os tempos de segurança.'
+        return 'Confira os tempos iniciais e os limites de verde em Treinamento → Configurações avançadas.'
     if any(t in lowered for t in ('n_steps', 'batch_size', 'minibatch', 'parâmetros ppo')):
         return 'Nos ajustes avançados do treinamento, a coleta precisa ser múltipla do tamanho do lote, e o lote não pode ser maior que a coleta.'
     if 'semente' in lowered:
@@ -153,27 +127,10 @@ def friendly_configuration_error(error):
     if isinstance(error, (ValueError, TypeError)) and ('invalid literal' in lowered or 'could not convert' in lowered):
         return 'Confira os campos numéricos: preencha somente números válidos, sem letras ou campos vazios.'
     if 'prepare' in lowered or 'rede válida' in lowered:
-        return 'Em Cenário e tráfego, abra Detalhes da rede e clique em Preparar simulação.'
+        return 'Abra Cenário e tráfego. Se a rede apresentar erro de preparação, use Tentar novamente.'
     if any(t in lowered for t in ('zero veículos', 'gerar tráfego', 'veículos por hora')):
         return 'No mapa, preencha o volume de pelo menos uma via. Se necessário, aumente o volume ou a duração para gerar veículos.'
     return text or 'Confira os valores preenchidos antes de iniciar.'
-
-
-def readiness_panel(config, error, busy=False):
-    with st.sidebar:
-        section_label('Antes de executar')
-        if st.session_state.get('ui_default_tab') == SETUP_TAB:
-            st.caption('Configure as vias no mapa. Os ajustes são conferidos ao avançar para o treinamento ou executar uma simulação.')
-        elif config is None:
-            destination, instruction = configuration_guidance(error)
-            st.warning(f'Falta um ajuste em {destination}.')
-            st.caption(instruction)
-        else:
-            st.success('Configuração pronta')
-            st.caption(f"{len({t['name'] for t in config['targets']})} cruzamento(s) · {config['duration_seconds']:g} s por simulação")
-        if busy:
-            st.info('Há uma execução em andamento. Acompanhe ou interrompa em Resultados.')
-        st.caption('Alterar os campos configura a próxima execução. Um processo em andamento mantém a configuração com que foi iniciado.')
 
 
 def configuration_changes(config, baseline, *, restored_study=True):
@@ -231,8 +188,8 @@ def configuration_changes(config, baseline, *, restored_study=True):
         changes.append(f'Aquecimento de {before_warmup:g} para {after_warmup:g} s')
     if baseline['step_seconds'] != config['step_seconds']:
         changes.append(f'Passo da simulação de {baseline["step_seconds"]:g} para {config["step_seconds"]:g} s')
-    if baseline['demand'].get('time_profile', []) != config['demand'].get('time_profile', []):
-        changes.append('Distribuição do fluxo ao longo da simulação alterada')
+    if baseline['demand'].get('time_profile') and not config['demand'].get('time_profile'):
+        changes.append('Volume por hora constante ao longo da simulação')
     if pedestrian_settings(baseline) != pedestrian_settings(config):
         changes.append('Configuração de pedestres alterada')
     if green_limits(baseline) != green_limits(config):
@@ -243,11 +200,23 @@ def configuration_changes(config, baseline, *, restored_study=True):
         changes.append('Prioridades do treinamento alteradas')
     if baseline.get('seeds') != config.get('seeds') or baseline.get('evaluation') != config.get('evaluation'):
         changes.append('Sementes do estudo alteradas')
-    before_ppo, after_ppo = baseline.get('ppo', {}), config.get('ppo', {})
-    old, new = before_ppo.get('total_timesteps', 2048), after_ppo.get('total_timesteps', 2048)
+    from semaforos.algoritmos.registro import get_algorithm
+
+    before_algorithm = get_algorithm(baseline.get('algorithm', 'PPO'))
+    after_algorithm = get_algorithm(config.get('algorithm', 'PPO'))
+    before_params = baseline.get(before_algorithm.config_key, {})
+    after_params = config.get(after_algorithm.config_key, {})
+    if before_algorithm.name != after_algorithm.name:
+        changes.append(f'Algoritmo alterado de {before_algorithm.name} para {after_algorithm.name}')
+    old, new = before_params.get('total_timesteps', 2048), after_params.get('total_timesteps', 2048)
     if old != new:
         changes.append(f'Decisões solicitadas de {old:,} para {new:,}'.replace(',', '.'))
-    if any(before_ppo.get(key) != after_ppo.get(key) for key in ('decision_seconds', 'n_epochs', 'n_steps', 'batch_size')):
+    before_control = baseline.get('control', baseline.get('ppo', {}))
+    after_control = config.get('control', config.get('ppo', {}))
+    if (before_control.get('decision_seconds') != after_control.get('decision_seconds')
+            or (before_algorithm.name == after_algorithm.name and any(
+                before_params.get(key) != after_params.get(key) for key in ('n_epochs', 'n_steps', 'batch_size')
+            ))):
         changes.append('Parâmetros avançados de treinamento alterados')
     if visualization(baseline, restored_study) != visualization(config, True):
         changes.append('Visualização durante o treino alterada')

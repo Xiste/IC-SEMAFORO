@@ -20,7 +20,7 @@ O mecanismo usa `setPhase` e `setPhaseDuration` conforme o [controle TraCI docum
 
 O PPO aprende a escolher as aberturas a partir dessas observações. As durações resultam das decisões sucessivas e dos limites, em vez de escolher antecipadamente um tempo para cada fase de um ciclo. A função de recompensa existente foi preservada para não misturar a mudança de controle com uma mudança de objetivo.
 
-A referência da rede continua executando seus tempos originais, sem intervenção adaptativa. O controle por filas usa as filas das aberturas candidatas, sujeito à mesma proteção de transições do modelo. As comparações mantêm demanda e sementes pareadas.
+A referência da rede executa os tempos iniciais. A avaliação usa a mesma demanda por semente para o programa inicial e o modelo treinado.
 
 Modelos antigos permanecem preservados e podem ser usados com seus cenários originais. **É necessário treinar um modelo novo para este modo**, pois mudaram as observações e o espaço de ações. O manifesto registra `action_mode`, `action_spec`, `observation_version=lane_sensors_v1` e `sensor_layout`; a avaliação recusa alterações incompatíveis. Cenários CLI antigos mantêm o comportamento anterior até que o modo seja alterado explicitamente. Preparar a rede ainda cria o programa de referência e seus grupos compatíveis; a interface aplica o modo adaptativo ao configurar a execução.
 

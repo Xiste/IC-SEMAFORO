@@ -23,11 +23,9 @@ projeto. Nenhum dos artigos valida a rede local ou seus planos operacionais.
 - `nearby_pairs.csv`: controladores a até 60 m, apenas **candidatos** a agrupamento;
 - `summary.json`: projeção da rede, cobertura do mapeamento e presença de infraestrutura pedestre.
 
-A avaliação `ppo-eval` agora inclui `queue_actuated`, que observa as filas nas
-faixas servidas pelo verde atual e pelo próximo verde configurado. Ela escolhe
-encurtar, manter ou estender o verde pelos mesmos limites do ambiente PPO.
-É um controle reativo simples, incluído como comparação adicional; não reproduz
-o método dos artigos PressLight ou RESCO.
+A avaliação `ppo-eval` compara o modelo PPO aos tempos iniciais. O comando
+independente `compare-baselines` compara os tempos iniciais com a heurística
+`queue_actuated`, que escolhe o verde a partir das filas observadas.
 
 ## Dependências externas ainda necessárias
 

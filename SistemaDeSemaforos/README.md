@@ -16,9 +16,9 @@ Na pasta SistemaDeSemaforos, em PowerShell:
 .\.venv\Scripts\python.exe pipeline.py rl-eval --model resultados/PASTA_DO_TREINO/ppo_model.zip
 ```
 
-Interface: http://localhost:8501. Abra **Começar com um exemplo** na barra lateral para explorar a configuração com volumes ilustrativos. Os comandos ppo-train e ppo-eval continuam disponíveis. train executa a busca com modelo substituto, separada do aprendizado por reforço. run executa a referência da rede ou um candidato de tempos fixos.
+Interface: http://localhost:8501. Em **Cenário e tráfego**, selecione as entradas no mapa e preencha os volumes por sentido. Os comandos ppo-train e ppo-eval continuam disponíveis. train executa a busca com modelo substituto, separada do aprendizado por reforço. run executa a referência da rede ou um candidato de tempos fixos.
 
-Para instalação nova no Windows x64 com Python 3.13: instale SUMO, exponha sumo no PATH ou defina SUMO_HOME e execute `powershell -ExecutionPolicy Bypass -File .\iniciar_interface.ps1`. O script cria um ambiente sem pacotes do Anaconda e instala `requirements-lock.txt`. Os resultados são gravados em diretórios novos. Em **Cenário e tráfego**, **Ver uma prévia de 30 segundos** abre uma visualização curta. **Simular com os tempos iniciais** executa o episódio completo e salva as métricas de referência, como o comando `pipeline.py run-reference`.
+Para instalação nova no Windows x64 com Python 3.13: instale SUMO, exponha sumo no PATH ou defina SUMO_HOME e execute `powershell -ExecutionPolicy Bypass -File .\iniciar_interface.ps1`. O script cria um ambiente sem pacotes do Anaconda e instala `requirements-lock.txt`. Os resultados são gravados em diretórios novos. Em **Cenário e tráfego**, **Simular com os tempos iniciais** executa o episódio completo e salva as métricas de referência, como o comando `pipeline.py run-reference`.
 
 ## Estrutura
 

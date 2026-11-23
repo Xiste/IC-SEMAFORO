@@ -107,7 +107,8 @@ def pedestrian_street_map(network, route):
                       get_background_color=[255, 255, 255, 240], character_set="'auto'")])
 
 
-def pedestrian_editor(network, defaults, key, *, selected_crossing=None, selected_route=None, show_map=True, map_only=False):
+def pedestrian_editor(network, defaults, key, *, selected_crossing=None, selected_route=None,
+                      show_map=True, map_only=False, apply_table=False):
     from semaforos.apresentacao.estado import configuration_key
     key = configuration_key(key)
     details = pedestrian_route_details(network, defaults)
@@ -132,16 +133,44 @@ def pedestrian_editor(network, defaults, key, *, selected_crossing=None, selecte
     local = [row for row in details if row['intersection'] == crossing]
     if selected_route and any(r['crossing_id'] == selected_route for r in local):
         local = [r for r in local if r['crossing_id'] == selected_route]
-    st.caption('Preencha as pessoas por hora deste cruzamento. Os valores dos outros cruzamentos são mantidos ao trocar a seleção. Zero não gera pedestres nesta entrada.')
+    st.caption('Informe pessoas por hora em cada sentido. Use 0 nas entradas sem pedestres.')
     records = [{'Entrada': row['entry_reference'], 'Travessia': row['reference'],
                 'Sai do lado': row['origin_side'], 'Chega ao lado': row['destination_side'],
                 'persons_per_hour': values[identity(row)]} for row in local]
-    edited = st.data_editor(pd.DataFrame(records), hide_index=True, num_rows='fixed', width='stretch',
-        key=f'{state_key}_editor_{crossing}' + (f'_{selected_route}' if selected_route else ''),
-        disabled=['Entrada', 'Travessia', 'Sai do lado', 'Chega ao lado'],
-        column_config={'persons_per_hour': st.column_config.NumberColumn('Pessoas/h', min_value=0., step=10., required=True)})
-    for row, value in zip(local, edited['persons_per_hour']):
-        values[identity(row)] = float(value) if pd.notna(value) else None
+    table = pd.DataFrame(records).astype({'persons_per_hour': float})
+    options = dict(hide_index=True, num_rows='fixed', width='stretch',
+                   disabled=['Entrada', 'Travessia', 'Sai do lado', 'Chega ao lado'],
+                   column_config={'persons_per_hour': st.column_config.NumberColumn('Pessoas/h', min_value=0., step=10., required=True)})
+    revision_key = key + '_table_revision'
+    if apply_table:
+        snapshot = tuple((identity(row), values[identity(row)]) for row in local)
+        editor_key = f'{key}_crossing_table_{hash(snapshot)}'
+        feedback_key = key + '_table_feedback'
+
+        def apply_flows():
+            rows = st.session_state[editor_key]['edited_rows']
+            updates = {identity(local[index]): cells['persons_per_hour'] for index, cells in rows.items()}
+            if any(value is None or not math.isfinite(value) or value < 0 for value in updates.values()):
+                st.session_state[feedback_key] = 'Preencha os fluxos com números maiores ou iguais a zero.'
+                return
+            if any(values[entry] != value for entry, value in updates.items()):
+                values.update({entry: float(value) for entry, value in updates.items()})
+                st.session_state[revision_key] = st.session_state.get(revision_key, 0) + 1
+            st.session_state[feedback_key] = ''
+
+        with st.form(key + '_crossing_form'):
+            st.data_editor(table, key=editor_key, **options)
+            st.form_submit_button('Aplicar fluxos das travessias', on_click=apply_flows)
+        feedback = st.session_state.pop(feedback_key, None)
+        if feedback:
+            st.error(feedback)
+        elif feedback == '':
+            st.success('Fluxos de pedestres aplicados ao cenário.')
+    else:
+        revision = st.session_state.get(revision_key, 0)
+        edited = st.data_editor(table, key=f'{state_key}_editor_{crossing}_{selected_route}_{revision}', **options)
+        for row, value in zip(local, edited['persons_per_hour']):
+            values[identity(row)] = float(value) if pd.notna(value) else None
     options = [f"{row['entry_reference']} - {row['reference']} - {row['origin_side']} -> {row['destination_side']}" for row in local]
     selected = st.selectbox('Entrada de pedestres a localizar', options,
         key=f'{key}_entry_{crossing}') if show_map else options[0]

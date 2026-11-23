@@ -27,7 +27,7 @@ Se as rotas ajustarem as contagens mas o fluxo realizado ficar abaixo do esperad
 
 ## Comparar controles
 
-Use **Comparar referência e controle por filas sem treinamento** para executar uma comparação sem modelo. Para incluir PPO, treine um modelo compatível e use **Avaliar PPO e referência**. A avaliação compara referência, controle por filas e modelo com as mesmas sementes.
+Em **Resultados → Comparações**, escolha um modelo treinado e use **Comparar modelo com os tempos iniciais**. A avaliação roda os dois controles com as mesmas sementes. A comparação independente com a heurística de filas está disponível pelo comando `compare-baselines`.
 
 O painel mostra valores médios antes/depois, benefício absoluto, percentual, quantidade de sementes com melhora/piora, intervalo de confiança exploratório e diferenças por cruzamento. Percentual positivo significa melhora; se a referência vale zero, o percentual fica vazio e os valores absolutos permanecem disponíveis. Tempo médio de viagem só considera viagens concluídas.
 

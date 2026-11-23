@@ -70,6 +70,8 @@ def test_real_map_has_signal_icons_roads_and_pedestrian_lines(tmp_path):
         assert feature['geometry']['geometries'][1]['coordinates']
     assert layers['configuration-signals']['pickable']
     assert layers['configuration-roads']['pickable']
+    assert layers['configuration-roads']['widthUnits'] == 'pixels'
+    assert all(road['width'] >= 8 for road in layers['configuration-roads']['data'])
     assert layers['configuration-pedestrians']['@@type'] == 'PathLayer'
     assert layers['configuration-directions']['data']
     # Rua Parana tem quatro faixas: desenhar apenas a primeira desloca a seta.
@@ -118,11 +120,29 @@ def test_map_selection_accepts_only_real_objects_and_switches_panel():
     assert map_selection({'selection': {'objects': {}}}, geometry) is None
 
 
-def test_map_panels_preserve_road_and_green_edits_between_crossings(tmp_path):
+def test_replayed_map_selection_does_not_reopen_dismissed_popup():
+    geometry = {'roads': [{'kind': 'road', 'edge_id': 'a', 'crossing': 'Local A'}],
+                'signals': [], 'pedestrians': []}
+    selected = {'selection': {'objects': {'configuration-roads': [{'edge_id': 'a'}]}}}
+    state = {}
+    apply_map_selection(state, 'map', geometry, selected)
+    assert not state['map_panel_closed']
+    state['map_panel_closed'] = True
+    replayed = {'selection': {'objects': {'configuration-roads': [{'edge_id': 'a', 'color': [0, 0, 0]}]}}}
+    apply_map_selection(state, 'map', geometry, replayed)
+    assert state['map_panel_closed']
+    apply_map_selection(state, 'map', geometry, {'selection': {'objects': {}}})
+    assert state['map_panel_closed']
+    apply_map_selection(state, 'map', geometry, selected)
+    assert not state['map_panel_closed']
+
+
+def test_map_preserves_road_edits_between_crossings(tmp_path):
     network = tmp_path / 'network.xml'
     network.write_text('''<net><location netOffset="0,0" projParameter="+proj=utm +zone=23 +south +datum=WGS84"/>
       <edge id="a"><lane id="a_0" shape="500000,7900000 500000,7900010"/></edge>
       <edge id="b"><lane id="b_0" shape="500100,7900000 500100,7900010"/></edge>
+      <edge id="c"><lane id="c_0" shape="500200,7900000 500200,7900010"/></edge>
       <connection tl="a" from="a" to="out" linkIndex="0" dir="s"/>
       <connection tl="b" from="b" to="out" linkIndex="0" dir="s"/>
       <tlLogic id="a"><phase state="G" duration="20"/><phase state="y" duration="3"/><phase state="r" duration="2"/></tlLogic>
@@ -132,10 +152,9 @@ def test_map_panels_preserve_road_and_green_edits_between_crossings(tmp_path):
 import streamlit as st
 from semaforos.apresentacao.mapa_configuracao import render_configuration_map
 base = {{'network':{str(network)!r}, 'targets':[{{'tls_id':'a','name':'Local A'}},{{'tls_id':'b','name':'Local B'}}]}}
-initial = [dict(from_edge=e, vehicles_per_hour=10., to_edge='') for e in ('a','b')]
-details = {{e: dict(crossing='Local '+e.upper(), reference='Entrada '+e, street='Rua '+e if e == 'a' else '', approach='norte', label=e) for e in ('a','b')}}
-specs = [dict(tls_id=tls,phase_index=i,kind=kind,durations_seconds=bounds) for tls in ('a','b')
-         for i,kind,bounds in [(0,'green',[10,20,30]),(1,'yellow',[3,3,3]),(2,'all_red',[2,2,2])]]
+initial = [dict(from_edge=e, vehicles_per_hour=10., to_edge='') for e in ('a','b','c')]
+details = {{e: dict(crossing='Local '+e.upper() if e != 'c' else '', reference='Entrada '+e,
+                   street='Rua '+e if e != 'b' else '', approach='norte', label=e) for e in ('a','b','c')}}
 from semaforos.apresentacao.mapa_configuracao import apply_map_selection
 from semaforos.apresentacao.estado import configuration_key
 namespace = configuration_key('configuration_map_' + str(base['network']))
@@ -146,44 +165,44 @@ def pick(layer, field, value):
 st.button('Via A', on_click=pick, args=('configuration-roads','edge_id','a'))
 st.button('Via B', on_click=pick, args=('configuration-roads','edge_id','b'))
 st.button('Sinal A', on_click=pick, args=('configuration-signals','tls_id','a'))
-roads, pedestrians, limits, enabled = render_configuration_map(base,initial,details,('a','b'),specs,{{'a':'Rua A','b':'Rua B'}},[],volume_by_road=True)
+roads, pedestrians, enabled = render_configuration_map(base,initial,details,('a','b'),[])
 st.session_state.roads = roads.to_dict('records')
-st.session_state.limits = limits.to_dict('records')
 '''
     app = AppTest.from_string(source).run()
     assert not app.exception
-    def edit(token, changes):
-        key = next(k for k,v in app.session_state.filtered_state.items() if token in k and isinstance(v,dict) and 'edited_rows' in v)
-        app.session_state[key] = {'edited_rows': {0:changes},'added_rows':[],'deleted_rows':[]}
-        app.run()
-        assert not app.exception
     assert not any(w.label == 'Cruzamento no mapa' for w in app.selectbox)
     assert not any(w.label == 'Veículos por hora' for w in app.number_input)
     def visible_roads():
         deck = json.loads(app.get('deck_gl_json_chart')[0].proto.json)
         return {road['edge_id'] for layer in deck['layers'] if layer['id'] == 'configuration-roads' for road in layer['data']}
     def search_options():
-        return next(w.options for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa')
+        return [option for option in next(w.options for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa')
+                if option.startswith('Vias · ')]
     assert visible_roads() == {'a'}
     assert len(search_options()) == 1 and 'Rua a' in search_options()[0]
+    assert next(w for w in app.selectbox if w.label == 'Cruzamento das vias').options == ['Local A']
+    assert any('volumes ativos em outros trechos' in w.value for w in app.caption)
     app.button[0].click().run()
     next(w for w in app.number_input if w.label == 'Veículos por hora').set_value(420.).run()
     app.button[2].click().run()
-    next(w for w in app.number_input if w.label == 'Verde mínimo (s)').set_value(12.).run()
-    next(w for w in app.number_input if w.label == 'Verde máximo (s)').set_value(35.).run()
-    assert not any('entries' in item.value.columns for item in app.dataframe)
-    next(w for w in app.toggle if w.label == 'Mostrar também vias sem nome').set_value(True).run()
-    assert visible_roads() == {'a', 'b'}
-    assert len(search_options()) == 2 and any('Nome não cadastrado' in option for option in search_options())
-    next(w for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa').select('b').run()
+    assert not any(w.label == 'Verde mínimo (s)' for w in app.number_input)
+    next(w for w in app.toggle if w.label == 'Mostrar outros trechos da rede').set_value(True).run()
+    assert visible_roads() == {'a', 'b', 'c'}
+    assert len(search_options()) == 3 and any('Nome não cadastrado' in option for option in search_options())
+    assert next(w for w in app.selectbox if w.label == 'Cruzamento das vias').options == ['Local A', 'Outros trechos']
+    overview = json.loads(app.get('deck_gl_json_chart')[0].proto.json)['initialViewState']
+    next(w for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa').select(('roads', 'b')).run()
+    focused = json.loads(app.get('deck_gl_json_chart')[0].proto.json)['initialViewState']
+    assert focused != overview
+    assert not any(w.label in ('Fechar ajustes', 'Voltar à visão geral do mapa') for w in app.button)
+    app.button[1].click().run()
     next(w for w in app.number_input if w.label == 'Veículos por hora').set_value(160.).run()
     next(w for w in app.button if w.label == 'Fechar ajustes').click().run()
-    next(w for w in app.toggle if w.label == 'Mostrar também vias sem nome').set_value(False).run()
+    next(w for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa').set_value(None).run()
+    assert json.loads(app.get('deck_gl_json_chart')[0].proto.json)['initialViewState'] == overview
+    next(w for w in app.toggle if w.label == 'Mostrar outros trechos da rede').set_value(False).run()
     assert visible_roads() == {'a'}
     app.button[0].click().run()
     assert not app.exception
     assert next(w for w in app.number_input if w.label == 'Veículos por hora').value == 420.
-    assert [r['vehicles_per_hour'] for r in app.session_state.roads] == [420.,160.]
-    assert app.session_state.limits[0]['minimum_seconds'] == 12.
-    assert app.session_state.limits[0]['maximum_seconds'] == 35.
-    assert app.session_state.limits[3]['minimum_seconds'] == 10.
+    assert [r['vehicles_per_hour'] for r in app.session_state.roads] == [420.,160.,10.]

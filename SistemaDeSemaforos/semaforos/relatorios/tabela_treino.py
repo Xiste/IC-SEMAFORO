@@ -121,10 +121,17 @@ def training_metrics_table(output):
         append(record, context_for(record), 'Rede', '', 'training_episodes.csv')
 
     if not episodes:
+        for record in read_csv(output / 'runs.csv').to_dict('records'):
+            append(record, context_for(record), 'Rede', record.get('controller'), 'runs.csv')
         for name, scope in DETAILS.items():
             for record in read_csv(output / f'{name}.csv').to_dict('records'):
                 identity = ' · '.join(str(record[k]) for k in ('intersection', 'tls_id', 'lane_id', 'movement_id', 'crossing_id', 'edge_id', 'vehicle_class') if k in record and pd.notna(record[k]))
                 append(record, context_for(record), scope, identity, f'{name}.csv')
+
+    for name in ('study_aggregate.csv', 'study_comparisons.csv'):
+        for record in read_csv(output / name).to_dict('records'):
+            identity = ' · '.join(str(record[field]) for field in ('controller', 'label') if field in record)
+            append(record, {}, 'Estudo com repetições', identity, name)
 
     for path in episodes:
         info = read_json(path) or {}

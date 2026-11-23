@@ -162,23 +162,43 @@ def prepare_or_reuse(config, results):
     return prepared, rows, False
 
 
-def preview_experimental(config, output):
+def preview_experimental(config, output, *, cycle_controller=None):
     """Confere carregamento e passos reais; não substitui avaliação completa."""
     from semaforos.simulacao.ambiente import SemaforosEnv
     preview = copy.deepcopy(config)
     horizon = min(30, float(config["duration_seconds"]))
+    phases = None
+    if cycle_controller is not None:
+        from semaforos.cenario.rede import network_programs
+        phases = network_programs(config['network']).get(cycle_controller)
+        if not phases or cycle_controller not in {target['tls_id'] for target in config['targets']}:
+            raise ValueError('O semáforo escolhido não pertence ao cenário atual.')
+        step = float(config['step_seconds'])
+        horizon = round(sum(phase['duration'] for phase in phases) / step) * step
     preview["duration_seconds"] = horizon
     # Preview de infraestrutura não executa um aquecimento longo nem a janela do estudo.
     preview['measurement'] = {'warmup_seconds': 0, 'start_seconds': 0, 'end_seconds': horizon}
     control = preview.get("control", preview.get("ppo", {}))
     # Gerar a demanda completa preserva taxas e janelas sem tráfego no início.
-    # Somente a execução é interrompida aos 30 s; não redistribuir viagens.
-    env = SemaforosEnv(preview, output, gui=bool(control.get("gui", False)), demand_config=config)
+    # O horizonte da prévia não redistribui viagens.
+    env = SemaforosEnv(preview, output, gui=bool(control.get("gui", False)), demand_config=config,
+                       allow_empty_edge_demand=cycle_controller is not None)
     env.reference_mode = True
     neutral_choice = 0 if env.action_mode == 'adaptive_signals' else 1
     action = [neutral_choice] * len(env.action_spec)
     try:
         env.reset(seed=preview["seeds"][0])
+        if phases:
+            import traci
+            traci.trafficlight.setPhase(cycle_controller, 0)
+            traci.trafficlight.setPhaseDuration(cycle_controller, phases[0]['duration'])
+            if env.gui:
+                views = traci.gui.getIDList()
+                lanes = traci.trafficlight.getControlledLanes(cycle_controller)
+                if views and lanes:
+                    x, y = traci.lane.getShape(lanes[0])[-1]
+                    traci.gui.setOffset(views[0], x, y)
+                    traci.gui.setZoom(views[0], 600)
         done = False
         while not done:
             _, _, done, _, info = env.step(action)

@@ -92,6 +92,18 @@ async def _exercise_events(port, captured):
     def elements(messages, kind):
         return [(m, getattr(m.delta.new_element, kind)) for m in messages
                 if m.WhichOneof('type') == 'delta' and m.delta.new_element.HasField(kind)]
+    def dialogs(messages):
+        return [(m, m.delta.add_block.dialog) for m in messages
+                if m.WhichOneof('type') == 'delta' and m.delta.add_block.HasField('dialog')]
+
+    def tab_labels(messages):
+        return {m.delta.add_block.tab.label for m in messages
+                if m.WhichOneof('type') == 'delta' and m.delta.add_block.HasField('tab')}
+
+    def search_has_crossings(messages):
+        return any(option.startswith('Travessias · ')
+                   for _, widget in elements(messages, 'selectbox') if widget.label == 'Buscar rua ou cruzamento no mapa'
+                   for option in widget.options)
     try:
         initial, full_time = await rerun()
         first_message, chart = elements(initial, 'deck_gl_json_chart')[0]
@@ -100,6 +112,11 @@ async def _exercise_events(port, captured):
         initial_view = json.loads(chart.json)['initialViewState']
         layers = {layer['id']: layer['data'] for layer in json.loads(chart.json)['layers']}
         roads = layers['configuration-roads']
+        assert not layers['configuration-pedestrians']
+        assert not any(p.label.startswith('Variar o fluxo') for _, p in elements(initial, 'checkbox'))
+        assert not search_has_crossings(initial)
+        assert {'Mapa', 'Tabela', 'Volumes das vias', 'Tempos dos semáforos'} <= tab_labels(initial)
+        assert 'Travessias' not in tab_labels(initial)
         assert all(feature['geometry']['geometries'][1]['coordinates']
                    for feature in layers['configuration-signals'])
         timings = []
@@ -128,15 +145,39 @@ async def _exercise_events(port, captured):
                 # no delta. A persistencia do numero e conferida no payload abaixo.
                 assert rate.id == first_rate_id
         close_message, close = next((m, p) for m, p in elements(partial, 'button') if p.label == 'Fechar ajustes')
+        assert close_message.delta.fragment_id == fragment
         states[close.id] = ('trigger_value', True)
-        closed, _ = await rerun(close_message.delta.fragment_id)
+        closed, close_time = await rerun(fragment)
         states.pop(close.id)
+        assert not any('FULL_APP_PASS_MARKER' in p.body for _, p in elements(closed, 'markdown'))
+        assert dialogs(closed)[-1][1].is_open is False
         closed_message, closed_chart = elements(closed, 'deck_gl_json_chart')[0]
         assert closed_chart.id == chart.id
         assert list(closed_message.metadata.delta_path) == list(first_message.metadata.delta_path)
-        assert any(p.label == 'Mostrar ajustes' for _, p in elements(closed, 'button'))
-        # O icone e os corredores pertencem ao mesmo objeto selecionavel. A
-        # tabela de tempos aparece sem recriar o mapa nem sair do fragmento.
+        assert not any(p.label.startswith('Reabrir ajustes:') for _, p in elements(closed, 'button'))
+        states[chart.id] = ('string_value', json.dumps({'selection': {
+            'indices': {'configuration-roads': [0]},
+            'objects': {'configuration-roads': [{**roads[0], 'color': [0, 0, 0]}]},
+        }}))
+        replayed, _ = await rerun(fragment)
+        assert not any(p.label == 'Veículos por hora' for _, p in elements(replayed, 'number_input'))
+        # O mapa alterna a seleção ao clicar outra vez no mesmo objeto.
+        states[chart.id] = ('string_value', json.dumps({'selection': {'indices': {}, 'objects': {}}}))
+        unselected, _ = await rerun(fragment)
+        assert not any(p.label == 'Veículos por hora' for _, p in elements(unselected, 'number_input'))
+        states[chart.id] = ('string_value', json.dumps({'selection': {
+            'indices': {'configuration-roads': [0]}, 'objects': {'configuration-roads': [roads[0]]},
+        }}))
+        reopened, _ = await rerun(fragment)
+        assert any(p.label == 'Veículos por hora' for _, p in elements(reopened, 'number_input'))
+        dialog_message, dialog = dialogs(reopened)[-1]
+        assert dialog.is_open and dialog_message.delta.fragment_id == fragment
+        states[dialog.id] = ('trigger_value', True)
+        dismissed, dismiss_time = await rerun(fragment)
+        states.pop(dialog.id)
+        assert dialogs(dismissed)[-1][1].is_open is False
+        assert not any('FULL_APP_PASS_MARKER' in p.body for _, p in elements(dismissed, 'markdown'))
+        # O ícone e os corredores pertencem ao mesmo objeto selecionável.
         signal_index, signal = next((i, p) for i, p in enumerate(layers['configuration-signals'])
                                     if p['tls_id'] == 'FAM_RONDON_PARANA')
         assert signal['type'] == 'Feature'
@@ -148,14 +189,13 @@ async def _exercise_events(port, captured):
         signal_selected, _ = await rerun(fragment)
         assert elements(signal_selected, 'deck_gl_json_chart')[0][1].id == chart.id
         assert not any('FULL_APP_PASS_MARKER' in p.body for _, p in elements(signal_selected, 'markdown'))
-        frames = [(m, pa.ipc.open_stream(p.data).read_all().to_pandas())
-                  for m, p in elements(signal_selected, 'arrow_data_frame')]
-        table_message, table = next((m, frame) for m, frame in frames if 'Vermelho (s)' in frame.columns)
-        assert table_message.delta.fragment_id == fragment
-        affected_references = {r['title'].split(' · ')[0] for r in roads if r['edge_id'] in signal['affected_edges']}
-        displayed_references = set(table.loc[table['Entrada'].str.startswith('Entrada'), 'Entrada'])
-        assert displayed_references == affected_references
-        assert all(table[['Verde (s)','Amarelo (s)','Vermelho (s)']].sum(axis=1) > 0)
+        assert not any(p.label == 'Movimento no ciclo' for _, p in elements(signal_selected, 'selectbox'))
+        assert not any(p.label == 'Ver um ciclo completo no SUMO' for _, p in elements(signal_selected, 'button'))
+        stages = next(p for _, p in elements(signal_selected, 'selectbox') if p.label == 'Quem recebe verde')
+        assert list(stages.options) == [
+            'Rua Paraná → sudeste',
+            'Av. Rondon Pacheco nos dois sentidos + Rua Paraná → noroeste',
+        ]
         new_times = []
         for label in ('Verde (s)', 'Amarelo (s)', 'Todos em vermelho (s)'):
             value = next(p for _, p in elements(signal_selected, 'number_input') if p.label == label)
@@ -166,22 +206,123 @@ async def _exercise_events(port, captured):
         applied, _ = await rerun(submit_message.delta.fragment_id)
         states.pop(submit.id)
         assert any('Tempos aplicados' in p.body for _, p in elements(applied, 'alert'))
-        close_message, close = next((m, p) for m, p in elements(applied, 'button') if p.label == 'Fechar ajustes')
+        signal_close = next(p for _, p in elements(signal_selected, 'button') if p.label == 'Fechar ajustes')
+        states[signal_close.id] = ('trigger_value', True)
+        signal_closed, _ = await rerun(fragment)
+        states.pop(signal_close.id)
+
+        for label, crossing in (
+                ('Cruzamento das vias', roads[0]['crossing']),
+                ('Cruzamento dos semáforos', signal['crossing'])):
+            select = next(p for _, p in elements(signal_closed, 'selectbox') if p.label == label)
+            assert crossing in select.options
+            states[select.id] = ('string_value', crossing)
+        tables, _ = await rerun(fragment)
+
+        async def apply_table(messages, label, column, updates):
+            editor = next(p for _, p in elements(messages, 'arrow_data_frame')
+                          if p.id and column in pa.ipc.open_stream(p.data).read_all().column_names)
+            submit = next(p for _, p in elements(messages, 'button') if p.label == label)
+            states[editor.id] = ('string_value', json.dumps({
+                'edited_rows': updates, 'added_rows': [], 'deleted_rows': [],
+            }))
+            states[submit.id] = ('trigger_value', True)
+            result, _ = await rerun(fragment)
+            states.pop(editor.id)
+            states.pop(submit.id)
+            return result
+
+        def table_frame(messages, column):
+            return next(frame for _, editor in elements(messages, 'arrow_data_frame') if editor.id
+                        for frame in [pa.ipc.open_stream(editor.data).read_all().to_pandas()] if column in frame)
+
+        road_ref = roads[0]['title'].split(' · ')[0]
+        road_rows = table_frame(tables, 'Veículos por hora')
+        road_index = road_rows.index[road_rows['Entrada'] == road_ref][0]
+        assert road_rows.loc[road_index, 'Veículos por hora'] == 600.
+        road_applied = await apply_table(tables, 'Aplicar volumes da tabela', 'Veículos por hora',
+                                         {int(road_index): {'Veículos por hora': 720.}})
+        assert any('Volumes aplicados' in p.body for _, p in elements(road_applied, 'alert'))
+        signal_rows = table_frame(tables, 'Todos em vermelho (s)')
+        group = 'Conjunto ' + signal['description'].split(' · ')[0].split()[-1]
+        signal_index_in_table = signal_rows.index[(signal_rows['Semáforo'] == group)
+                                                  & (signal_rows['Quem recebe verde'] == stages.options[0])][0]
+        assert signal_rows.loc[signal_index_in_table, 'Verde (s)'] == new_times[0]
+        new_times[0] += 1
+        signal_applied = await apply_table(road_applied, 'Aplicar tempos da tabela', 'Todos em vermelho (s)',
+                                           {int(signal_index_in_table): {'Verde (s)': new_times[0]}})
+        assert any('Tempos aplicados' in p.body for _, p in elements(signal_applied, 'alert'))
+
+        states[chart.id] = ('string_value', json.dumps({'selection': {
+            'indices': {'configuration-roads': [0]}, 'objects': {'configuration-roads': [roads[0]]},
+        }}))
+        reopened, _ = await rerun(fragment)
+        rate = next(p for _, p in elements(reopened, 'number_input') if p.label == 'Veículos por hora')
+        assert (rate.value if rate.set_value else rate.default) == 720.
+        close_message, close = next((m, p) for m, p in elements(reopened, 'button') if p.label == 'Fechar ajustes')
         states[close.id] = ('trigger_value', True)
         await rerun(close_message.delta.fragment_id)
         states.pop(close.id)
-        # Editar periodos tambem precisa permanecer no fragmento, inclusive o
-        # rerun adicional usado para atualizar as porcentagens e as estimativas.
-        profile_toggle = next(p for _, p in elements(initial, 'checkbox') if p.label.startswith('Variar o fluxo'))
-        states[profile_toggle.id] = ('bool_value', True)
-        profile_open, _ = await rerun(fragment)
-        editor = next(p for _, p in elements(profile_open, 'arrow_data_frame') if '"share"' in p.columns)
-        states[editor.id] = ('string_value', json.dumps({'edited_rows': {
-            str(i): {'share': share} for i, share in enumerate((40.,10.,20.,30.))},
-            'added_rows': [], 'deleted_rows': []}))
-        profile_changed, _ = await rerun(fragment)
-        assert not any('FULL_APP_PASS_MARKER' in p.body for _, p in elements(profile_changed, 'markdown'))
-        assert elements(profile_changed, 'deck_gl_json_chart')[-1][1].id == chart.id
+
+        toggle = next(p for _, p in elements(initial, 'checkbox') if p.label == 'Incluir pedestres?')
+        states[toggle.id] = ('bool_value', True)
+        enabled, _ = await rerun(fragment)
+        enabled_chart = elements(enabled, 'deck_gl_json_chart')[0][1]
+        crossings = next(layer['data'] for layer in json.loads(enabled_chart.json)['layers']
+                         if layer['id'] == 'configuration-pedestrians')
+        assert search_has_crossings(enabled)
+        assert 'Travessias' in tab_labels(enabled)
+        pedestrian_select = next(p for _, p in elements(enabled, 'selectbox')
+                                 if p.label == 'Cruzamento para preencher os pedestres')
+        states[pedestrian_select.id] = ('string_value', crossings[0]['crossing'])
+        crossing_event = ('string_value', json.dumps({'selection': {
+            'indices': {'configuration-pedestrians': [0]},
+            'objects': {'configuration-pedestrians': [crossings[0]]},
+        }}))
+        states[enabled_chart.id] = crossing_event
+        crossing_selected, _ = await rerun(fragment)
+        edit_message, pedestrian_editor = next((m, p) for m, p in elements(crossing_selected, 'arrow_data_frame')
+                                                if p.id and 'persons_per_hour' in p.columns
+                                                and m.delta.fragment_id != fragment)
+        states[pedestrian_editor.id] = ('string_value', json.dumps({
+            'edited_rows': {'0': {'persons_per_hour': 60}}, 'added_rows': [], 'deleted_rows': [],
+        }))
+        await rerun(edit_message.delta.fragment_id)
+        states.pop(pedestrian_editor.id)
+        states[toggle.id] = ('bool_value', False)
+        disabled, _ = await rerun(fragment)
+        disabled_chart = elements(disabled, 'deck_gl_json_chart')[0][1]
+        assert not next(layer['data'] for layer in json.loads(disabled_chart.json)['layers']
+                        if layer['id'] == 'configuration-pedestrians')
+        assert not search_has_crossings(disabled)
+        assert 'Travessias' not in tab_labels(disabled)
+        assert not any(p.label == 'Fechar ajustes' for _, p in elements(disabled, 'button'))
+        states.pop(enabled_chart.id)
+        states[toggle.id] = ('bool_value', True)
+        visible_again, _ = await rerun(fragment)
+        states[elements(visible_again, 'deck_gl_json_chart')[0][1].id] = crossing_event
+        crossing_reopened, _ = await rerun(fragment)
+        editor = next(p for m, p in elements(crossing_reopened, 'arrow_data_frame')
+                      if p.id and 'persons_per_hour' in p.columns and m.delta.fragment_id != fragment)
+        assert pa.ipc.open_stream(editor.data).read_all()['persons_per_hour'][0].as_py() == 60.
+        close = next(p for _, p in elements(crossing_reopened, 'button') if p.label == 'Fechar ajustes')
+        states[close.id] = ('trigger_value', True)
+        pedestrian_table, _ = await rerun(fragment)
+        states.pop(close.id)
+        pedestrian_rows = table_frame(pedestrian_table, 'persons_per_hour')
+        crossing_entry = int(pedestrian_rows.index[pedestrian_rows['persons_per_hour'] == 60.][0])
+        applied_flows = await apply_table(pedestrian_table, 'Aplicar fluxos das travessias', 'persons_per_hour',
+                                         {crossing_entry: {'persons_per_hour': 90.}})
+        assert any('Fluxos de pedestres aplicados' in p.body for _, p in elements(applied_flows, 'alert'))
+        current_chart = elements(applied_flows, 'deck_gl_json_chart')[0][1]
+        states[current_chart.id] = ('string_value', json.dumps({'selection': {'indices': {}, 'objects': {}}}))
+        await rerun(fragment)
+        states[current_chart.id] = crossing_event
+        with_updated_volume, _ = await rerun(fragment)
+        editor = next(p for m, p in elements(with_updated_volume, 'arrow_data_frame')
+                      if p.id and 'persons_per_hour' in p.columns and m.delta.fragment_id != fragment)
+        assert pa.ipc.open_stream(editor.data).read_all()['persons_per_hour'][0].as_py() == 90.
+
         # Acao fora do fragmento deve usar os valores recentes, com executor substituido.
         reference = next(p for _, p in elements(initial, 'button') if p.label == 'Simular com os tempos iniciais')
         assert not reference.disabled
@@ -189,11 +330,14 @@ async def _exercise_events(port, captured):
         await rerun()
         payload = json.loads(captured.read_text(encoding='utf-8'))
         assert payload['demand']['mode'] == 'edge_volumes'
-        assert next(r['vehicles_per_hour'] for r in payload['demand']['edge_volumes'] if r['from_edge'] == roads[0]['edge_id']) == 600.
+        assert next(r['vehicles_per_hour'] for r in payload['demand']['edge_volumes'] if r['from_edge'] == roads[0]['edge_id']) == 720.
         assert len({t['name'] for t in payload['targets']}) == 9
-        assert [(r['end']-r['begin'])*r['multiplier'] for r in payload['demand']['time_profile']] == [40.,10.,20.,30.]
+        assert 'time_profile' not in payload['demand']
         from semaforos.cenario.rede import network_programs
         assert [phase['duration'] for phase in network_programs(payload['network'])[signal['tls_id']][:3]] == new_times
+        assert payload['pedestrians']['enabled']
+        assert [row['persons_per_hour'] for row in payload['pedestrians']['flows']] == [90.]
         print(f'Primeira abertura: {full_time:.3f}s; cliques parciais: ' + ', '.join(f'{t:.3f}s' for t in timings))
+        print(f'Fechamento no fragmento: botão {close_time:.3f}s; X {dismiss_time:.3f}s')
     finally:
         connection.close()

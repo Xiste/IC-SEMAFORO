@@ -33,10 +33,11 @@ from semaforos.relatorios.metricas import trip_summary
 class SemaforosEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, config, output, gui=False, demand_config=None):
+    def __init__(self, config, output, gui=False, demand_config=None, *, allow_empty_edge_demand=False):
         super().__init__()
         self.config = config
         self.demand_config = demand_config if demand_config is not None else config
+        self.allow_empty_edge_demand = allow_empty_edge_demand
         # Arquivos additional do SUMO resolvem saídas a partir da sua própria pasta.
         self.output = Path(output).resolve()
         self.output.mkdir(parents=True, exist_ok=True)
@@ -153,7 +154,8 @@ class SemaforosEnv(gym.Env):
         folder.mkdir()
         self.current_output = folder
         self.real_started = time.perf_counter()
-        routes = create_demand(self.demand_config, self.network, folder, self.seed_value)
+        routes = create_demand(self.demand_config, self.network, folder, self.seed_value,
+                               allow_empty_edge_demand=self.allow_empty_edge_demand)
         pedestrian_routes, planned_people = create_pedestrian_demand(self.demand_config, folder)
         # Comparar viagens, horários, tipos e pedestres, removendo comentários de geração.
         digest = hashlib.sha256()

@@ -39,7 +39,7 @@ def validate_vehicle_types(config):
     return types
 
 
-def create_edge_volume_demand(config, network, output, seed):
+def create_edge_volume_demand(config, network, output, seed, *, allow_empty=False):
     """Converte contagens por via em viagens com saídas conectadas.
 
     Na ausência de destino informado, a saída é sintética e sorteada entre
@@ -137,7 +137,7 @@ def create_edge_volume_demand(config, network, output, seed):
                          "planned_vehicles": count, "to_edge": fixed_exit or None,
                          "destinations": destination_mix,
                          "destination_source": destination_source})
-    if not trips:
+    if not trips and not allow_empty:
         raise ValueError("Os volumes e a duração selecionados geram zero veículos")
     root = ET.Element("routes")
     for vehicle_type in vehicle_types:
@@ -154,14 +154,14 @@ def create_edge_volume_demand(config, network, output, seed):
     return routes
 
 
-def create_demand(config, network, output, seed):
+def create_demand(config, network, output, seed, *, allow_empty_edge_demand=False):
     demand = config["demand"]
     routes = output / "routes.rou.xml"
     if demand["mode"] == "observed_counts":
         from .calibracao import create_calibrated_demand
         return create_calibrated_demand(config, output, seed)
     if demand["mode"] == "edge_volumes":
-        return create_edge_volume_demand(config, network, output, seed)
+        return create_edge_volume_demand(config, network, output, seed, allow_empty=allow_empty_edge_demand)
     if demand["mode"] == "random":
         rate = demand["vehicles_per_hour"]
         if rate <= 0:

@@ -11,9 +11,8 @@ from pyproj import Proj
 
 from semaforos.apresentacao.estado import configuration_key
 from semaforos.apresentacao.layout import SETUP_TAB
-from semaforos.apresentacao.vias import edit_road_volumes
+from semaforos.apresentacao.vias import edit_road_volumes, render_road_volume_table, studied_volume_roads
 from semaforos.apresentacao.pedestres import pedestrian_editor, pedestrian_route_details
-from semaforos.apresentacao.treinamento import adaptive_limits_editor
 from semaforos.cenario.ciclos import adjusted_programs, minimum_phase_seconds
 from semaforos.cenario.rede import network_programs
 
@@ -207,13 +206,12 @@ def configuration_geometry(network, version, targets, road_details, pedestrian_r
     return {'signals': signals, 'roads': paths, 'context': contexts, 'pedestrians': pedestrians}
 
 
-def map_road_scope(geometry, include_unnamed):
-    if include_unnamed:
-        return geometry
-    named = [row for row in geometry['roads'] if row['street']]
-    background = [{'path': row['path']} for row in geometry['roads'] if not row['street']]
-    return {**geometry, 'roads': named, 'context': [*geometry['context'], *background],
-            'all_roads': geometry['roads']}
+def map_road_scope(geometry, visible_ids, primary_ids):
+    editable = [row for row in geometry['roads'] if row['edge_id'] in visible_ids]
+    background = [{'path': row['path']} for row in geometry['roads'] if row['edge_id'] not in visible_ids]
+    overview = [row for row in geometry['roads'] if row['edge_id'] in primary_ids]
+    return {**geometry, 'roads': editable, 'context': [*geometry['context'], *background],
+            'overview_roads': overview}
 
 
 def map_selection(event, geometry):
@@ -231,6 +229,12 @@ def map_selection(event, geometry):
 
 def apply_map_selection(state, namespace, geometry, event, demand_mode_key=None):
     selection = map_selection(event, geometry)
+    event_key = namespace + '_last_map_selection'
+    previous = state[event_key] if event_key in state else None
+    state[event_key] = selection
+    # O gráfico pode reenviar o objeto destacado em outra interação da página.
+    if selection == previous:
+        return selection
     if selection:
         open_map_adjustment(state, namespace, selection)
         if selection['kind'] == 'road' and demand_mode_key:
@@ -247,55 +251,40 @@ def open_map_adjustment(state, namespace, selection):
         state[namespace + '_controller_' + selection['crossing']] = selection['tls_id']
 
 
-def locate_map_object(namespace, row, field):
-    selection = {key: row[key] for key in ('kind', 'crossing', field)}
-    open_map_adjustment(st.session_state, namespace, selection)
-    st.session_state[namespace + '_located'] = selection
-
-
 def render_map_search(geometry, namespace, focus, focus_object):
-    category_key = namespace + '_search_category'
-    focus_category = {'roads': 'Vias', 'signals': 'Semáforos', 'pedestrians': 'Travessias'}.get(focus)
-    if focus_category:
-        st.session_state[category_key] = focus_category
-        _, collection, field = MAP_OBJECTS[focus_category]
-        target_id = focus_object.get(field)
-        target = next((row for row in geometry[collection] if row[field] == target_id), None)
-        if target is not None:
-            locate_map_object(namespace, target, field)
-            st.session_state[f'{namespace}_search_{collection}'] = target_id
-        else:
-            st.session_state[namespace + '_panel_closed'] = True
-            st.info('Escolha um item na busca ou clique no mapa para abrir o ajuste.')
-    category = st.radio('Tipo de ajuste', list(MAP_OBJECTS), horizontal=True, key=category_key)
-    _, collection, field = MAP_OBJECTS[category]
-    choices = {row[field]: row for row in geometry[collection]}
+    search_key = namespace + '_search_object'
+    choices = {(collection, row[field]): (category, field, row)
+               for category, (_, collection, field) in MAP_OBJECTS.items()
+               for row in geometry[collection]}
+    if st.session_state.get(search_key) not in choices:
+        st.session_state.pop(search_key, None)
+    if focus in ('roads', 'signals', 'pedestrians'):
+        field = next(field for _, collection, field in MAP_OBJECTS.values() if collection == focus)
+        target = (focus, focus_object.get(field))
+        if target in choices:
+            st.session_state[search_key] = target
 
-    def label(object_id):
-        row = choices[object_id]
+    def label(option):
+        category, _, row = choices[option]
         if category == 'Semáforos':
-            return f"{row['crossing']} · {row['description'].split(' · ', 1)[0]}"
+            return f'{category} · {row["crossing"]} · {row["description"].split(" · ", 1)[0]}'
         if category == 'Vias':
-            return f"{row['title']} · {row['crossing']} · {row['description']}"
-        return f"{row['crossing']} · {row['title']}"
+            return f"{category} · {row['title']} · {row['crossing']} · {row['description']}"
+        return f"{category} · {row['crossing']} · {row['title']}"
 
-    search_key = f'{namespace}_search_{collection}'
-
-    def open_choice():
-        target_id = st.session_state[search_key]
-        if target_id in choices:
-            locate_map_object(namespace, choices[target_id], field)
-
-    st.selectbox('Buscar rua ou cruzamento no mapa', list(choices), index=None,
-                 placeholder='Digite um nome para localizar e abrir os ajustes',
-                 format_func=label, key=search_key, on_change=open_choice, disabled=not choices)
-    if st.session_state.get(namespace + '_located'):
-        def reset_view():
-            st.session_state.pop(namespace + '_located', None)
-            for _, collection_name, _ in MAP_OBJECTS.values():
-                st.session_state.pop(f'{namespace}_search_{collection_name}', None)
-
-        st.button('Voltar à visão geral do mapa', key=namespace + '_overview', on_click=reset_view)
+    target = st.selectbox('Buscar rua ou cruzamento no mapa', list(choices), index=None,
+                          placeholder='Digite um nome para localizar no mapa',
+                          format_func=label, key=search_key, disabled=not choices)
+    located = {}
+    if target in choices:
+        _, field, row = choices[target]
+        located = {key: row[key] for key in ('kind', 'crossing', field)}
+    location_key = namespace + '_located'
+    if located != (st.session_state.get(location_key) or {}):
+        st.session_state[location_key] = located
+        st.session_state.pop(namespace + '_selected', None)
+        st.session_state.pop(namespace + '_last_map_selection', None)
+        st.session_state[namespace + '_panel_closed'] = True
 
 
 def configuration_deck(geometry, crossing, selected, *, locate=False):
@@ -306,13 +295,14 @@ def configuration_deck(geometry, crossing, selected, *, locate=False):
         controlled = selected.get('kind') == 'signal' and selected.get('tls_id') in row['controllers']
         roads.append({**{k: row[k] for k in ('kind','edge_id','crossing','path','title','description','controllers')},
                       'color': [37, 99, 235] if focused else [14, 165, 164] if controlled else [71,105,130,150],
-                      'width': 7 if focused else 4 if controlled else 3})
+                      'width': 10 if focused else 9 if controlled else 8})
         if row['direction_polygon']:
             arrows.append({'polygon': row['direction_polygon']})
     # A vista inicial e os objetos exibidos nao dependem da selecao. O clique
     # altera somente o destaque/painel, preservando o enquadramento do usuario.
     local = geometry['signals']
-    points = [p for r in geometry.get('all_roads', geometry['roads']) for p in r['path']] or [r['position'] for r in local]
+    points = [p for r in geometry.get('overview_roads', geometry['roads']) for p in r['path']]
+    points.extend(r['position'] for r in local)
     west, east = min(p[0] for p in points), max(p[0] for p in points)
     south, north = min(p[1] for p in points), max(p[1] for p in points)
     center = [(west + east) / 2, (south + north) / 2]
@@ -368,24 +358,92 @@ def configuration_deck(geometry, crossing, selected, *, locate=False):
         ])
 
 
-@st.cache_data(show_spinner=False)
-def configured_signal_timings(network, version, controller, details, edits):
-    from semaforos.apresentacao.sinais import signal_movement_timings
-    return signal_movement_timings(network, controller, details, include_timeline=True, edited_durations=edits)
-
-
 def cycle_edit_key(network):
     return configuration_key('cycle_durations_' + str(network))
 
 
+CYCLE_COLUMNS = ('Verde (s)', 'Amarelo (s)', 'Todos em vermelho (s)')
+
+
 @st.cache_data(show_spinner=False)
-def editable_cycle(network, version, target, labels):
-    from semaforos.cenario.rede import initial_signal_timings
-    return (network_programs(network),
-            initial_signal_timings({'network': network, 'targets': [target]}, labels))
+def editable_cycles(network, version, targets, details, include_pedestrians):
+    from semaforos.apresentacao.sinais import green_stage_choices
+
+    programs = network_programs(network)
+    return programs, green_stage_choices(network, programs, targets, details, include_pedestrians)
 
 
-def edit_initial_cycle(base, controller, labels, namespace):
+def apply_cycle_edits(base, programs, changes):
+    state_key = cycle_edit_key(base['network'])
+    candidate = dict(st.session_state.get(state_key, {}))
+    for key, value in changes.items():
+        tls, index = key.rsplit(':', 1)
+        if value == programs[tls][int(index)]['duration']:
+            candidate.pop(key, None)
+        else:
+            candidate[key] = value
+    adjusted_programs(base, programs, candidate)
+    st.session_state[state_key] = candidate
+
+
+def render_signal_cycle_table(base, details, namespace, *, include_pedestrians=False):
+    import pandas as pd
+
+    if base.get('experimental', {}).get('method') != 'compatible_groups_v2':
+        return
+    network = str(base['network'])
+    crossings = list(dict.fromkeys(t['name'] for t in base['targets']))
+    with st.container():
+        crossing = st.selectbox('Cruzamento dos semáforos', crossings, key=namespace + '_table_signals')
+        targets = [t for t in base['targets'] if t['name'] == crossing]
+        programs, groups = editable_cycles(network, Path(network).stat().st_mtime_ns, targets, details, include_pedestrians)
+        edits = st.session_state.get(cycle_edit_key(network), {})
+        rows = []
+        phase_keys = []
+        for number, target in enumerate(targets, 1):
+            controller = target['tls_id']
+            for start, label in groups[controller]:
+                indices = range(start, start + len(CYCLE_COLUMNS))
+                keys = tuple(f'{controller}:{index}' for index in indices)
+                durations = [edits.get(key, programs[controller][index]['duration'])
+                             for key, index in zip(keys, indices)]
+                phase_keys.append(keys)
+                rows.append({'Semáforo': f'Conjunto {number}', 'Quem recebe verde': label,
+                             **dict(zip(CYCLE_COLUMNS, durations))})
+        snapshot = tuple(tuple(row[column] for column in CYCLE_COLUMNS) for row in rows)
+        editor_key = f'{namespace}_signal_table_{hash((tuple(phase_keys), snapshot))}'
+        feedback_key = namespace + '_signal_table_feedback'
+
+        def apply_timing_table():
+            edited_rows = st.session_state[editor_key]['edited_rows']
+            changes = {key: cells[column] for index, cells in edited_rows.items()
+                       for key, column in zip(phase_keys[index], CYCLE_COLUMNS) if column in cells}
+            try:
+                apply_cycle_edits(base, programs, changes)
+            except ValueError as error:
+                st.session_state[feedback_key] = str(error)
+            else:
+                st.session_state[feedback_key] = ''
+
+        step = float(base['step_seconds'])
+        st.caption('Edite as fases do ciclo inicial em segundos. Os tempos só mudam depois de aplicar a tabela.')
+        with st.form(namespace + '_signal_table_form'):
+            st.data_editor(pd.DataFrame(rows), hide_index=True, width='stretch', key=editor_key,
+                disabled=['Semáforo', 'Quem recebe verde'],
+                column_config={
+                    'Quem recebe verde': st.column_config.TextColumn(width='large'),
+                    **{column: st.column_config.NumberColumn(min_value=0., step=step, required=True)
+                       for column in CYCLE_COLUMNS},
+                })
+            st.form_submit_button('Aplicar tempos da tabela', on_click=apply_timing_table)
+        feedback = st.session_state.pop(feedback_key, None)
+        if feedback:
+            st.error(feedback)
+        elif feedback == '':
+            st.success('Tempos aplicados ao cenário.')
+
+
+def edit_initial_cycle(base, controller, details, namespace, *, include_pedestrians=False):
     if base.get('experimental', {}).get('method') != 'compatible_groups_v2':
         st.info('A edição do ciclo inicial está disponível na rede preparada com grupos compatíveis.')
         return
@@ -393,19 +451,19 @@ def edit_initial_cycle(base, controller, labels, namespace):
     key = cycle_edit_key(network)
     edits = st.session_state.get(key, {})
     target = next(t for t in base['targets'] if t['tls_id'] == controller)
-    programs, groups = editable_cycle(network, Path(network).stat().st_mtime_ns, target, labels)
-    choice = st.selectbox('Grupo de movimentos', range(len(groups)),
-        format_func=lambda i: f"{groups[i]['Grupo']} · {groups[i]['Movimentos liberados']}",
-        key=namespace + '_cycle_group_' + controller, help='Movimentos que recebem verde juntos.')
-    start = target['phase_indices'][choice]
+    programs, groups = editable_cycles(network, Path(network).stat().st_mtime_ns, [target], details, include_pedestrians)
+    labels = dict(groups[controller])
+    start = st.selectbox('Quem recebe verde', list(labels), format_func=labels.__getitem__,
+        key=namespace + '_cycle_stage_' + controller, help='O tempo de verde vale para todos os movimentos da opção escolhida.')
+    if len(labels[start]) > 36:
+        st.caption(labels[start])
     form_key = f'{namespace}_cycle_{controller}_{start}'
     step = float(base['step_seconds'])
     cap = float(base.get('control', base['ppo'])['maximum_cycle_seconds'])
     with st.form(form_key, border=False):
         columns = st.columns(3)
         changes = {}
-        for offset, (column, label, kind) in enumerate(zip(columns,
-                ('Verde (s)', 'Amarelo (s)', 'Todos em vermelho (s)'), ('green', 'yellow', 'all_red'))):
+        for offset, (column, label, kind) in enumerate(zip(columns, CYCLE_COLUMNS, ('green', 'yellow', 'all_red'))):
             phase_index = start + offset
             original = programs[controller][phase_index]['duration']
             phase_key = f'{controller}:{phase_index}'
@@ -414,60 +472,76 @@ def edit_initial_cycle(base, controller, labels, namespace):
                 value=edits.get(phase_key, original), step=step)
         submitted = st.form_submit_button('Aplicar tempos', type='primary')
     if submitted:
-        candidate = {**edits, **changes}
-        candidate = {k: v for k, v in candidate.items()
-                     if v != programs[k.rsplit(':', 1)[0]][int(k.rsplit(':', 1)[1])]['duration']}
         try:
-            adjusted_programs(base, programs, candidate)
+            apply_cycle_edits(base, programs, changes)
         except ValueError as error:
             st.error(str(error))
         else:
-            st.session_state[key] = candidate
             st.success('Tempos aplicados ao cenário.')
 
 
-def render_configuration_map(base, initial, details, incoming_ids, specs, labels, ped_defaults, *, volume_by_road,
-                             duration=None, focus=None, focus_object=None):
+def render_configuration_map(base, initial, details, incoming_ids, ped_defaults, *,
+                             duration=None, focus=None, focus_object=None,
+                             pedestrian_controls=None, filter_controls=None):
     network = str(base['network'])
     namespace = configuration_key('configuration_map_' + network)
+    with (pedestrian_controls if pedestrian_controls is not None else st.container()):
+        enabled = st.toggle('Incluir pedestres?',
+            value=bool(ped_defaults and base.get('pedestrians', {}).get('enabled', False)),
+            key=configuration_key('Incluir pedestres?'), disabled=not ped_defaults,
+            help='Mostra as travessias no mapa para configurar a quantidade de pedestres.')
+    edge_ids = tuple(row['from_edge'] for row in initial)
+    details, primary_ids, road_notes = studied_volume_roads(edge_ids, details)
+    visible_ids = primary_ids
+    if len(primary_ids) < len(edge_ids):
+        with (filter_controls if filter_controls is not None else st.container()):
+            with st.expander('Filtros'):
+                show_other_roads = st.toggle('Mostrar outros trechos da rede', key=namespace + '_other_roads',
+                    help='Inclui acessos adicionais na busca, no mapa e na tabela de volumes.')
+                if show_other_roads:
+                    visible_ids = set(edge_ids)
     geometry = configuration_geometry(network, Path(network).stat().st_mtime_ns,
-        tuple((t['tls_id'], t['name']) for t in base['targets']), details, ped_defaults,
-        tuple(row['from_edge'] for row in initial))
+        tuple((t['tls_id'], t['name']) for t in base['targets']), details, ped_defaults if enabled else [],
+        edge_ids)
     crossings = list(dict.fromkeys(t['name'] for t in base['targets']))
     selected_key = namespace + '_selected'
-    include_unnamed = False
     if geometry:
-        search_column, pedestrians_column = st.columns([2, 1])
-        with search_column:
-            if any(not row['street'] for row in geometry['roads']):
-                include_unnamed = st.toggle('Mostrar também vias sem nome', key=namespace + '_include_unnamed',
-                    help='Inclui trechos sem nome da rede simulada na busca e na edição. O filtro não altera os volumes já preenchidos.')
-            geometry = map_road_scope(geometry, include_unnamed)
-            visible_ids = {row['edge_id'] for row in geometry['roads']}
-            for key in (selected_key, namespace + '_located'):
-                selection = st.session_state.get(key, {})
-                if selection.get('kind') == 'road' and selection['edge_id'] not in visible_ids:
-                    st.session_state.pop(key, None)
-            search_key = namespace + '_search_roads'
-            searched_road = st.session_state.get(search_key)
-            if searched_road is not None and searched_road not in visible_ids:
-                st.session_state.pop(search_key, None)
-            render_map_search(geometry, namespace, focus, focus_object or {})
-    else:
-        pedestrians_column = st.container()
-    with pedestrians_column:
-        enabled = st.toggle('Incluir pedestres?', value=bool(base.get('pedestrians', {}).get('enabled', False)),
-            key=configuration_key('Incluir pedestres?'), disabled=not ped_defaults,
-            help='Com a opção ativa, a simulação usa os fluxos definidos nas travessias.')
-        if not ped_defaults:
-            st.caption('Sem travessias cadastradas nesta rede.')
-        elif not enabled:
-            st.caption('Os fluxos de pedestres ficam fora da simulação enquanto esta opção estiver desligada.')
-    selected = st.session_state.get(selected_key, {})
-    popup_open = bool(selected) and not st.session_state.get(namespace + '_panel_closed', False)
-    st.caption('Clique em uma via, semáforo ou travessia para editar em uma janela. Use o zoom para ver o sentido de cada trecho.')
-    with st.container(key='configuration_map_canvas'):
+        geometry = map_road_scope(geometry, visible_ids, primary_ids)
+        mapped_ids = {row['edge_id'] for row in geometry['roads']}
+        for key in (selected_key, namespace + '_located', namespace + '_last_map_selection'):
+            selection = st.session_state.get(key) or {}
+            if ((selection.get('kind') == 'road' and selection['edge_id'] not in mapped_ids)
+                    or (selection.get('kind') == 'pedestrian' and not geometry['pedestrians'])):
+                st.session_state.pop(key, None)
+    map_view, table_view = st.tabs(['Mapa', 'Tabela'])
+    with map_view:
         if geometry:
+            render_map_search(geometry, namespace, focus, focus_object or {})
+    selected = st.session_state.get(selected_key, {})
+    on_setup = st.session_state.get('ui_workflow_selection', SETUP_TAB) == SETUP_TAB
+    if not on_setup:
+        st.session_state[namespace + '_panel_closed'] = True
+    popup_open = bool(selected) and not st.session_state.get(namespace + '_panel_closed', True)
+
+    def close_popup():
+        st.session_state[namespace + '_panel_closed'] = True
+
+    dialog = None
+    if geometry and selected and on_setup:
+        title = {'road': 'Configurar via', 'signal': 'Configurar semáforo',
+                 'pedestrian': 'Configurar travessia'}[selected['kind']]
+        # O diálogo fica no fragmento do mapa para que os botões de fechar e o X
+        # só atualizem a configuração. O conteúdo tem seu próprio fragmento.
+        dialog = st._event._dialog(title, on_dismiss=close_popup)
+        if popup_open:
+            dialog.open()
+        else:
+            dialog.close()
+
+    objects = 'uma via, um semáforo ou uma travessia' if enabled else 'uma via ou um semáforo'
+    with map_view, st.container(key='configuration_map_canvas'):
+        if geometry:
+            st.caption(f'Selecione {objects} para editar.')
             chart_key = namespace + '_chart_0'
             def picked():
                 apply_map_selection(st.session_state, namespace, geometry, st.session_state.get(chart_key, {}))
@@ -476,77 +550,57 @@ def render_configuration_map(base, initial, details, incoming_ids, specs, labels
             # O frontend nativo destaca a selecao sem alterar este JSON/camera.
             located = st.session_state.get(namespace + '_located', {})
             st.pydeck_chart(configuration_deck(geometry, None, located, locate=bool(located)), key=chart_key,
-                            height=760, on_select=picked, selection_mode='single-object')
-            road_legend = 'Vias destacadas: trechos configuráveis da rede simulada.' if include_unnamed else 'Vias destacadas: trechos com nome disponíveis para configurar.'
-            st.caption(road_legend + ' Ícones: controladores em posições aproximadas, sem estado ao vivo. © OpenStreetMap · © CARTO')
-            if selected and not popup_open:
-                st.button('Mostrar ajustes', key=namespace + '_reopen',
-                          on_click=lambda: st.session_state.update({namespace + '_panel_closed': False}))
+                            height=520, on_select=picked, selection_mode='single-object')
+            st.caption('Vias destacadas podem ser editadas. © OpenStreetMap · © CARTO')
         else:
             st.info('Esta rede não tem localização geográfica disponível.')
+
+    pedestrian_key = f'pedestrian_flows_{network}_{tuple(crossings)}'
+    with table_view:
+        table_tabs = ['Volumes das vias', 'Tempos dos semáforos']
+        if enabled:
+            table_tabs.append('Travessias')
+        roads_view, signals_view, *pedestrian_view = st.tabs(table_tabs)
+        with roads_view:
+            render_road_volume_table(network, initial, details, primary_ids, visible_ids, road_notes)
+        with signals_view:
+            render_signal_cycle_table(base, details, namespace, include_pedestrians=enabled)
+        if pedestrian_view:
+            with pedestrian_view[0]:
+                pedestrian_editor(network, ped_defaults, key=pedestrian_key, show_map=False, apply_table=True)
 
     def road_editor(edge=None):
         return edit_road_volumes(network, initial, details, incoming_ids, None,
             selected_edge=edge, show_map=False, map_only=True, duration=duration)
 
-    def green_limits(crossing=None, controller=None):
-        return adaptive_limits_editor(base, specs, labels, key=f'adaptive_limits_{network}',
-            selected_crossing=crossing, selected_controller=controller, map_only=True)
-
     def pedestrian_flows(crossing=None, route=None):
-        if ped_defaults:
-            return pedestrian_editor(network, ped_defaults, key=f'pedestrian_flows_{network}_{tuple(crossings)}',
+        if enabled:
+            return pedestrian_editor(network, ped_defaults, key=pedestrian_key,
                 selected_crossing=crossing, selected_route=route, show_map=False, map_only=True)
         return None
 
-    if geometry and selected.get('kind') == 'signal':
-        controller, crossing = selected['tls_id'], selected['crossing']
-        timing_details = {**details, **{row['crossing_id']: {
-            'reference': row['title'], 'street': 'Travessia de pedestres',
-            'approach': row['origin_side'] + ' ↔ ' + row['destination_side']} for row in geometry['pedestrians']}}
-        from semaforos.apresentacao.sinais import render_initial_cycle
-
-        edits = st.session_state.get(cycle_edit_key(network), {})
-        timings = configured_signal_timings(network, Path(network).stat().st_mtime_ns, controller, timing_details, edits)
-        with st.expander(f'Ciclo e tempos por via · {crossing}'):
-            render_initial_cycle(timings, key=namespace + '_cycle_' + controller)
-            columns = ['Entrada', 'Via', 'Sentido', 'Movimento', 'Verde (s)', 'Amarelo (s)', 'Vermelho (s)']
-            if any(row['Outros (s)'] for row in timings):
-                columns.append('Outros (s)')
-            st.dataframe([{name: row[name] for name in columns} for row in timings], hide_index=True, width='stretch')
-        with st.expander('Limites de verde do treinamento'):
-            phase_table = green_limits(crossing, controller)
-    else:
-        phase_table = green_limits()
-
-    def close_popup():
-        st.session_state[namespace + '_panel_closed'] = True
-
-    if geometry and popup_open and st.session_state.get('ui_workflow_selection', SETUP_TAB) == SETUP_TAB:
+    if dialog is not None and popup_open:
         kind = selected['kind']
-        title = {'road': 'Configurar via', 'signal': 'Configurar semáforo', 'pedestrian': 'Configurar travessia'}[kind]
 
-        @st.dialog(title, on_dismiss=close_popup)
-        def adjustment_popup():
-            if st.session_state[namespace + '_panel_closed']:
-                st.rerun()
-            with st.container(key='configuration_map_popup'):
-                st.caption(selected['crossing'])
-                if kind == 'road':
-                    road_editor(selected['edge_id'])
-                elif kind == 'signal':
-                    edit_initial_cycle(base, selected['tls_id'], labels, namespace)
-                else:
-                    pedestrian_flows(selected['crossing'], selected['crossing_id'])
-                    st.caption('Pessoas/h em cada sentido. Ative Incluir pedestres para usar esses valores.')
-                st.button('Fechar ajustes', key=namespace + '_close', on_click=close_popup)
+        @st.fragment
+        def adjustment_fields():
+            st.caption(selected['crossing'])
+            if kind == 'road':
+                road_editor(selected['edge_id'])
+            elif kind == 'signal':
+                edit_initial_cycle(base, selected['tls_id'], details, namespace, include_pedestrians=enabled)
+            else:
+                pedestrian_flows(selected['crossing'], selected['crossing_id'])
+                st.caption('Pessoas/h em cada sentido.')
 
-        adjustment_popup()
+        with dialog, st.container(key='configuration_map_popup'):
+            adjustment_fields()
+            st.button('Fechar ajustes', key=namespace + '_close', on_click=close_popup)
 
     # Os editores alteram o rascunho da sessão. A coleta para a execução inclui toda a rede.
     road_table, pedestrian_table = road_editor(), pedestrian_flows()
-    if geometry and volume_by_road and not include_unnamed:
-        unnamed_ids = {row['edge_id'] for row in geometry['all_roads'] if not row['street']}
-        if (road_table['from_edge'].isin(unnamed_ids) & road_table['vehicles_per_hour'].gt(0)).any():
-            st.caption('Há fluxo configurado em vias sem nome. Use “Mostrar também vias sem nome” para revisar esses valores.')
-    return road_table if volume_by_road else None, pedestrian_table, phase_table, enabled
+    if len(visible_ids) < len(edge_ids):
+        hidden_flow = ~road_table['from_edge'].isin(visible_ids) & road_table['vehicles_per_hour'].gt(0)
+        if hidden_flow.any():
+            st.caption('Há volumes ativos em outros trechos. Abra Filtros para revisar esses valores.')
+    return road_table, pedestrian_table, enabled

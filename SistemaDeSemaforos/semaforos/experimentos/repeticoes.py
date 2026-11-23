@@ -23,7 +23,7 @@ def study_plan(config):
     if len(train) > 50:
         raise ValueError('Limite de 50 treinamentos por estudo')
     return {'training_seeds': list(train), 'evaluation_seeds': list(evaluate), 'repetitions': len(train),
-            'evaluation_episodes': len(train) * len(evaluate) * 3,
+            'evaluation_episodes': len(train) * len(evaluate) * 2,
             'requested_training_timesteps': len(train) * int(config.get(algorithm.config_key, {}).get('total_timesteps', 2048))}
 
 

@@ -30,6 +30,7 @@ with tempfile.TemporaryDirectory(dir=ROOT / 'resultados', prefix='ui_test_interf
     for _ in range(2):
         # Sessões independentes recuperam o processo sem compartilhar session_state.
         app = AppTest.from_file(str(ROOT / 'interface.py'), default_timeout=90).run()
+        next(w for w in app.radio if w.label == 'Etapas do estudo').set_value('3 · Resultados').run()
         assert not app.exception, str(app.exception)
         assert Path(app.session_state['job']['folder']) == folder
         assert any(w.label == 'Fila atual nas entradas' for w in app.metric)

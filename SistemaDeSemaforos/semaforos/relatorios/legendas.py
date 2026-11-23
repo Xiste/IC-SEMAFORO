@@ -99,6 +99,14 @@ def metric_legend(name):
         return METRICS[name]
     if re.fullmatch(r"phase_\d+_seconds", name):
         return (f"Tempo na fase {name.split('_')[1]}", METRICS["phase_N_seconds"][1], "s")
+    if re.fullmatch(r"phase_\d+_mean_duration_seconds", name):
+        return (f"Duração média da fase {name.split('_')[1]}", "Média por passagem completa pela fase na janela medida.", "s")
+    if re.fullmatch(r"phase_\d+_completed_count", name):
+        return (f"Passagens completas pela fase {name.split('_')[1]}", "Número de passagens pela fase com início e fim observados.", "passagens")
+    if match := re.fullmatch(r"link_(\d+)_(green|yellow|red)_mean_seconds", name):
+        link, color = match.groups()
+        label = {'green': 'verde', 'yellow': 'amarelo', 'red': 'vermelho'}[color]
+        return (f"Duração média do {label} no movimento {link}", "Média de passagens contínuas pela cor com início e fim observados.", "s")
     for statistic, title in STATS.items():
         if name.startswith(statistic + "_") and name[len(statistic) + 1:] in TRIPS:
             label, description, unit = TRIPS[name[len(statistic) + 1:]]

@@ -25,6 +25,7 @@ def main():
     parser.add_argument("--candidate", help="JSON com durações das fases por ID:índice")
     parser.add_argument("--output", help="Pasta de saída da execução")
     parser.add_argument("--model", help="Arquivo de modelo .zip para rl-eval/ppo-eval")
+    parser.add_argument("--reference-model", help="Outro modelo .zip para comparar em rl-eval/ppo-eval")
     parser.add_argument("--algorithm", help="Nome do algoritmo registrado; padrão PPO")
     parser.add_argument("--measurements-file", help="CSV de contagens para o comando measurements")
     args = parser.parse_args()
@@ -85,7 +86,7 @@ def main():
         if not args.model:
             parser.error("rl-eval/ppo-eval requer --model")
         from semaforos.experimentos.rl import evaluate_rl
-        print(json.dumps(evaluate_rl(config, output, args.model), indent=2, default=str))
+        print(json.dumps(evaluate_rl(config, output, args.model, reference_model_path=args.reference_model), indent=2, default=str))
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ import pandas as pd
 import streamlit as st
 import sumolib
 
-from semaforos.cenario.configuracao import read_config
+from semaforos.cenario.configuracao import read_config, with_detailed_metrics
 from semaforos.cenario.ciclos import adjusted_programs, include_adjusted_times, save_adjusted_network
 from semaforos.cenario.demanda import planned_vehicle_count
 from semaforos.cenario.rede import network_programs, phase_action_spec
@@ -28,7 +28,7 @@ from semaforos.apresentacao.layout import (
 from semaforos.apresentacao.estudos import load_study_configuration
 from semaforos.apresentacao.gargalos import render_study
 from semaforos.apresentacao.resultados import (
-    COMPARISONS, TRAIN_RESULTS, duration_label, execution_label, execution_section, render_execution_results,
+    COMPARISONS, MODEL_COMPARISONS, TRAIN_RESULTS, duration_label, execution_label, execution_section, render_execution_results,
 )
 from semaforos.apresentacao.vias import identify_roads
 from semaforos.apresentacao.estado import configuration_key
@@ -120,9 +120,11 @@ def map_pedestrian_routes(network_path, version, targets):
 
 
 
-def start_job(command, config, model=None):
-    st.session_state.job = launch_job(config, command, RESULTS, model)
-    st.session_state['results_next_section'] = execution_section(command)
+def start_job(command, config, model=None, *, reference_model=None):
+    config = with_detailed_metrics(config)
+    options = {'reference_model': reference_model} if reference_model else {}
+    st.session_state.job = launch_job(config, command, RESULTS, model, **options)
+    st.session_state['results_next_section'] = execution_section(command, reference_model)
     select_workflow_tab(RESULTS_TAB)
 
 
@@ -137,11 +139,11 @@ with results_tab:
         current = st.session_state.get('job')
         if current and current['folder'] not in {entry['folder'] for entry in jobs} and (current['folder'] / 'job.json').is_file():
             jobs = [current, *jobs]
-        commands = {str(entry['folder']): (read_json(entry['folder'] / 'job.json') or {}).get('command')
-                    for entry in jobs}
-        jobs = [entry for entry in jobs if commands[str(entry['folder'])] != 'compare-baselines']
+        states = {str(entry['folder']): read_json(entry['folder'] / 'job.json') or {} for entry in jobs}
+        jobs = [entry for entry in jobs if states[str(entry['folder'])].get('command') != 'compare-baselines']
         by_path = {str(entry['folder']): entry for entry in jobs}
-        sections = {path: execution_section(commands[path]) for path in by_path}
+        sections = {path: execution_section(states[path].get('command'), states[path].get('reference_model'))
+                    for path in by_path}
         execution_labels = {path: execution_label(path) for path in by_path}
         active_path = next((str(entry['folder']) for entry in jobs
                             if job_state(entry)['status'] in ('starting', 'running')), '')
@@ -149,7 +151,8 @@ with results_tab:
         pending_section = st.session_state.pop('results_next_section', None)
         if pending_section or 'results_section' not in st.session_state:
             st.session_state['results_section'] = pending_section or sections.get(current_path, TRAIN_RESULTS)
-        results_section = st.radio('Área dos resultados', [TRAIN_RESULTS, COMPARISONS], horizontal=True,
+        results_section = st.radio('Área dos resultados', [TRAIN_RESULTS, COMPARISONS, MODEL_COMPARISONS], horizontal=True,
+                                   format_func=lambda area: 'Modelo × tempos iniciais' if area == COMPARISONS else area,
                                    label_visibility='collapsed', key='results_section')
         choices = {path: entry for path, entry in by_path.items() if sections[path] == results_section}
         if choices:
@@ -157,7 +160,11 @@ with results_tab:
             if current_path not in choices:
                 previous = saved_selections.get(results_section)
                 current_path = previous if previous in choices else next(iter(choices))
-            execution_key = 'results_comparison_execution' if results_section == COMPARISONS else 'results_training_execution'
+            execution_key = {
+                TRAIN_RESULTS: 'results_training_execution',
+                COMPARISONS: 'results_comparison_execution',
+                MODEL_COMPARISONS: 'results_model_comparison_execution',
+            }[results_section]
             # O Streamlit recria o seletor quando a lista muda. A execução
             # acompanhada continua sendo a escolhida pelo callback.
             st.session_state[execution_key] = current_path
@@ -177,18 +184,17 @@ with results_tab:
     if show_results and st.session_state.get('job'):
         job = st.session_state.job
         if (job['folder'] / 'cenario.json').is_file():
-            with st.expander('Mais opções'):
-                def load_execution_draft(path):
-                    if error := load_study_configuration(path):
-                        st.session_state['results_load_error'] = error
-                    else:
-                        select_workflow_tab(SETUP_TAB)
+            def load_execution_draft(path):
+                if error := load_study_configuration(path):
+                    st.session_state['results_load_error'] = error
+                else:
+                    select_workflow_tab(SETUP_TAB)
 
-                st.button('Carregar configurações desta execução',
-                          help='Usa a configuração salva como um novo rascunho em Cenário e tráfego.',
-                          on_click=load_execution_draft, args=(job['folder'] / 'cenario.json',))
-                if error := st.session_state.pop('results_load_error', None):
-                    st.error(error)
+            st.button('Carregar configurações desta execução',
+                      help='Usa a configuração salva como um novo rascunho em Cenário e tráfego.',
+                      on_click=load_execution_draft, args=(job['folder'] / 'cenario.json',))
+            if error := st.session_state.pop('results_load_error', None):
+                st.error(error)
 
 with setup_tab:
     source = st.session_state.get('study_source')
@@ -315,7 +321,6 @@ with training_tab:
         st.session_state.pop('configuration_focus', None)
         training_focus_object = st.session_state.pop('configuration_focus_object', {})
     restored_study = st.session_state.get('study_source', {}).get('kind') in ('duplicate', 'recovered')
-    saved_metrics = base.get('metrics', {}) if restored_study else {}
     algorithm_names = sorted(available_algorithms(), key=lambda name: name != 'PPO')
     saved_algorithm = get_algorithm(base.get('algorithm', 'PPO')).name
     selected_algorithm = st.selectbox('Algoritmo de treinamento', algorithm_names,
@@ -381,17 +386,17 @@ with training_tab:
         else:
             algorithm_parameters_text = st.text_area("Parâmetros específicos do algoritmo (JSON)", value="{}",
                 help="Objeto com parâmetros aceitos pelo adaptador.", key=configuration_key('Parâmetros específicos do algoritmo (JSON)'))
-        detailed_analysis = st.checkbox('Coletar análise detalhada',
-            value=bool(saved_metrics.get('collect_lane_details') or saved_metrics.get('collect_extended')),
-            key=configuration_key('Coletar análise detalhada'))
         with st.expander('Indicadores e critérios da análise detalhada'):
-            collect_lane = st.checkbox("Velocidade e ocupação das faixas", value=saved_metrics.get('collect_lane_details', True), help=config_help("collect_lane_details"), disabled=not detailed_analysis, key=configuration_key('Velocidade e ocupação das faixas'))
-            collect_emissions = st.checkbox("CO₂, CO, HC, NOx, partículas, combustível e eletricidade", value=saved_metrics.get('collect_emissions', False), help=config_help("collect_emissions"), key=configuration_key('CO₂, CO, HC, NOx, partículas, combustível e eletricidade'))
-            collect_events = st.checkbox("Teletransportes e colisões", value=saved_metrics.get('collect_events', True), help=config_help("collect_events"), key=configuration_key('Teletransportes e colisões'))
-            collect_resources = st.checkbox("CPU e memória", value=saved_metrics.get('collect_resources', True), help=config_help("collect_resources"), key=configuration_key('CPU e memória'))
-            collect_extended = st.checkbox('Faixas, movimentos, filas em metros e bloqueios', value=base.get('metrics', {}).get('collect_extended', True), disabled=not detailed_analysis, key=configuration_key('Faixas, movimentos, filas em metros e bloqueios'))
-            collect_dynamics = st.checkbox('Frenagens, paradas, velocidade e TTC exploratório', value=base.get('metrics', {}).get('collect_vehicle_dynamics', True), disabled=not collect_extended, key=configuration_key('Frenagens, paradas, velocidade e TTC exploratório'))
-            collect_classes = st.checkbox('Separar indicadores por classe de veículo', value=base.get('metrics', {}).get('collect_vehicle_classes', True), disabled=not collect_extended, key=configuration_key('Separar indicadores por classe de veículo'))
+            st.markdown(
+                'Coleta automática em todas as execuções:\n'
+                '- Velocidade e ocupação das faixas\n'
+                '- CO₂, CO, HC, NOx, partículas, combustível e eletricidade\n'
+                '- Teletransportes e colisões\n'
+                '- CPU e memória\n'
+                '- Faixas, movimentos, filas em metros e bloqueios\n'
+                '- Frenagens, paradas, velocidade e TTC explorat?rio\n'
+                '- Indicadores por classe de veículo'
+            )
             thresholds = dict(base.get('metrics', {}).get('thresholds', {}))
             thresholds['spillback_occupancy_percent'] = st.number_input('Ocupação para indicar transbordamento (%)', min_value=1.0, max_value=100.0, value=float(thresholds.get('spillback_occupancy_percent', 80)), key=configuration_key('Ocupação para indicar transbordamento (%)'))
             thresholds['downstream_occupancy_percent'] = st.number_input('Ocupação da saída para indicar bloqueio (%)', min_value=1.0, max_value=100.0, value=float(thresholds.get('downstream_occupancy_percent', 80)), key=configuration_key('Ocupação da saída para indicar bloqueio (%)'))
@@ -399,11 +404,6 @@ with training_tab:
             thresholds['hard_braking_meters_per_second_squared'] = st.number_input('Desaceleração para frenagem forte (m/s²)', min_value=0.1, value=float(thresholds.get('hard_braking_meters_per_second_squared', 4)), key=configuration_key('Desaceleração para frenagem forte (m/s²)'))
             thresholds['ttc_seconds'] = st.number_input('Limiar de TTC longitudinal exploratório (s)', min_value=0.1, value=float(thresholds.get('ttc_seconds', 1.5)), key=configuration_key('Limiar de TTC longitudinal exploratório (s)'))
             st.caption('Detalhes adicionais aumentam o custo de coleta. Bloqueio é um indicador baseado em verde, veículos parados e ocupação da saída; TTC não certifica risco de acidente. Limiares são configuráveis e ficam registrados.')
-    collect_lane = detailed_analysis and collect_lane
-    collect_extended = detailed_analysis and collect_extended
-    collect_dynamics = collect_extended and collect_dynamics
-    collect_classes = collect_extended and collect_classes
-
 
 
 def configured():
@@ -462,14 +462,8 @@ def configured():
     if not parsed_seeds or len(set(parsed_seeds)) != len(parsed_seeds) or int(seed) in parsed_seeds:
         raise ValueError("Informe sementes de avaliação distintas e diferentes da semente do treino")
     config["evaluation"] = {"seeds": parsed_seeds}
-    config["metrics"] = {"collect_lane_details": collect_lane,
-                         'collect_extended': collect_extended, 'collect_vehicle_dynamics': collect_dynamics,
-                         'collect_vehicle_classes': collect_classes,
-                         'thresholds': thresholds,
-                         "collect_emissions": collect_emissions,
-                         "collect_events": collect_events,
-                         "collect_resources": collect_resources,
-                         "collect_actions": True}
+    config["metrics"] = {"thresholds": thresholds}
+    config = with_detailed_metrics(config)
     config["ppo"] = {**base["ppo"], "decision_seconds": int(decision), "gui": bool(gui),
                      "action_mode": "adaptive_signals",
                      "phase_types": ["green", "yellow", "all_red"],
@@ -678,26 +672,24 @@ def progress_panel():
                 column.metric(label, value)
         return
 
-    view = st.radio('Visualização', ['Resumo', 'Métricas e Excel'], horizontal=True,
-                    label_visibility='collapsed', key=f"results_view_{job['folder']}")
-    if results_section == COMPARISONS:
+    if results_section != TRAIN_RESULTS:
         download_label = 'Baixar Excel desta comparação'
     elif state.get('command') == 'rl-train' or (job['output'] / 'training_episodes.csv').is_file():
         download_label = 'Baixar Excel deste treino'
     else:
         download_label = 'Baixar Excel desta simulação'
     evaluation = None
-    if view == 'Métricas e Excel' and state.get('command') == 'rl-train':
+    if state.get('command') == 'rl-train':
         model = (read_json(job['output'] / 'summary.json') or {}).get('model')
         if model:
             for entry in jobs:
                 candidate = read_json(entry['folder'] / 'job.json') or {}
                 if (candidate.get('command') == 'rl-eval' and candidate.get('status') == 'completed'
+                        and not candidate.get('reference_model')
                         and candidate.get('model') and Path(candidate['model']) == Path(model)):
                     evaluation = entry['output']
                     break
-    render_execution_results(job['output'], f"results_{job['folder']}",
-                             'Resumo' if view == 'Resumo' else 'Métricas',
+    render_execution_results(job['output'], f"results_{job['folder']}", 'Métricas',
                              download_label=download_label, evaluation=evaluation)
 
 
@@ -705,9 +697,7 @@ def progress_panel():
 if show_results:
     with current_results:
         if not st.session_state.get("job"):
-            if results_section == COMPARISONS:
-                st.info('As comparações aparecem aqui depois de iniciadas.')
-            else:
+            if results_section == TRAIN_RESULTS:
                 st.info('Inicie uma simulação ou um treinamento para ver os resultados aqui.')
                 st.button('Ir para o treinamento', on_click=select_workflow_tab, args=(TRAINING_TAB,))
         if was_running:
@@ -715,20 +705,50 @@ if show_results:
         else:
             progress_panel()
 
-if show_results and results_section == COMPARISONS:
+def render_new_comparison(compare_models):
     with results_tab, st.expander('Nova comparação', expanded=results_job is None):
         models = sorted(RESULTS.glob('**/*_model.zip'), key=lambda p: p.stat().st_mtime, reverse=True)
+        if len(models) < (2 if compare_models else 1):
+            if compare_models and models:
+                st.info('Você tem 1 modelo salvo. Treine mais um no mesmo cenário para comparar os dois.')
+                if st.button('Comparar o modelo salvo com os tempos iniciais'):
+                    st.session_state['results_next_section'] = COMPARISONS
+                    st.rerun()
+            else:
+                st.info('Nenhum modelo salvo. Conclua dois treinos no mesmo cenário para comparar os modelos.'
+                        if compare_models else 'Nenhum modelo salvo. Conclua um treino para compará-lo com os tempos iniciais.')
+            st.button('Ir para o treinamento', on_click=select_workflow_tab, args=(TRAINING_TAB,))
+            return
+
         model_jobs = {entry['output']: str(entry['folder']) for entry in jobs}
         model_names = {
             str(model): execution_labels[model_jobs[model.parent]] if model.parent in model_jobs else str(model.relative_to(RESULTS))
             for model in models
         }
-        selected_model = st.selectbox('Modelo treinado', list(model_names), index=None,
+        if compare_models:
+            st.caption('Escolha o modelo que quer avaliar (A) e o que vai servir de referência (B).')
+        selected_model = st.selectbox('Modelo A' if compare_models else 'Modelo treinado', list(model_names), index=None,
                                       format_func=model_names.__getitem__, placeholder='Selecione um treino salvo')
-        use_current_config = st.checkbox('Usar o cenário atual', disabled=not selected_model,
-                                         help='Por padrão, a avaliação usa a configuração salva no treino.')
-        if st.button('Comparar modelo com os tempos iniciais', type='primary',
-                     disabled=active or not selected_model or (use_current_config and current_config is None)):
+        if not selected_model:
+            return
+        reference_model = None
+        comparison_seeds = ''
+        if compare_models:
+            reference_model = st.selectbox('Modelo B (referência)', [path for path in model_names if path != selected_model],
+                                           index=None, format_func=model_names.__getitem__,
+                                           placeholder='Selecione outro treino salvo')
+            if not reference_model:
+                return
+            st.caption('Os dois modelos usarão o mesmo cenário, demanda e sementes de avaliação.')
+        use_current_config = False
+        if not compare_models or st.toggle('Personalizar a avaliação'):
+            use_current_config = st.checkbox('Usar o cenário atual',
+                                             help='Por padrão, a avaliação usa a configuração salva no treino.')
+            if compare_models:
+                comparison_seeds = st.text_input('Sementes de avaliação para os dois modelos', placeholder='Ex.: 101, 102, 103',
+                                                 help='Deixe em branco para usar as sementes do cenário. Use sementes diferentes das usadas nos dois treinos.')
+        if st.button('Comparar os dois modelos' if compare_models else 'Comparar modelo com os tempos iniciais', type='primary',
+                     disabled=active or (use_current_config and current_config is None)):
             try:
                 model = Path(selected_model).resolve()
                 if not model.is_file():
@@ -745,7 +765,25 @@ if show_results and results_section == COMPARISONS:
                 algorithm = manifest.get('algorithm', comparison_config.get('algorithm', 'PPO'))
                 if algorithm.upper() != comparison_config.get('algorithm', 'PPO').upper():
                     raise ValueError(f'Este modelo usa {algorithm}. Escolha o mesmo algoritmo em Treinamento.')
-                start_job('rl-eval', comparison_config, model)
+                if comparison_seeds.strip():
+                    try:
+                        seeds = [int(seed.strip()) for seed in comparison_seeds.split(',')]
+                    except ValueError as error:
+                        raise ValueError('Informe sementes inteiras separadas por vírgulas.') from error
+                    if min(seeds) < 0 or len(set(seeds)) != len(seeds):
+                        raise ValueError('Use sementes distintas e não negativas.')
+                    comparison_config = {**comparison_config, 'evaluation': {
+                        **comparison_config.get('evaluation', {}), 'seeds': seeds}}
+                if reference_model:
+                    seeds = comparison_config.get('evaluation', {}).get('seeds') or comparison_config['seeds']
+                    baseline_manifest = read_json(Path(reference_model).parent / 'manifest.json') or {}
+                    if any(saved.get('training_seed') in seeds for saved in (manifest, baseline_manifest)):
+                        raise ValueError('Uma das sementes de avaliação foi usada no treinamento. Escolha sementes diferentes das usadas nos dois treinos.')
+                start_job('rl-eval', comparison_config, model, reference_model=reference_model)
                 st.rerun()
             except Exception as error:
                 st.error(friendly_configuration_error(error))
+
+
+if show_results and results_section != TRAIN_RESULTS:
+    render_new_comparison(results_section == MODEL_COMPARISONS)

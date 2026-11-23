@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from semaforos.cenario.configuracao import control_parameters
+from semaforos.cenario.configuracao import control_parameters, with_detailed_metrics
 from semaforos.simulacao.ambiente import SemaforosEnv
 from semaforos.relatorios.catalogos import export_catalogs
 from semaforos.relatorios.exportacao import write_evaluation_report
@@ -16,6 +16,7 @@ from .tarefas import cancellation_requested
 
 
 def run_reference(config, output):
+    config = with_detailed_metrics(config)
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     export_catalogs(output, config)

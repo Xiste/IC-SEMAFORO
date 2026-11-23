@@ -6,23 +6,23 @@ import pydeck as pdk
 import streamlit as st
 
 
-def _formatted_wait(value, signed=False):
-    return format(value, '+,.1f' if signed else ',.1f').translate(str.maketrans(',.', '.,'))
+def _formatted_count(value):
+    return format(value, ',.1f').translate(str.maketrans(',.', '.,'))
 
 
-def _wait_marks(rows, locations):
+def _queue_marks(rows, locations):
     marks = []
     for row in rows:
         name = row['intersection']
         status, symbol, color = 'Sem dados pareados', '?', [71, 85, 105]
         change = row['difference']
         details = 'Nenhum par válido'
-        if change is not None:
-            details = f"{_formatted_wait(row['before'])} → {_formatted_wait(row['after'])} veículo·s"
+        if pd.notna(change):
+            details = f"{_formatted_count(row['before'])} → {_formatted_count(row['after'])} veículos parados"
             if round(change, 1) < 0:
-                status, symbol, color = 'Menos espera', '↓', [15, 118, 95]
+                status, symbol, color = 'Menos veículos parados', '↓', [15, 118, 95]
             elif round(change, 1) > 0:
-                status, symbol, color = 'Mais espera', '↑', [171, 60, 56]
+                status, symbol, color = 'Mais veículos parados', '↑', [171, 60, 56]
             else:
                 status, symbol = 'Sem diferença visível', '='
         location = {key: value for key, value in locations.get(name, {}).items()
@@ -31,10 +31,9 @@ def _wait_marks(rows, locations):
     return marks
 
 
-def render_wait_comparison(rows, locations, key):
-    st.subheader('Espera por cruzamento')
-    st.caption('Espera acumulada nas faixas de entrada, em veículo·s. Por exemplo, 10 veículos esperando 5 s somam 50 veículo·s.')
-    marks = _wait_marks(rows, locations)
+def select_result_intersection(rows, locations, key, *, average):
+    marks = _queue_marks(rows, locations)
+    title = 'Mapa da fila média' if average else 'Mapa do pico da fila'
     by_name = {row['intersection']: row for row in marks}
     selection_key = f'{key}_intersection'
     georeferenced = [row for row in marks if {'longitude', 'latitude'} <= set(row)]
@@ -43,7 +42,7 @@ def render_wait_comparison(rows, locations, key):
 
         def select_intersection():
             selection = st.session_state.get(map_key, {}).get('selection', {})
-            for item in selection.get('objects', {}).get('intersection-wait', []):
+            for item in selection.get('objects', {}).get('intersection-queue', []):
                 if item.get('intersection') in by_name:
                     st.session_state[selection_key] = item['intersection']
 
@@ -52,35 +51,23 @@ def render_wait_comparison(rows, locations, key):
             initial_view_state=pdk.ViewState(latitude=float(map_data.latitude.mean()),
                 longitude=float(map_data.longitude.mean()), zoom=12.8),
             layers=[
-                pdk.Layer('ScatterplotLayer', map_data, id='intersection-wait',
+                pdk.Layer('ScatterplotLayer', map_data, id='intersection-queue',
                     get_position='[longitude, latitude]', get_fill_color='color',
                     radius_units="'pixels'", get_radius=16, pickable=True, auto_highlight=True),
-                pdk.Layer('TextLayer', map_data, id='intersection-wait-status',
+                pdk.Layer('TextLayer', map_data, id='intersection-queue-status',
                     get_position='[longitude, latitude]', get_text='symbol', get_color=[255, 255, 255],
                     get_size=16, character_set="'auto'"),
             ], tooltip={'text': '{intersection}\n{status}\n{details}'})
-        st.pydeck_chart(deck, key=map_key, height=365, on_select=select_intersection, selection_mode='single-object')
-        st.caption('↓ Menos espera · ↑ Mais espera · = Sem diferença visível · ? Sem dados pareados')
-        if len(georeferenced) < len(marks):
-            st.caption('Outros cruzamentos estão disponíveis na lista abaixo.')
+        with st.expander(title):
+            st.pydeck_chart(deck, key=map_key, height=365, on_select=select_intersection, selection_mode='single-object')
+            st.caption('↓ Menos veículos parados · ↑ Mais veículos parados · = Sem diferença visível · ? Sem dados pareados')
     else:
         local = [row for row in marks if {'x_meters', 'y_meters'} <= set(row)]
         if local:
-            st.scatter_chart(pd.DataFrame(local).rename(columns={'x_meters': 'Leste (m)', 'y_meters': 'Norte (m)'}),
-                x='Leste (m)', y='Norte (m)', color='status', height=340)
-        else:
-            st.caption('As coordenadas deste relatório não estão disponíveis. Consulte a espera pela lista de cruzamentos.')
-    crossing = st.selectbox('Cruzamento para detalhar', list(by_name), key=selection_key)
-    selected = by_name[crossing]
-    if selected['pairs']:
-        before, after, change = st.columns(3)
-        before.metric('Tempos iniciais', f"{_formatted_wait(selected['before'])} veículo·s")
-        after.metric('Controle avaliado', f"{_formatted_wait(selected['after'])} veículo·s")
-        delta = round(selected['difference'], 1) or 0
-        change.metric(selected['status'], f"{_formatted_wait(delta, signed=bool(delta))} veículo·s")
-        st.caption(f"Média de {selected['pairs']} par(es) com dados neste cruzamento. Posições aproximadas das entradas.")
-    else:
-        st.info('Não há simulações completas dos dois controles com dados de espera para este cruzamento.')
+            with st.expander(title):
+                st.scatter_chart(pd.DataFrame(local).rename(columns={'x_meters': 'Leste (m)', 'y_meters': 'Norte (m)'}),
+                    x='Leste (m)', y='Norte (m)', color='status', height=340)
+    return st.selectbox('Cruzamento para detalhar', list(by_name), key=selection_key)
 
 
 def render_bottlenecks(report, key):

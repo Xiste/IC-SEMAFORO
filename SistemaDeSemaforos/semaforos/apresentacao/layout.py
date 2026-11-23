@@ -157,18 +157,6 @@ def configuration_changes(config, baseline, *, restored_study=True):
         greens = source.get('experimental', {}).get('green_floors', bounds)
         return {key: bounds[key] for key in greens if key in bounds}
 
-    def optional_metrics(source, use_saved):
-        metrics = source.get('metrics', {}) if use_saved else {}
-        details = bool(metrics.get('collect_lane_details') or metrics.get('collect_extended'))
-        extended = details and metrics.get('collect_extended', True)
-        return (
-            details and metrics.get('collect_lane_details', True), extended,
-            extended and metrics.get('collect_vehicle_dynamics', True),
-            extended and metrics.get('collect_vehicle_classes', True),
-            metrics.get('collect_emissions', False),
-            metrics.get('collect_events', True), metrics.get('collect_resources', True),
-        )
-
     def visualization(source, use_saved):
         control = source.get('control', source.get('ppo', {}))
         gui = use_saved and control.get('gui', False)
@@ -227,8 +215,8 @@ def configuration_changes(config, baseline, *, restored_study=True):
     except (TypeError, ValueError):
         thresholds_changed = (baseline.get('metrics', {}).get('thresholds')
                               != config.get('metrics', {}).get('thresholds'))
-    if optional_metrics(baseline, restored_study) != optional_metrics(config, True) or thresholds_changed:
-        changes.append('Coleta de indicadores ou limiares alterados')
+    if thresholds_changed:
+        changes.append('Limiares dos indicadores alterados')
     return changes
 
 

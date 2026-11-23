@@ -14,7 +14,7 @@ from semaforos.relatorios.localizacao import MetricLocations
 COLUMNS = ['Métrica', 'Valor', 'Unidade', 'Escopo', 'Episódio', 'Semente',
            'Situação do episódio', 'Identificação', 'Tempo simulado (s)',
            'Disponibilidade', 'Código', 'Descrição', 'Origem',
-           'Cruzamento', 'Rua de entrada', 'Rua de saída', 'Sentido']
+           'Cruzamento', 'Rua de entrada', 'Rua de saída', 'Sentido', 'Controle']
 CONTEXT = {'episode', 'episode_number', 'seed', 'episode_complete', 'controller',
            'episode_output', 'demand_sha256', 'intersection', 'tls_id', 'lane_id',
            'edge_id', 'crossing_id', 'movement_id', 'vehicle_class', 'incoming_lanes',
@@ -77,7 +77,18 @@ def training_metrics_table(output):
         return {'Episódio': info.get('episode_number', info.get('episode')),
                 'Semente': info.get('seed'),
                 'Situação do episódio': 'Completo' if complete is True else 'Parcial' if complete is False else 'Não informada',
-                'Tempo simulado (s)': info.get('simulated_seconds')}
+                'Tempo simulado (s)': info.get('simulated_seconds'),
+                'Controle': info.get('controller') or controllers.get(info.get('episode_number')) or manifest.get('algorithm')}
+
+    def read_csv(path):
+        try:
+            return pd.read_csv(path)
+        except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError):
+            return pd.DataFrame()
+
+    controllers = {record['episode_number']: record['controller']
+                   for record in read_csv(output / 'runs.csv').to_dict('records')
+                   if 'episode_number' in record and 'controller' in record}
 
     episodes = list(sorted((output / 'episodes').glob('*/episode_metrics.json')))
     captured = {}
@@ -100,12 +111,6 @@ def training_metrics_table(output):
                 phases = detail.pop('phase_seconds', {})
                 detail.update({f'phase_{index}_seconds': seconds for index, seconds in phases.items()})
                 append(detail, context, scope, identity, source)
-
-    def read_csv(path):
-        try:
-            return pd.read_csv(path)
-        except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError):
-            return pd.DataFrame()
 
     # Fallback para registros antigos ou episódios completos recém-publicados.
     for record in read_csv(output / 'training_episodes.csv').to_dict('records'):
@@ -161,7 +166,7 @@ def training_metrics_table(output):
     return pd.DataFrame(rows, columns=COLUMNS)
 
 
-def metrics_excel(table):
+def metrics_excel(table, result_sheets=None):
     """Exportador do produto: números nativos, filtros e cabeçalho fixo."""
     from openpyxl import Workbook
     from openpyxl.cell import WriteOnlyCell
@@ -172,7 +177,7 @@ def metrics_excel(table):
     header_font = Font(name='Calibri', bold=True, color='FFFFFF', size=11)
     header_fill = PatternFill('solid', fgColor='15354B')
     wrap = Alignment(wrap_text=True, vertical='top')
-    widths = [48, 19, 19, 22, 12, 12, 23, 42, 23, 30, 44, 90, 65, 45, 40, 40, 36]
+    widths = [48, 19, 19, 22, 12, 12, 23, 42, 23, 30, 44, 90, 65, 45, 40, 40, 36, 23]
     # Escrita incremental para exportar treinos longos sem criar todas as células em memória.
     for start in range(0, max(1, len(table)), 1_048_575):
         sheet = workbook.create_sheet('Métricas' if start == 0 else f'Métricas {start // 1_048_575 + 1}')
@@ -205,6 +210,29 @@ def metrics_excel(table):
             sheet.row_dimensions[row_index].height = 15 * lines
             sheet.append(cells)
         sheet.auto_filter.ref = f'A1:{get_column_letter(len(table.columns))}{len(chunk) + 1}'
+    for name, detail in (result_sheets or {}).items():
+        sheet = workbook.create_sheet(name)
+        sheet.freeze_panes = 'B2'
+        sheet.sheet_view.showGridLines = False
+        sheet.auto_filter.ref = f'A1:{get_column_letter(len(detail.columns))}{len(detail) + 1}'
+        header = []
+        for index, label in enumerate(detail.columns, 1):
+            wide = label in ('Cruzamento', 'Indicador', 'Movimento ou sinal')
+            sheet.column_dimensions[get_column_letter(index)].width = 55 if wide else max(15, len(label) + 3)
+            cell = WriteOnlyCell(sheet, label)
+            cell.font, cell.fill = header_font, header_fill
+            header.append(cell)
+        sheet.append(header)
+        for record in detail.itertuples(index=False, name=None):
+            cells = []
+            for value in record:
+                cell = WriteOnlyCell(sheet, None if pd.isna(value) else value)
+                if isinstance(value, str):
+                    cell.data_type = 's'
+                elif isinstance(value, Real):
+                    cell.number_format = '0.##'
+                cells.append(cell)
+            sheet.append(cells)
     buffer = io.BytesIO()
     workbook.save(buffer)
     return buffer.getvalue()

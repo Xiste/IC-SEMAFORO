@@ -29,7 +29,7 @@ def cancellation_requested(output):
     return False
 
 
-def start_job(config, command, results, model=None):
+def start_job(config, command, results, model=None, *, reference_model=None):
     if command not in COMMANDS:
         raise ValueError('Comando de execução não suportado')
     folder = Path(results) / f'ui_{uuid4().hex[:12]}'
@@ -38,7 +38,8 @@ def start_job(config, command, results, model=None):
     write_json(config_path, config)
     read_config(config_path)
     write_json(folder / 'job.json', {'command': command, 'status': 'starting', 'created_at': time.time(),
-                                    'model': str(model) if model else None})
+                                    'model': str(model) if model else None,
+                                    'reference_model': str(reference_model) if reference_model else None})
     with (folder / 'processo.log').open('w', encoding='utf-8') as log:
         try:
             process = subprocess.Popen([sys.executable, '-m', 'semaforos.experimentos.tarefas', '--folder', str(folder)],
@@ -107,7 +108,7 @@ def execute(folder):
             elif state['command'] == 'compare-baselines':
                 evaluate_rl(config, output)
             else:
-                evaluate_rl(config, output, state['model'])
+                evaluate_rl(config, output, state['model'], reference_model_path=state.get('reference_model'))
         summary = read_json(output / 'summary.json') or {}
         state['status'] = 'cancelled' if summary.get('cancelled') else 'completed'
     except Exception as error:

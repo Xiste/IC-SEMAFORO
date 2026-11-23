@@ -6,6 +6,18 @@ import shutil
 from pathlib import Path
 
 
+REQUIRED_METRIC_FLAGS = (
+    'collect_lane_details', 'collect_emissions', 'collect_events',
+    'collect_resources', 'collect_extended', 'collect_vehicle_dynamics',
+    'collect_vehicle_classes', 'collect_actions',
+)
+
+
+def with_detailed_metrics(config):
+    return {**config, 'metrics': {**config.get('metrics', {}),
+                                 **dict.fromkeys(REQUIRED_METRIC_FLAGS, True)}}
+
+
 def read_config(path):
     path = Path(path).resolve()
     data = json.loads(path.read_text(encoding="utf-8"))

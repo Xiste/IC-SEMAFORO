@@ -12,6 +12,7 @@ from semaforos.algoritmos.registro import get_algorithm
 from semaforos.algoritmos.heuristicas import queue_actuated_action
 from .proveniencia import file_hash, versions
 from semaforos.relatorios.metricas import trip_summary
+from semaforos.cenario.configuracao import with_detailed_metrics
 from semaforos.relatorios.catalogos import export_catalogs
 from semaforos.relatorios.exportacao import write_evaluation_report
 from semaforos.cenario.rede import network_programs, phase_action_spec
@@ -55,6 +56,7 @@ class ProgressCallback(BaseCallback):
 
 
 def train_rl(config, output):
+    config = with_detailed_metrics(config)
     algorithm = get_algorithm(config.get("algorithm", "PPO"))
     constructor = algorithm.constructor_parameters(config)
     output = Path(output)
@@ -132,31 +134,26 @@ def train_rl(config, output):
             optimizer_logger.close()
 
 
-def evaluate_rl(config, output, model_path=None, seeds=None):
-    output = Path(output)
-    output.mkdir(parents=True, exist_ok=False)
-    model_path = Path(model_path) if model_path else None
+def _evaluation_model(config, model_path, action_mode, action_spec, *, primary):
     training_manifest_path = model_path.parent / "manifest.json" if model_path else None
     training_manifest = json.loads(training_manifest_path.read_text(encoding="utf-8")) if training_manifest_path and training_manifest_path.is_file() else {}
     model_algorithm = training_manifest.get("algorithm", config.get("algorithm", "PPO"))
-    if config.get("algorithm", model_algorithm).upper() != model_algorithm.upper():
+    if primary and config.get("algorithm", model_algorithm).upper() != model_algorithm.upper():
         raise ValueError("O algoritmo selecionado difere do algoritmo do modelo")
     algorithm = get_algorithm(model_algorithm)
-    action_mode, action_spec = phase_action_spec(config, network_programs(config["network"]))
     if model_path and training_manifest.get("action_mode", "green_extension") != action_mode:
         raise ValueError("O modo de ação mudou; treine um novo modelo")
     if model_path and action_mode in ('phase_durations', 'adaptive_signals') and training_manifest.get("action_spec") != action_spec:
         raise ValueError("As fases ou os limites de duração mudaram; treine um novo modelo")
     if training_manifest.get("targets") and training_manifest["targets"] != config["targets"]:
         raise ValueError("O modelo foi treinado com outros semáforos/fases")
-    if training_manifest.get("objectives") and training_manifest["objectives"] != config.get("objectives"):
+    if primary and training_manifest.get("objectives") and training_manifest["objectives"] != config.get("objectives"):
         raise ValueError("Pesos dos objetivos diferentes; treine outro modelo")
     if training_manifest.get("network_sha256") and training_manifest["network_sha256"] != file_hash(config["network"]):
         raise ValueError("A rede difere da usada no treinamento")
     if (training_manifest.get("mapping_sha256") and config.get("mapping_path")
             and training_manifest["mapping_sha256"] != file_hash(config["mapping_path"])):
         raise ValueError("O mapeamento difere do usado no treinamento")
-    model = algorithm.load(model_path) if model_path else None
     if model_path and action_mode == 'adaptive_signals':
         import sumolib
         from semaforos.simulacao.adaptativo import sensor_layout
@@ -164,11 +161,33 @@ def evaluate_rl(config, output, model_path=None, seeds=None):
         if (training_manifest.get('observation_version') != 'lane_sensors_v1'
                 or training_manifest.get('sensor_layout') != expected_layout):
             raise ValueError('A configuração dos sensores mudou; treine um novo modelo')
+    return algorithm, training_manifest
+
+
+def evaluate_rl(config, output, model_path=None, seeds=None, *, reference_model_path=None):
+    config = with_detailed_metrics(config)
+    output = Path(output)
+    model_path = Path(model_path).resolve() if model_path else None
+    reference_model_path = Path(reference_model_path).resolve() if reference_model_path else None
+    if reference_model_path and (not model_path or reference_model_path == model_path):
+        raise ValueError('Selecione dois modelos salvos diferentes.')
+    action_mode, action_spec = phase_action_spec(config, network_programs(config["network"]))
+    algorithm, training_manifest = _evaluation_model(config, model_path, action_mode, action_spec, primary=True)
+    reference_algorithm, reference_manifest = None, {}
+    if reference_model_path:
+        try:
+            reference_algorithm, reference_manifest = _evaluation_model(
+                config, reference_model_path, action_mode, action_spec, primary=False)
+        except ValueError as error:
+            raise ValueError(f'Modelo de comparação incompatível com o cenário. {error}') from error
     seeds = seeds or config.get("evaluation", {}).get("seeds") or config["seeds"]
     if len(set(seeds)) != len(seeds):
         raise ValueError('Sementes de avaliação devem ser distintas')
-    if training_manifest.get("training_seed") in seeds:
-        raise ValueError("Use sementes de avaliação diferentes da semente do treino")
+    if any(manifest.get("training_seed") in seeds for manifest in (training_manifest, reference_manifest)):
+        raise ValueError("Use sementes de avaliação diferentes das sementes usadas no treino dos modelos.")
+    model = algorithm.load(model_path) if model_path else None
+    reference_model = reference_algorithm.load(reference_model_path) if reference_model_path else None
+    output.mkdir(parents=True, exist_ok=False)
     export_catalogs(output, config)
     rows = []
     signal_rows = []
@@ -178,7 +197,8 @@ def evaluate_rl(config, output, model_path=None, seeds=None):
     started = time.perf_counter()
     control = config.get("control", config.get("ppo", {}))
     env = SemaforosEnv(config, output / "episodes", gui=bool(control.get("gui", False)))
-    controllers = ("network_reference", algorithm.name if model is not None else "queue_actuated")
+    reference_controller = 'model_reference' if reference_model_path else 'network_reference'
+    controllers = (reference_controller, algorithm.name if model is not None else "queue_actuated")
     try:
         for seed in seeds:
             for controller in controllers:
@@ -186,7 +206,9 @@ def evaluate_rl(config, output, model_path=None, seeds=None):
                 observation, _ = env.reset(seed=int(seed))
                 episode_reward = 0.0
                 while True:
-                    if controller == algorithm.name:
+                    if controller == 'model_reference':
+                        action, _ = reference_model.predict(observation, deterministic=True)
+                    elif controller == algorithm.name:
                         action, _ = model.predict(observation, deterministic=True)
                     elif controller == "queue_actuated":
                         action = queue_actuated_action(env)
@@ -216,6 +238,10 @@ def evaluate_rl(config, output, model_path=None, seeds=None):
             "evaluation_demand": config["demand"],
             "evaluation_seeds": list(seeds),
             "training_manifest": training_manifest,
+            "reference_controller": reference_controller,
+            "reference_model_path": str(reference_model_path) if reference_model_path else None,
+            "reference_model_algorithm": reference_algorithm.name if reference_algorithm else None,
+            "reference_training_seed": reference_manifest.get('training_seed'),
             "algorithm": algorithm.name if model else "Comparação sem treinamento",
             "cancelled": cancelled,
         })

@@ -46,7 +46,10 @@ def write_evaluation_report(output, rows, signal_rows, metadata):
         for axis, metric in zip(axes, metrics):
             means = complete.groupby("controller")[metric].mean()
             deviations = complete.groupby("controller")[metric].std().reindex(means.index).fillna(0)
-            axis.bar(means.index, means.values, yerr=deviations.values, capsize=4)
+            labels = means.index
+            if metadata.get('reference_model_path'):
+                labels = ['Modelo B' if name == metadata['reference_controller'] else 'Modelo A' for name in means.index]
+            axis.bar(labels, means.values, yerr=deviations.values, capsize=4)
             axis.set_title(metric_column_label(metric), wrap=True)
             axis.tick_params(axis="x", rotation=20)
         figure.tight_layout()
@@ -63,7 +66,8 @@ def write_evaluation_report(output, rows, signal_rows, metadata):
     lines = ["# Comparação PPO × programa da rede", "",
              f"Sementes de avaliação: {', '.join(map(str, sorted(runs['seed'].unique())))}.",
              "A demanda planejada foi igual entre controladores em cada semente.",
-             "A referência é o programa da rede, ainda não o plano da planilha.",
+             (f"Modelo A: {metadata['model_path']}\nModelo B (referência): {metadata['reference_model_path']}"
+              if metadata.get('reference_model_path') else "A referência é o programa da rede."),
              "Viagens incompletas e sem chegada não entram na média de tempo de viagem.",
              "Episódios parciais são identificados em runs.csv e excluídos de aggregate.csv e comparison.png.",
              "Barras de erro mostram desvio padrão amostral entre sementes; com uma semente não há estimativa de dispersão.",

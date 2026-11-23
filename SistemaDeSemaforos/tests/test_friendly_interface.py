@@ -16,6 +16,60 @@ from test_interface_configuration_contract import pick_map
 
 
 class FriendlyInterfaceTest(unittest.TestCase):
+    def test_comparison_can_submit_two_saved_models(self):
+        with tempfile.TemporaryDirectory(dir=PROJECT_ROOT / 'resultados', prefix='ui_pair_') as temporary:
+            folder = Path(temporary)
+            models = [folder / name / 'ppo_model.zip' for name in ('a', 'b')]
+            config = read_config(PROJECT_ROOT / 'config/cenario_rede_corrigida.json')
+            for model, seed in zip(models, (11, 22)):
+                model.parent.mkdir()
+                model.touch()
+                write_json(model.parent / 'manifest.json', {'algorithm': 'PPO', 'config': config, 'training_seed': seed})
+            with patch('semaforos.experimentos.tarefas.start_job', return_value=job_paths(folder)) as launch:
+                app = AppTest.from_file(str(PROJECT_ROOT / 'interface.py'), default_timeout=90)
+                app.session_state['ui_default_tab'] = '3 · Resultados'
+                app.session_state['results_section'] = 'Modelo × modelo'
+                app.run()
+                self.assertFalse(any(w.label == 'Modelo B (referência)' for w in app.selectbox))
+                next(w for w in app.selectbox if w.label == 'Modelo A').select(str(models[0])).run()
+                next(w for w in app.selectbox if w.label == 'Modelo B (referência)').select(str(models[1])).run()
+                next(w for w in app.toggle if w.label == 'Personalizar a avaliação').set_value(True).run()
+                next(w for w in app.text_input if w.label == 'Sementes de avaliação para os dois modelos').set_value('101, 102')
+                next(w for w in app.button if w.label == 'Comparar os dois modelos').run()
+                next(w for w in app.button if w.label == 'Comparar os dois modelos').click().run()
+                self.assertFalse(app.exception, str(app.exception))
+                self.assertEqual(launch.call_args.args[0]['evaluation']['seeds'], [101, 102])
+                self.assertEqual(launch.call_args.args[3], models[0])
+                self.assertEqual(Path(launch.call_args.kwargs['reference_model']), models[1])
+                self.assertEqual(app.session_state['results_section'], 'Modelo × modelo')
+
+    def test_model_comparison_explains_when_only_one_model_is_saved(self):
+        original_glob = Path.glob
+        results = PROJECT_ROOT / 'resultados'
+        with tempfile.TemporaryDirectory(dir=results, prefix='ui_single_model_') as temporary:
+            model = Path(temporary) / 'ppo_model.zip'
+            model.touch()
+
+            def glob(path, pattern, *args, **kwargs):
+                if path == results and pattern == '**/*_model.zip':
+                    return iter([model])
+                return original_glob(path, pattern, *args, **kwargs)
+
+            with patch.object(Path, 'glob', glob):
+                app = AppTest.from_file(str(PROJECT_ROOT / 'interface.py'), default_timeout=90)
+                app.session_state['ui_default_tab'] = '3 · Resultados'
+                app.session_state['results_section'] = 'Modelo × modelo'
+                app.run()
+                self.assertFalse(app.exception, str(app.exception))
+                area = next(w for w in app.radio if w.label == 'Área dos resultados')
+                self.assertEqual(area.options, ['Treinos e simulações', 'Modelo × tempos iniciais', 'Modelo × modelo'])
+                self.assertTrue(any('Você tem 1 modelo salvo' in item.value for item in app.info))
+                self.assertFalse(any(w.label.startswith('Modelo ') for w in app.selectbox))
+                next(w for w in app.button if w.label == 'Comparar o modelo salvo com os tempos iniciais').click().run()
+                self.assertFalse(app.exception, str(app.exception))
+                self.assertEqual(app.session_state['results_section'], 'Comparações')
+                self.assertTrue(any(w.label == 'Modelo treinado' for w in app.selectbox))
+
     def test_comparison_excludes_partial_runs_and_keeps_missing_values(self):
         runs = pd.DataFrame([
             {'controller': 'network_reference', 'seed': 101, 'episode_complete': True, 'arrived': 10, 'unfinished': 2, 'pending_departure': 1, 'mean_trip_waiting_seconds': 8},
@@ -86,9 +140,13 @@ class FriendlyInterfaceTest(unittest.TestCase):
                 self.assertFalse(any(w.label == 'Tamanho do minibatch' for w in app.number_input))
                 self.assertEqual(config['duration_seconds'], 901)
                 self.assertEqual(config['objectives'], {'waiting': 1.0, 'queues': 1.0, 'travel': 1.0})
-                self.assertFalse(config['metrics']['collect_extended'])
-                self.assertFalse(config['metrics']['collect_vehicle_dynamics'])
-                self.assertFalse(config['metrics']['collect_lane_details'])
+                self.assertTrue(config['metrics']['collect_extended'])
+                self.assertTrue(config['metrics']['collect_vehicle_dynamics'])
+                self.assertTrue(config['metrics']['collect_lane_details'])
+                self.assertTrue(config['metrics']['collect_emissions'])
+                self.assertTrue(config['metrics']['collect_events'])
+                self.assertTrue(config['metrics']['collect_resources'])
+                self.assertTrue(config['metrics']['collect_vehicle_classes'])
                 next(w for w in app.radio if w.label == 'Etapas do estudo').set_value('1 · Cenário e tráfego').run()
                 search = next(w for w in app.selectbox if w.label == 'Buscar rua ou cruzamento no mapa')
                 search.select(('signals', config['targets'][0]['tls_id'])).run()
@@ -100,7 +158,6 @@ class FriendlyInterfaceTest(unittest.TestCase):
                 launch.reset_mock()
                 next(w for w in app.button if w.label == 'Fechar ajustes').click().run()
                 next(w for w in app.radio if w.label == 'Etapas do estudo').set_value('2 · Treinamento').run()
-                next(w for w in app.checkbox if w.label == 'Coletar análise detalhada').set_value(True).run()
                 next(w for w in app.button if w.label == 'Iniciar treinamento').click().run()
                 self.assertFalse(app.exception, str(app.exception))
                 detailed = launch.call_args.args[0]

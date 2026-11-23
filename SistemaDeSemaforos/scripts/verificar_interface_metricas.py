@@ -34,7 +34,6 @@ with tempfile.TemporaryDirectory(dir=ROOT / 'resultados', prefix='ui_metrics_') 
                             {'selection': {'objects': {'configuration-roads': [road]}}})
         app.run()
         next(w for w in app.number_input if w.label == 'Veículos por hora').set_value(600.).run()
-        next(w for w in app.checkbox if w.label == 'Coletar análise detalhada').set_value(True).run()
         next(w for w in app.button if w.label == 'Executar treinos e avaliações repetidos').click().run()
         assert not app.exception, str(app.exception)
         assert launch.call_count == 1
@@ -47,6 +46,7 @@ with tempfile.TemporaryDirectory(dir=ROOT / 'resultados', prefix='ui_metrics_') 
         assert config['study']['training_seeds'] == [11, 22, 33]
         assert config['metrics']['collect_extended']
         assert config['metrics']['collect_vehicle_classes']
+        assert config['metrics']['collect_emissions']
         assert not app.exception, str(app.exception)
 
 map_app = AppTest.from_string('''

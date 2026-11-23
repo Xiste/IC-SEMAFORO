@@ -8,6 +8,35 @@ from semaforos.apresentacao.mapa_vias import short_path
 from semaforos.apresentacao.vias import DIRECTIONS
 
 
+def _short_street(street):
+    if street == 'Avenida Governador Rondon Pacheco':
+        return 'Av. Rondon Pacheco'
+    return street.replace('Avenida ', 'Av. ', 1) if street.startswith('Avenida ') else street
+
+
+def controller_approaches(network, details):
+    """Identifica o conjunto pelas entradas de veículos que ele controla."""
+    labels = {}
+    for light in network.getTrafficLights():
+        streets = {}
+        for incoming, outgoing, _ in light.getConnections():
+            edge = incoming.getEdge()
+            if not edge.allows('passenger') or not outgoing.getEdge().allows('passenger'):
+                continue
+            info = details.get(edge.getID(), {})
+            street = info.get('street') or info.get('reference')
+            if street:
+                origins = streets.setdefault(_short_street(street), set())
+                if info.get('origin'):
+                    origins.add(info['origin'])
+        if streets:
+            labels[light.getID()] = ' / '.join(
+                f"{street} (chegada pelo {' e '.join(sorted(origins))})" if origins else street
+                for street, origins in sorted(streets.items())
+            )
+    return labels
+
+
 def green_stage_choices(network, programs, targets, details, include_pedestrians):
     root = ET.parse(network).getroot()
     edges = {edge.get('id'): edge for edge in root.findall('edge')}
@@ -36,10 +65,7 @@ def green_stage_choices(network, programs, targets, details, include_pedestrians
                     continue
                 info = details.get(source, {})
                 street = info.get('street') or edges[source].get('name') or info.get('reference') or 'Via sem nome'
-                if street == 'Avenida Governador Rondon Pacheco':
-                    street = 'Av. Rondon Pacheco'
-                elif street.startswith('Avenida '):
-                    street = street.replace('Avenida ', 'Av. ', 1)
+                street = _short_street(street)
                 turn = (connection.get('dir') or '').lower()
                 if turn == 's':
                     straight.setdefault(street, set()).add(info.get('direction') or '')
@@ -88,7 +114,11 @@ def _initial_cycle(phases, colors):
 
 def signal_movement_timings(network, controller, details, *, include_timeline=False, edited_durations=None):
     """Duracoes por entrada/movimento do programa inicial, sem amostrar o treino."""
-    root = ET.parse(network).getroot()
+    return _movement_timings(ET.parse(network).getroot(), controller, details,
+                             include_timeline=include_timeline, edited_durations=edited_durations)
+
+
+def _movement_timings(root, controller, details, *, include_timeline=False, edited_durations=None):
     edges = {edge.get('id'): edge for edge in root.findall('edge')}
     programs = {logic.get('id'): logic for logic in root.findall('tlLogic')}
     logic = programs.get(controller)
@@ -125,7 +155,8 @@ def signal_movement_timings(network, controller, details, *, include_timeline=Fa
             for phase, state in zip(phases, sequence):
                 color = 'green' if state in 'Gg' else 'yellow' if state in 'Yy' else 'red' if state in 'Rr' else 'other'
                 times[color] += float(phase.get('duration'))
-            grouped[key] = {'edge_id': edge_id, 'tls_id': controller, 'movements': set(),
+            grouped[key] = {'edge_id': edge_id, 'tls_id': controller, '_link_index': index,
+                '_static_cycle': sequential, 'movements': set(),
                 'Entrada': info.get('reference', 'Pedestres' if pedestrian else 'Entrada'),
                 'Via': info.get('street') or ('Travessia de pedestres' if pedestrian else 'Nome não cadastrado'),
                 'Sentido': info.get('approach', ''), 'Verde (s)': times['green'],

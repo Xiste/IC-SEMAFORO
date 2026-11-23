@@ -24,6 +24,7 @@ from semaforos.simulacao.contagens import FlowCounts
 from semaforos.cenario.pedestres import create_pedestrian_demand
 from semaforos.simulacao.pedestres import PedestrianMetrics
 from semaforos.simulacao.observacao import IntersectionMetrics, LiveMetrics
+from semaforos.simulacao.cores import SignalColorTimes
 from semaforos.simulacao.janela import measurement_window
 from semaforos.simulacao.detalhes import DetailedMetrics
 from semaforos.arquivos import write_json
@@ -233,7 +234,9 @@ class SemaforosEnv(gym.Env):
                 "queue_vehicle_seconds": 0.0, "peak_halted_vehicles": 0,
                 "speed_meters_per_second_sum": 0.0, "occupancy_percent_sum": 0.0,
                 "lane_samples": 0, "phase_seconds": {str(i): 0.0 for i in range(len(self.programs[target["tls_id"]]))},
+                "phase_started_in_window": None, "complete_phases": {},
             } for target in self.targets}
+            self.signal_colors = SignalColorTimes({tls: self.programs[tls] for tls in self.signal_metrics})
             self.co2_mg = self.fuel_mg = 0.0
             self.extra_emissions = {key: 0.0 for key in ("co_grams", "hc_grams", "nox_grams", "pmx_grams", "electricity_wh")}
             self.global_halted_seconds = 0.0
@@ -407,6 +410,14 @@ class SemaforosEnv(gym.Env):
                 if measured:
                     signal["phase_seconds"][str(index)] += self.step_length
                 if index != self.phase[tls_id]:
+                    self.signal_colors.transition(tls_id, self.phase[tls_id], index, current, self.measurement)
+                    started = signal["phase_started_in_window"]
+                    if measured and started is not None and current > started:
+                        previous_phase = self.phase[tls_id]
+                        sample = signal["complete_phases"].setdefault(previous_phase, [0.0, 0])
+                        sample[0] += current - started
+                        sample[1] += 1
+                    signal["phase_started_in_window"] = current if measured or current == self.measurement.start else None
                     self.phase[tls_id] = index
                     self.phase_since[tls_id] = current
                     self.shortened[tls_id] = False
@@ -479,6 +490,11 @@ class SemaforosEnv(gym.Env):
                 values["occupancy_percent_sum"] / values["lane_samples"]
                 if values["lane_samples"] else None),
             "phase_seconds": values["phase_seconds"],
+            **self.signal_colors.metrics(tls_id),
+            **{f"phase_{index}_mean_duration_seconds": total / count
+               for index, (total, count) in values["complete_phases"].items()},
+            **{f"phase_{index}_completed_count": values["complete_phases"].get(int(index), (0.0, 0))[1]
+               for index in values["phase_seconds"]},
         } for tls_id, values in self.signal_metrics.items()}
         if metric_options.get("collect_emissions", False):
             info.update(co2_grams=self.co2_mg / 1000, fuel_grams=self.fuel_mg / 1000)

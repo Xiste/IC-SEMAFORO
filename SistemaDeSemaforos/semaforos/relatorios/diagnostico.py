@@ -83,25 +83,26 @@ def _read_table(path):
 
 def export_diagnostics(output, runs, metadata):
     output = Path(output)
+    reference = metadata.get('reference_controller', 'network_reference')
     config = metadata.get('evaluation_config', metadata.get('config', {}))
     demand = config.get('demand', {})
     complete = runs[runs['episode_complete'].fillna(False)]
     expected_seeds = set(runs.seed.unique())
     expected_seeds.update(metadata.get('evaluation_seeds', config.get('evaluation', {}).get('seeds', []) if metadata.get('evaluation_config') else config.get('seeds', [])))
-    comparisons = paired_metrics(runs)
+    comparisons = paired_metrics(runs, reference)
     tolerance = float(demand.get('calibration_tolerance', 0.2))
     calibration = flow_diagnostics(_read_table(output / 'flow_counts.csv'), tolerance)
-    baseline_flows = [row for row in calibration if row['controller'] == 'network_reference']
+    baseline_flows = [row for row in calibration if row['controller'] == reference]
     observed = demand.get('mode') == 'observed_counts'
     expected_edges = {row['from_edge'] for row in demand.get('edge_volumes', [])} if observed else set()
     coverage = {row['edge_id'] for row in baseline_flows} == expected_edges
-    reference_seeds = set(complete.loc[complete.controller == 'network_reference', 'seed'])
+    reference_seeds = set(complete.loc[complete.controller == reference, 'seed'])
     calibration_valid = bool(baseline_flows and coverage and reference_seeds == expected_seeds and
                              not metadata.get('cancelled') and
                              all(row['within_tolerance'] and row['seeds'] == len(expected_seeds) for row in baseline_flows)) if observed else None
     conclusions = []
-    baseline = complete[complete.controller == 'network_reference'].set_index('seed')
-    for controller, candidate in complete[complete.controller != 'network_reference'].groupby('controller'):
+    baseline = complete[complete.controller == reference].set_index('seed')
+    for controller, candidate in complete[complete.controller != reference].groupby('controller'):
         candidate = candidate.set_index('seed')
         seeds = baseline.index.intersection(candidate.index)
         base, other = baseline.loc[seeds], candidate.loc[seeds]
@@ -150,12 +151,12 @@ def export_diagnostics(output, runs, metadata):
     local = []
     if not intersections.empty:
         for name, group in intersections.groupby('intersection'):
-            for row in paired_metrics(group):
+            for row in paired_metrics(group, reference):
                 if row['metric'] == 'wait_vehicle_seconds':
                     local.append({**row, 'intersection': name})
             # A tabela local usa fila própria; reaproveita comparação pareada com esse nome.
             renamed = group.rename(columns={'queue_vehicle_seconds': 'global_halted_vehicle_seconds'})
-            for row in paired_metrics(renamed):
+            for row in paired_metrics(renamed, reference):
                 if row['metric'] == 'global_halted_vehicle_seconds':
                     local.append({**row, 'intersection': name, 'label': 'Fila do cruzamento (veículo·s)'})
     result = {'scope': 'Resultados da simulação; não certificam melhoria no trânsito real',
@@ -167,7 +168,8 @@ def export_diagnostics(output, runs, metadata):
               'comparisons': comparisons, 'conclusions': conclusions, 'intersections': local,
               'measurement_source': demand.get('measurement_source')}
     from .gargalos import export_bottlenecks
-    result['bottlenecks'] = export_bottlenecks(output, config, intersections, _read_table(output / 'lanes.csv'), _read_table(output / 'movements.csv'))
+    result['bottlenecks'] = export_bottlenecks(output, config, intersections, _read_table(output / 'lanes.csv'),
+                                               _read_table(output / 'movements.csv'), reference=reference)
     write_json(output / 'diagnostico.json', result)
     for name, rows in (('melhorias', comparisons), ('validacao_demanda', calibration), ('melhorias_cruzamentos', local)):
         if rows:

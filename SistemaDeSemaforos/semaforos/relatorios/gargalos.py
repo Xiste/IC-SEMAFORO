@@ -36,7 +36,7 @@ def intersection_locations(config):
     return result
 
 
-def bottleneck_rows(config, intersections, lanes=None, movements=None):
+def bottleneck_rows(config, intersections, lanes=None, movements=None, *, reference_controller='network_reference'):
     if intersections.empty or 'controller' not in intersections:
         return []
     complete = intersections[intersections.episode_complete.fillna(False)]
@@ -45,7 +45,7 @@ def bottleneck_rows(config, intersections, lanes=None, movements=None):
     lanes = pd.DataFrame() if lanes is None else lanes
     movements = pd.DataFrame() if movements is None else movements
     for name, local in complete.groupby('intersection'):
-        baseline = local[local.controller == 'network_reference'].set_index('seed')
+        baseline = local[local.controller == reference_controller].set_index('seed')
         for controller, group in local.groupby('controller'):
             paired = group.set_index('seed').join(baseline[['queue_vehicle_seconds']].rename(columns={'queue_vehicle_seconds': 'reference_queue'}), how='inner')
             reference = float(paired.reference_queue.mean()) if len(paired) else None
@@ -70,8 +70,8 @@ def bottleneck_rows(config, intersections, lanes=None, movements=None):
     return rows
 
 
-def export_bottlenecks(output, config, intersections, lanes, movements):
-    rows = bottleneck_rows(config, intersections, lanes, movements)
+def export_bottlenecks(output, config, intersections, lanes, movements, *, reference='network_reference'):
+    rows = bottleneck_rows(config, intersections, lanes, movements, reference_controller=reference)
     if rows:
         write_text(Path(output) / 'gargalos.csv', pd.DataFrame(rows).drop(columns='color').to_csv(index=False))
     return rows
